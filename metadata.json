@@ -1,0 +1,5 @@
+{
+  "name": "Luminous Harmonics",
+  "description": "An interactive, aesthetic visualization of Fourier Series using p5.js. Deconstructs a square wave into its constituent rotating epicycles.",
+  "requestFramePermissions": []
+}

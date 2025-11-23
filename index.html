@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Luminous Harmonics | Fourier Series</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+      tailwind.config = {
+        theme: {
+          extend: {
+            fontFamily: {
+              sans: ['Inter', 'sans-serif'],
+              mono: ['"JetBrains Mono"', 'monospace'],
+            }
+          }
+        }
+      }
+    </script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;700&family=Noto+Sans+SC:wght@400;500;600;700&display=swap" rel="stylesheet">
+    
+    <!-- KaTeX CSS (Using cdnjs for better stability) -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.9/katex.min.css" integrity="sha512-fHwaWebuwA7NSF5Qg/af4UeDx9XqUpYpOGgubo3ywu+b2IQR4UeQwbb42Ti7gVAjNtVoI/I9TEoYeu9omwcM6g==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+
+    <style>
+      :root {
+        --apple-blue: #0A84FF;
+        --apple-bg: #000000;
+        --primary-purple: #5E6AD2;
+      }
+      body {
+        margin: 0;
+        padding: 0;
+        background-color: var(--apple-bg);
+        font-family: -apple-system, BlinkMacSystemFont, "Inter", "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+        overflow: hidden;
+        -webkit-font-smoothing: antialiased;
+        -moz-osx-font-smoothing: grayscale;
+      }
+      
+      /* Minimalist Scrollbar */
+      ::-webkit-scrollbar {
+        width: 0px;
+        background: transparent;
+      }
+      
+      /* --- Custom Neon Slider CSS --- */
+      
+      /* Reset */
+      input[type=range] {
+        -webkit-appearance: none; /* Hides default slider */
+        width: 100%; 
+        background: transparent; /* Background handled by React inline style for progress */
+      }
+
+      input[type=range]:focus {
+        outline: none;
+      }
+
+      /* Track - WebKit */
+      input[type=range]::-webkit-slider-runnable-track {
+        width: 100%;
+        height: 2px; /* Ultra thin line */
+        cursor: pointer;
+        background: transparent; /* Important: let the input's background gradient show through */
+        border-radius: 1px;
+      }
+      
+      /* Thumb - WebKit (The Neon Dot) */
+      input[type=range]::-webkit-slider-thumb {
+        -webkit-appearance: none;
+        height: 14px;
+        width: 14px;
+        border-radius: 50%;
+        background: var(--primary-purple);
+        border: 2px solid #FFFFFF;
+        box-shadow: 0 0 10px rgba(94, 106, 210, 0.8), 0 0 20px rgba(94, 106, 210, 0.4); /* Neon Glow */
+        cursor: grab;
+        margin-top: -6px; /* Center thumb on the 2px track: (14px - 2px) / 2 * -1 */
+        transition: transform 0.1s ease, box-shadow 0.2s ease;
+      }
+
+      /* Thumb Hover */
+      input[type=range]::-webkit-slider-thumb:hover {
+        transform: scale(1.1);
+        box-shadow: 0 0 15px rgba(94, 106, 210, 1), 0 0 25px rgba(94, 106, 210, 0.6);
+      }
+      
+      /* Thumb Active (Grabbing) */
+      input[type=range]:active::-webkit-slider-thumb {
+        transform: scale(0.95);
+        cursor: grabbing;
+        background: #FFFFFF;
+        border-color: var(--primary-purple);
+      }
+
+      /* Firefox styles */
+      input[type=range]::-moz-range-track {
+        width: 100%;
+        height: 2px;
+        cursor: pointer;
+        background: rgba(255, 255, 255, 0.1);
+        border-radius: 1px;
+      }
+      input[type=range]::-moz-range-thumb {
+        height: 14px;
+        width: 14px;
+        border: 2px solid #FFFFFF;
+        border-radius: 50%;
+        background: var(--primary-purple);
+        cursor: pointer;
+        box-shadow: 0 0 10px rgba(94, 106, 210, 0.8);
+      }
+
+      /* Focus Ring Removal */
+      *:focus-visible {
+        outline: none !important;
+      }
+      
+      /* Global Animation Keyframes */
+      @keyframes slideUpFade {
+        from {
+          opacity: 0;
+          transform: translateY(10px);
+        }
+        to {
+          opacity: 1;
+          transform: translateY(0);
+        }
+      }
+      
+      @keyframes shimmer {
+        0% { transform: translateX(-100%); }
+        100% { transform: translateX(100%); }
+      }
+      
+      .text-glow {
+        text-shadow: 0 0 10px rgba(255, 255, 255, 0.5);
+      }
+      /* High-quality CJK font helper */
+      .font-cjk {
+        font-family: 'Noto Sans SC', 'Inter', 'Segoe UI', system-ui, sans-serif;
+        letter-spacing: 0.01em;
+      }
+      
+      /* KaTeX Overrides for dark mode visibility */
+      .katex {
+        font-size: 1.1em;
+        color: #D0D6E0;
+      }
+      .katex .mord.mathnormal {
+        font-family: "Georgia", serif; /* Elegant variables */
+      }
+    </style>
+  <script type="importmap">
+{
+  "imports": {
+    "react/": "https://aistudiocdn.com/react@^19.2.0/",
+    "react": "https://aistudiocdn.com/react@^19.2.0",
+    "react-dom/": "https://aistudiocdn.com/react-dom@^19.2.0/",
+    "p5": "https://esm.sh/p5@1.9.0"
+  }
+}
+</script>
+<link rel="stylesheet" href="/index.css">
+</head>
+  <body>
+    <div id="root"></div>
+  <script type="module" src="/index.tsx"></script>
+</body>
+</html>
