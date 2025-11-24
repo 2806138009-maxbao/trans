@@ -98,7 +98,7 @@ const App: React.FC = () => {
       <div className="fixed top-5 right-6 z-[60]">
         <button
           onClick={toggleLang}
-          className="text-[11px] font-bold tracking-wider px-3 py-1.5 rounded text-[#8A8F98] hover:text-white hover:bg-white/5 transition-all border border-transparent hover:border-white/5 font-sans backdrop-blur-md bg-[#16171A]/30 cursor-none"
+          className="text-[11px] font-bold tracking-wider px-4 py-2.5 md:px-3 md:py-1.5 rounded text-[#8A8F98] hover:text-white hover:bg-white/5 transition-all border border-transparent hover:border-white/5 font-sans backdrop-blur-md bg-[#16171A]/30 cursor-none min-w-[44px] min-h-[44px] flex items-center justify-center"
         >
           {lang === "en" ? "CN" : "EN"}
         </button>

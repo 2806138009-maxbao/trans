@@ -56,7 +56,7 @@ export const FourierCanvas: React.FC<FourierCanvasProps> = ({ nVal, lang }) => {
         );
         canvas.parent(containerRef.current!);
         // Allow touch scrolling to pass through
-        canvas.elt.style.touchAction = "pan-y";
+        canvas.elt.style.touchAction = "pan-y pinch-zoom";
         canvas.elt.style.pointerEvents = "none";
         p.frameRate(60);
       };

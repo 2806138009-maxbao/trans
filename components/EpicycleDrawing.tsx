@@ -167,26 +167,38 @@ export const EpicycleDrawing: React.FC<EpicycleDrawingProps> = ({ lang }) => {
         endDrawingSession();
       };
 
+      // Mobile touch handling: allow drawing on touch, but don't trap scroll when idle
       p.touchStarted = (event: TouchEvent) => {
-        if (event.touches && event.touches[0]) {
-          setPointerFromTouch(event.touches[0]);
-        } else if (p.touches && p.touches[0]) {
-          setPointerFromTouch(p.touches[0] as Touch);
+        const touch = event.touches?.[0] || (p.touches && p.touches[0]);
+        if (touch) {
+          setPointerFromTouch(touch as Touch);
+          pointerActive = true;
+          startDrawingSession();
+          if (p.canvas) {
+            (p.canvas as HTMLCanvasElement).style.touchAction = "none";
+          }
         }
-        pointerActive = true;
-        startDrawingSession();
+        return false; // prevent scroll during draw
       };
 
       p.touchMoved = (event: TouchEvent) => {
-        if (event.touches && event.touches[0]) {
-          setPointerFromTouch(event.touches[0]);
-        } else if (p.touches && p.touches[0]) {
-          setPointerFromTouch(p.touches[0] as Touch);
+        const touch = event.touches?.[0] || (p.touches && p.touches[0]);
+        if (!touch) return true;
+        if (pointerActive) {
+          setPointerFromTouch(touch as Touch);
+          return false; // keep drawing
         }
+        return true;
       };
 
       p.touchEnded = () => {
         endDrawingSession();
+        pointerActive = false;
+        if (p.canvas) {
+          (p.canvas as HTMLCanvasElement).style.touchAction =
+            "pan-y pinch-zoom";
+        }
+        return false;
       };
 
       p.draw = () => {
