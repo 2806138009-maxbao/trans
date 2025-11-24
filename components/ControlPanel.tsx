@@ -1,38 +1,25 @@
 
 import React from 'react';
-import { Language, TRANSLATIONS, COLORS, WaveType } from '../types';
+import { Language, TRANSLATIONS, COLORS } from '../types';
 import { TiltCard } from './TiltCard';
 
 interface ControlPanelProps {
   n: number;
   setN: (val: number) => void;
-  waveType: WaveType;
-  setWaveType: (t: WaveType) => void;
   lang: Language;
   onHoverLabel: (isHovering: boolean) => void;
 }
 
-export const ControlPanel: React.FC<ControlPanelProps> = ({ n, setN, waveType, setWaveType, lang, onHoverLabel }) => {
+export const ControlPanel: React.FC<ControlPanelProps> = ({ n, setN, lang, onHoverLabel }) => {
   const t = TRANSLATIONS[lang];
   
-  // Calculate progress percentage for the gradient track
-  // Min 1, Max 50
-  const progress = ((n - 1) / (50 - 1)) * 100;
-
-  const btnClass = (isActive: boolean) => 
-    `p-2 rounded-md transition-all duration-300 flex items-center justify-center border ${
-      isActive 
-        ? 'bg-[#5E6AD2]/20 border-[#5E6AD2] text-white shadow-[0_0_10px_rgba(94,106,210,0.4)]' 
-        : 'bg-white/5 border-transparent text-[#8A8F98] hover:bg-white/10 hover:text-white'
-    }`;
-
   return (
     <div 
       id="control-panel-container"
-      className="fixed bottom-10 left-1/2 transform -translate-x-1/2 w-[90%] max-w-[360px] p-0 z-20"
+      className="fixed left-0 right-0 bottom-0 md:bottom-10 md:left-1/2 md:right-auto md:transform md:-translate-x-1/2 w-full md:w-[90%] max-w-none md:max-w-[360px] p-0 z-20 px-4 pb-4 md:px-0 md:pb-0"
     >
       <TiltCard className="p-0 overflow-hidden" glowColor="rgba(255, 255, 255, 0.3)">
-        <div className="p-5 flex flex-col gap-5">
+        <div className="p-5 flex flex-col gap-4">
             <div className="flex justify-between items-center">
               <label 
                 className="text-[#D0D6E0] text-xs font-medium uppercase tracking-wider cursor-help transition-all duration-300 ease-out origin-left inline-block hover:scale-110 hover:text-white hover:drop-shadow-[0_0_8px_rgba(255,255,255,0.8)]"
@@ -56,46 +43,12 @@ export const ControlPanel: React.FC<ControlPanelProps> = ({ n, setN, waveType, s
                   step="1"
                   value={n}
                   onChange={(e) => setN(parseInt(e.target.value))}
-                  className="w-full z-10 cursor-pointer h-[2px] appearance-none"
-                  style={{ 
-                    // Dynamic gradient: Filled part is Purple (#5E6AD2), Empty part is faint white
-                    background: `linear-gradient(to right, #5E6AD2 0%, #5E6AD2 ${progress}%, rgba(255, 255, 255, 0.1) ${progress}%, rgba(255, 255, 255, 0.1) 100%)` 
-                  }}
+                  className="w-full z-10 cursor-pointer"
+                  style={{ opacity: 0.8 }}
                 />
             </div>
             
-            {/* Waveform Selectors */}
-            <div className="grid grid-cols-3 gap-3 border-t border-white/5 pt-4">
-                <button 
-                    className={btnClass(waveType === 'square')}
-                    onClick={() => setWaveType('square')}
-                    title={t.waveSquare}
-                >
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                        <path d="M3 12h4v-8h8v16h8" />
-                    </svg>
-                </button>
-                <button 
-                    className={btnClass(waveType === 'sawtooth')}
-                    onClick={() => setWaveType('sawtooth')}
-                    title={t.waveSawtooth}
-                >
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                        <polyline points="4 20 20 4 20 20" />
-                    </svg>
-                </button>
-                <button 
-                    className={btnClass(waveType === 'triangle')}
-                    onClick={() => setWaveType('triangle')}
-                    title={t.waveTriangle}
-                >
-                     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                        <path d="M4 20 L12 4 L20 20" />
-                    </svg>
-                </button>
-            </div>
-            
-            <div className="pt-2">
+            <div className="border-t border-white/5 pt-3">
                 <p className="text-center text-[10px] text-[#8A8F98] font-medium tracking-wide">
                   {t.dragInstruction}
                 </p>

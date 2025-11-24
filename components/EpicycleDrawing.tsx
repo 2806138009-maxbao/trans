@@ -48,6 +48,52 @@ export const EpicycleDrawing: React.FC<EpicycleDrawingProps> = ({ lang }) => {
 
     const sketch = (p: p5) => {
       let time = 0;
+      const pointer = { x: 0, y: 0 };
+      let pointerActive = false;
+      
+      const setPointerFromTouch = (touch: Touch) => {
+        if (!containerRef.current) return;
+        const rect = containerRef.current.getBoundingClientRect();
+        pointer.x = touch.clientX - rect.left;
+        pointer.y = touch.clientY - rect.top;
+      };
+
+      const setPointerFromMouse = () => {
+        pointer.x = p.mouseX;
+        pointer.y = p.mouseY;
+      };
+
+      const startDrawingSession = () => {
+        if (pointer.y <= 0 || pointer.y >= p.height) { pointerActive = false; return; }
+        if (modeRef.current === 'COMPUTING' || modeRef.current === 'ANIMATING') { pointerActive = false; return; }
+        if (pointer.y > p.height - 100 && pointer.x > p.width/2 - 200 && pointer.x < p.width/2 + 200) { pointerActive = false; return; }
+        if (pointer.y < 80 && pointer.x > p.width - 100) { pointerActive = false; return; }
+
+        modeRef.current = 'DRAWING';
+        pointerActive = true;
+        setUiState('DRAWING');
+        drawingPath.current = [];
+        path.current = [];
+        time = 0;
+      };
+
+      const endDrawingSession = () => {
+        if (modeRef.current === 'DRAWING') {
+          pointerActive = false;
+          modeRef.current = 'COMPUTING';
+          setUiState('COMPUTING');
+          setTimeout(() => {
+            const skip = 1; 
+            const input: Complex[] = [];
+            for(let i=0; i<drawingPath.current.length; i+=skip) {
+                input.push(drawingPath.current[i]);
+            }
+            fourierX.current = dft(input);
+            modeRef.current = 'ANIMATING';
+            setUiState('ANIMATING');
+          }, 50);
+        }
+      };
       
       const dft = (x: Complex[]): FourierCoef[] => {
         const X: FourierCoef[] = [];
@@ -73,6 +119,7 @@ export const EpicycleDrawing: React.FC<EpicycleDrawingProps> = ({ lang }) => {
       p.setup = () => {
         const canvas = p.createCanvas(containerRef.current!.clientWidth, containerRef.current!.clientHeight);
         canvas.parent(containerRef.current!);
+        canvas.elt.style.touchAction = 'none';
         p.frameRate(60);
       };
 
@@ -83,33 +130,42 @@ export const EpicycleDrawing: React.FC<EpicycleDrawingProps> = ({ lang }) => {
       };
 
       p.mousePressed = () => {
-        if (p.mouseY > 0 && p.mouseY < p.height && modeRef.current !== 'COMPUTING' && modeRef.current !== 'ANIMATING') {
-             if (p.mouseY > p.height - 100 && p.mouseX > p.width/2 - 200 && p.mouseX < p.width/2 + 200) return;
-             if (p.mouseY < 80 && p.mouseX > p.width - 100) return;
+        setPointerFromMouse();
+        pointerActive = true;
+        startDrawingSession();
+      };
 
-          modeRef.current = 'DRAWING';
-          setUiState('DRAWING');
-          drawingPath.current = [];
-          path.current = [];
-          time = 0;
-        }
+      p.mouseDragged = () => {
+        setPointerFromMouse();
       };
 
       p.mouseReleased = () => {
-        if (modeRef.current === 'DRAWING') {
-          modeRef.current = 'COMPUTING';
-          setUiState('COMPUTING');
-          setTimeout(() => {
-            const skip = 1; 
-            const input: Complex[] = [];
-            for(let i=0; i<drawingPath.current.length; i+=skip) {
-                input.push(drawingPath.current[i]);
-            }
-            fourierX.current = dft(input);
-            modeRef.current = 'ANIMATING';
-            setUiState('ANIMATING');
-          }, 50);
+        endDrawingSession();
+      };
+
+      p.touchStarted = (event: TouchEvent) => {
+        if (event.touches && event.touches[0]) {
+          setPointerFromTouch(event.touches[0]);
+        } else if (p.touches && p.touches[0]) {
+          setPointerFromTouch(p.touches[0] as Touch);
         }
+        pointerActive = true;
+        startDrawingSession();
+        return false;
+      };
+
+      p.touchMoved = (event: TouchEvent) => {
+        if (event.touches && event.touches[0]) {
+          setPointerFromTouch(event.touches[0]);
+        } else if (p.touches && p.touches[0]) {
+          setPointerFromTouch(p.touches[0] as Touch);
+        }
+        return false;
+      };
+
+      p.touchEnded = () => {
+        endDrawingSession();
+        return false;
       };
 
       p.draw = () => {
@@ -122,10 +178,10 @@ export const EpicycleDrawing: React.FC<EpicycleDrawingProps> = ({ lang }) => {
         const cx = p.width / 2;
         const cy = p.height / 2;
 
-        if (modeRef.current === 'DRAWING') {
-          const mx = p.mouseX - cx;
-          const my = p.mouseY - cy;
-          if (p.mouseX !== 0 && p.mouseY !== 0) {
+        if (modeRef.current === 'DRAWING' && pointerActive) {
+          const mx = pointer.x - cx;
+          const my = pointer.y - cy;
+          if (!Number.isNaN(mx) && !Number.isNaN(my)) {
              drawingPath.current.push({ re: mx, im: my });
           }
           
@@ -154,7 +210,7 @@ export const EpicycleDrawing: React.FC<EpicycleDrawingProps> = ({ lang }) => {
           ctx.shadowColor = 'white'; 
           p.noStroke();
           p.fill(255);
-          p.circle(p.mouseX, p.mouseY, 7);
+          p.circle(pointer.x, pointer.y, 7);
           ctx.shadowBlur = 0;
         }
         else if (modeRef.current === 'ANIMATING' && fourierX.current.length > 0) {
@@ -298,12 +354,12 @@ export const EpicycleDrawing: React.FC<EpicycleDrawingProps> = ({ lang }) => {
   }, []); 
 
   return (
-    <div className="relative w-full h-full bg-transparent overflow-hidden">
-      <div ref={containerRef} className="absolute inset-0 z-0 cursor-crosshair" />
+    <div className="relative w-full h-full min-h-[70vh] bg-transparent overflow-hidden">
+      <div ref={containerRef} className="absolute inset-0 z-0 cursor-crosshair" style={{ touchAction: 'none' }} />
       
       {/* Bottom Command Bar */}
-      <div className="absolute bottom-12 left-1/2 transform -translate-x-1/2 z-20 pointer-events-none">
-        <TiltCard className="pointer-events-auto transition-all duration-300 hover:scale-[1.02]" glowColor="rgba(255,255,255,0.4)">
+      <div className="absolute left-1/2 bottom-4 md:bottom-12 transform -translate-x-1/2 z-20 pointer-events-none w-full px-4 md:w-auto md:px-0">
+        <TiltCard className="pointer-events-auto transition-all duration-300 hover:scale-[1.02] max-w-[520px] mx-auto" glowColor="rgba(255,255,255,0.4)">
              <div className="p-0 overflow-hidden">
                 <div className="p-4 flex flex-col gap-3">
                     <div className="flex items-center justify-center">
@@ -314,7 +370,7 @@ export const EpicycleDrawing: React.FC<EpicycleDrawingProps> = ({ lang }) => {
                                 {uiState === 'COMPUTING' && <div className="w-2 h-2 rounded-full border-2 border-[#5E6AD2] border-t-transparent animate-spin" />}
                                 {uiState === 'ANIMATING' && <div className="w-2 h-2 rounded-full bg-[#00D68F] shadow-[0_0_8px_#00D68F]" />}
                                 
-                                <span className="text-sm font-medium text-[#D0D6E0] tracking-wide font-cjk truncate">
+                                <span className="text-sm md:text-xs font-medium text-[#D0D6E0] tracking-wide font-mono truncate">
                                     {uiState === 'IDLE' ? t.dftInstruction : 
                                     uiState === 'DRAWING' ? 'Recording Input...' : 
                                     uiState === 'COMPUTING' ? t.dftComputing : 

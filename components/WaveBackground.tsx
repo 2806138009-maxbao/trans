@@ -5,9 +5,10 @@ import { COLORS } from '../types';
 
 interface WaveBackgroundProps {
   dimmed?: boolean;
+  reducedMotion?: boolean;
 }
 
-export const WaveBackground: React.FC<WaveBackgroundProps> = ({ dimmed = false }) => {
+export const WaveBackground: React.FC<WaveBackgroundProps> = ({ dimmed = false, reducedMotion = false }) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const p5Ref = useRef<p5 | null>(null);
 
@@ -18,7 +19,7 @@ export const WaveBackground: React.FC<WaveBackgroundProps> = ({ dimmed = false }
       let t = 0;
       
       const particles: any[] = [];
-      const numParticles = 350; // Reduced count for cleaner look
+      const numParticles = reducedMotion ? 120 : 350; // Cut effects on low-motion
       const noiseScale = 0.002; // Smoother flow
 
       p.setup = () => {
@@ -52,8 +53,9 @@ export const WaveBackground: React.FC<WaveBackgroundProps> = ({ dimmed = false }
             const n = p.noise(prt.pos.x * noiseScale, prt.pos.y * noiseScale, t * 0.1);
             const angle = n * p.TWO_PI * 4; // More swirl
             
-            prt.vel.x = p.cos(angle) * 1.5; // Faster movement
-            prt.vel.y = p.sin(angle) * 1.5;
+            const speed = reducedMotion ? 0.6 : 1.5;
+            prt.vel.x = p.cos(angle) * speed;
+            prt.vel.y = p.sin(angle) * speed;
             
             prt.pos.add(prt.vel);
             
@@ -80,7 +82,7 @@ export const WaveBackground: React.FC<WaveBackgroundProps> = ({ dimmed = false }
 
             // Draw Glowy Particle
             // Use shadowBlur sparingly for performance
-            if (i % 2 === 0) {
+            if (!reducedMotion && i % 2 === 0) {
                 ctx.shadowBlur = prt.size * 2;
                 ctx.shadowColor = `rgba(${r},${g},${b},0.5)`;
             } else {
@@ -119,7 +121,7 @@ export const WaveBackground: React.FC<WaveBackgroundProps> = ({ dimmed = false }
             p5Ref.current = null;
         }
     };
-  }, []);
+  }, [reducedMotion]);
 
   return (
     <div 
