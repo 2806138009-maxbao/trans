@@ -1,7 +1,7 @@
-import React, { useEffect, useRef, useState } from 'react';
-import { Language, TRANSLATIONS } from '../../types';
-import { TiltCard } from '../TiltCard';
-import { Eyebrow, GradientText } from './SectionHelpers';
+import React, { useEffect, useRef, useState } from "react";
+import { Language, TRANSLATIONS } from "../../types";
+import { TiltCard } from "../TiltCard";
+import { Eyebrow, GradientText } from "./SectionHelpers";
 
 interface Point {
   x: number;
@@ -13,9 +13,12 @@ interface SignalAsDrawingSectionProps {
   reducedMotion?: boolean;
 }
 
-export const SignalAsDrawingSection: React.FC<SignalAsDrawingSectionProps> = ({ lang, reducedMotion }) => {
+export const SignalAsDrawingSection: React.FC<SignalAsDrawingSectionProps> = ({
+  lang,
+  reducedMotion,
+}) => {
   const t = TRANSLATIONS[lang];
-  const motionClass = reducedMotion ? '' : 'fade-up';
+  const motionClass = reducedMotion ? "" : "fade-up";
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const [path, setPath] = useState<Point[]>([]);
@@ -29,7 +32,10 @@ export const SignalAsDrawingSection: React.FC<SignalAsDrawingSectionProps> = ({ 
     const height = 260;
     for (let i = 0; i <= 200; i++) {
       const x = (i / 200) * width;
-      const y = height / 2 + Math.sin((i / 200) * Math.PI * 3) * 60 + Math.sin((i / 200) * Math.PI * 9) * 12;
+      const y =
+        height / 2 +
+        Math.sin((i / 200) * Math.PI * 3) * 60 +
+        Math.sin((i / 200) * Math.PI * 9) * 12;
       seed.push({ x, y });
     }
     setPath(seed);
@@ -45,20 +51,20 @@ export const SignalAsDrawingSection: React.FC<SignalAsDrawingSectionProps> = ({ 
 
   useEffect(() => {
     resizeCanvas();
-    window.addEventListener('resize', resizeCanvas);
-    return () => window.removeEventListener('resize', resizeCanvas);
+    window.addEventListener("resize", resizeCanvas);
+    return () => window.removeEventListener("resize", resizeCanvas);
   }, []);
 
   const draw = (progress: number) => {
     const canvas = canvasRef.current;
     if (!canvas) return;
-    const ctx = canvas.getContext('2d');
+    const ctx = canvas.getContext("2d");
     if (!ctx) return;
 
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 
     // Background grid
-    ctx.strokeStyle = 'rgba(255,255,255,0.05)';
+    ctx.strokeStyle = "rgba(255,255,255,0.05)";
     ctx.lineWidth = 1;
     for (let x = 0; x < canvas.width; x += 60) {
       ctx.beginPath();
@@ -76,27 +82,30 @@ export const SignalAsDrawingSection: React.FC<SignalAsDrawingSectionProps> = ({ 
     if (path.length < 2) return;
 
     ctx.lineWidth = 2;
-    ctx.strokeStyle = 'rgba(71,156,255,0.7)';
+    ctx.strokeStyle = "rgba(71,156,255,0.7)";
     ctx.beginPath();
     ctx.moveTo(path[0].x, path[0].y);
     for (let i = 1; i < path.length; i++) ctx.lineTo(path[i].x, path[i].y);
     ctx.stroke();
 
-    const idx = Math.min(Math.floor(progress * (path.length - 1)), path.length - 2);
+    const idx = Math.min(
+      Math.floor(progress * (path.length - 1)),
+      path.length - 2
+    );
     const frac = progress * (path.length - 1) - idx;
     const px = path[idx].x + (path[idx + 1].x - path[idx].x) * frac;
     const py = path[idx].y + (path[idx + 1].y - path[idx].y) * frac;
 
     ctx.shadowBlur = 12;
-    ctx.shadowColor = '#5E6AD2';
-    ctx.fillStyle = '#5E6AD2';
+    ctx.shadowColor = "#5E6AD2";
+    ctx.fillStyle = "#5E6AD2";
     ctx.beginPath();
     ctx.arc(px, py, 7, 0, Math.PI * 2);
     ctx.fill();
     ctx.shadowBlur = 0;
 
     // time arrow
-    ctx.strokeStyle = 'rgba(255,255,255,0.3)';
+    ctx.strokeStyle = "rgba(255,255,255,0.3)";
     ctx.setLineDash([6, 4]);
     ctx.beginPath();
     ctx.moveTo(16, canvas.height - 24);
@@ -107,7 +116,7 @@ export const SignalAsDrawingSection: React.FC<SignalAsDrawingSectionProps> = ({ 
 
   useEffect(() => {
     const loop = (ts: number) => {
-      const progress = ((ts % 2000) / 2000);
+      const progress = (ts % 2000) / 2000;
       draw(progress);
       rafRef.current = requestAnimationFrame(loop);
     };
@@ -130,7 +139,10 @@ export const SignalAsDrawingSection: React.FC<SignalAsDrawingSectionProps> = ({ 
     const canvas = canvasRef.current;
     if (!canvas) return;
     const rect = canvas.getBoundingClientRect();
-    setPath((prev) => [...prev, { x: clientX - rect.left, y: clientY - rect.top }]);
+    setPath((prev) => [
+      ...prev,
+      { x: clientX - rect.left, y: clientY - rect.top },
+    ]);
   };
 
   const stopDrawing = () => {
@@ -146,7 +158,9 @@ export const SignalAsDrawingSection: React.FC<SignalAsDrawingSectionProps> = ({ 
             <h2 className="text-4xl md:text-5xl font-bold">
               <GradientText>{t.signalDrawingTitle}</GradientText>
             </h2>
-            <p className="text-lg text-[#D0D6E0] leading-relaxed">{t.signalDrawingLead}</p>
+            <p className="text-lg text-[#D0D6E0] leading-relaxed">
+              {t.signalDrawingLead}
+            </p>
             <p className="text-sm text-[#8A8F98]">{t.signalDrawingNote}</p>
           </div>
         </TiltCard>
@@ -159,15 +173,18 @@ export const SignalAsDrawingSection: React.FC<SignalAsDrawingSectionProps> = ({ 
             <canvas
               ref={canvasRef}
               className="w-full h-[260px] rounded-xl bg-[#0B0C0E] cursor-crosshair"
+              style={{ touchAction: "none" }}
               onMouseDown={(e) => handlePointerDown(e.clientX, e.clientY)}
               onMouseMove={(e) => handlePointerMove(e.clientX, e.clientY)}
               onMouseUp={stopDrawing}
               onMouseLeave={stopDrawing}
               onTouchStart={(e) => {
+                e.preventDefault();
                 const touch = e.touches[0];
                 if (touch) handlePointerDown(touch.clientX, touch.clientY);
               }}
               onTouchMove={(e) => {
+                e.preventDefault();
                 const touch = e.touches[0];
                 if (touch) handlePointerMove(touch.clientX, touch.clientY);
               }}
@@ -175,7 +192,7 @@ export const SignalAsDrawingSection: React.FC<SignalAsDrawingSectionProps> = ({ 
             />
             <div className="flex justify-between items-center mt-4 text-xs text-[#8A8F98] uppercase tracking-[0.2em]">
               <span>{t.lblTime}</span>
-              <span>{t.lblSignal || 'Signal'}</span>
+              <span>{t.lblSignal || "Signal"}</span>
             </div>
           </div>
         </TiltCard>

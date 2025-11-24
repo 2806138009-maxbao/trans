@@ -27,15 +27,20 @@ export const WaveBackground: React.FC<WaveBackgroundProps> = ({
       p.setup = () => {
         const canvas = p.createCanvas(p.windowWidth, p.windowHeight);
         canvas.parent(containerRef.current!);
-        // Ensure canvas doesn't capture touch events
+        // Ensure canvas doesn't capture touch events - allow scroll through
         canvas.style("pointer-events", "none");
-        canvas.style("touch-action", "none");
+        canvas.style("touch-action", "auto");
         p.background("#0B0C0E");
 
         for (let i = 0; i < numParticles; i++) {
           particles.push(createParticle(p));
         }
       };
+
+      // Explicitly allow touch events to pass through for scrolling
+      p.touchStarted = () => true;
+      p.touchMoved = () => true;
+      p.touchEnded = () => true;
 
       p.windowResized = () => {
         p.resizeCanvas(p.windowWidth, p.windowHeight);

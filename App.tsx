@@ -70,10 +70,7 @@ const App: React.FC = () => {
   const isInteractiveMode = buildInView || epicycleInView;
 
   return (
-    <div
-      className="relative w-full min-h-screen text-white overflow-x-hidden bg-[#0B0C0E]"
-      style={{ touchAction: "pan-y" }}
-    >
+    <div className="relative w-full min-h-screen text-white bg-[#0B0C0E]">
       <CustomCursor />
       <WaveBackground
         dimmed={isInteractiveMode}
