@@ -175,7 +175,6 @@ export const EpicycleDrawing: React.FC<EpicycleDrawingProps> = ({ lang }) => {
         }
         pointerActive = true;
         startDrawingSession();
-        return false;
       };
 
       p.touchMoved = (event: TouchEvent) => {
@@ -184,12 +183,10 @@ export const EpicycleDrawing: React.FC<EpicycleDrawingProps> = ({ lang }) => {
         } else if (p.touches && p.touches[0]) {
           setPointerFromTouch(p.touches[0] as Touch);
         }
-        return false;
       };
 
       p.touchEnded = () => {
         endDrawingSession();
-        return false;
       };
 
       p.draw = () => {
