@@ -5,89 +5,115 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Luminous Harmonics | Fourier Series</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
     <style>
       :root {
-        --apple-blue: #0A84FF;
+        --apple-blue: #0a84ff;
         --apple-bg: #000000;
       }
+      html,
       body {
         margin: 0;
         padding: 0;
         background-color: var(--apple-bg);
-        font-family: -apple-system, BlinkMacSystemFont, "Inter", "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+        font-family: -apple-system, BlinkMacSystemFont, "Inter", "Segoe UI",
+          Roboto, Helvetica, Arial, sans-serif;
         overflow-x: hidden;
         overflow-y: auto;
         -webkit-font-smoothing: antialiased;
         -moz-osx-font-smoothing: grayscale;
+        /* Mobile scroll fixes */
+        -webkit-overflow-scrolling: touch;
+        touch-action: pan-y;
+        overscroll-behavior: none;
+      }
+
+      #root {
+        min-height: 100vh;
+        overflow-x: hidden;
       }
 
       /* Simple fade/slide animation for sections */
       @keyframes fadeUp {
-        0% { opacity: 0; transform: translateY(24px); }
-        100% { opacity: 1; transform: translateY(0); }
+        0% {
+          opacity: 0;
+          transform: translateY(24px);
+        }
+        100% {
+          opacity: 1;
+          transform: translateY(0);
+        }
       }
       .fade-up {
         opacity: 0;
         animation: fadeUp 0.8s ease forwards;
       }
-      .fade-up.delay-1 { animation-delay: 0.12s; }
-      .fade-up.delay-2 { animation-delay: 0.24s; }
-      .fade-up.delay-3 { animation-delay: 0.36s; }
-      
+      .fade-up.delay-1 {
+        animation-delay: 0.12s;
+      }
+      .fade-up.delay-2 {
+        animation-delay: 0.24s;
+      }
+      .fade-up.delay-3 {
+        animation-delay: 0.36s;
+      }
+
       /* Minimalist Scrollbar */
       ::-webkit-scrollbar {
         width: 0px; /* Hidden by default for cleaner look, or very thin */
         background: transparent;
       }
-      
+
       /* iOS Style Range Input */
-      input[type=range] {
+      input[type="range"] {
         -webkit-appearance: none;
         width: 100%;
         background: transparent;
       }
-      input[type=range]::-webkit-slider-thumb {
+      input[type="range"]::-webkit-slider-thumb {
         -webkit-appearance: none;
         height: 24px;
         width: 24px;
         border-radius: 50%;
-        background: #FFFFFF;
-        box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+        background: #ffffff;
+        box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
         cursor: pointer;
         margin-top: -10px;
         transition: transform 0.2s cubic-bezier(0.25, 0.1, 0.25, 1);
       }
-      input[type=range]::-webkit-slider-thumb:hover {
+      input[type="range"]::-webkit-slider-thumb:hover {
         transform: scale(1.1);
       }
-      input[type=range]::-webkit-slider-runnable-track {
+      input[type="range"]::-webkit-slider-runnable-track {
         width: 100%;
         height: 4px;
         cursor: pointer;
-        background: rgba(255,255,255,0.2);
+        background: rgba(255, 255, 255, 0.2);
         border-radius: 2px;
       }
-      input[type=range]:focus {
+      input[type="range"]:focus {
         outline: none;
       }
     </style>
-  <script type="importmap">
-{
-  "imports": {
-    "react/": "https://aistudiocdn.com/react@^19.2.0/",
-    "react": "https://aistudiocdn.com/react@^19.2.0",
-    "react-dom/": "https://aistudiocdn.com/react-dom@^19.2.0/",
-    "p5": "https://esm.sh/p5@1.9.0"
-  }
-}
-</script>
-<link rel="stylesheet" href="/index.css">
-</head>
+    <script type="importmap">
+      {
+        "imports": {
+          "react/": "https://aistudiocdn.com/react@^19.2.0/",
+          "react": "https://aistudiocdn.com/react@^19.2.0",
+          "react-dom/": "https://aistudiocdn.com/react-dom@^19.2.0/",
+          "p5": "https://esm.sh/p5@1.9.0"
+        }
+      }
+    </script>
+    <link rel="stylesheet" href="/index.css" />
+  </head>
   <body>
     <div id="root"></div>
-  <script type="module" src="/index.tsx"></script>
-</body>
+    <script type="module" src="/index.tsx"></script>
+  </body>
 </html>
