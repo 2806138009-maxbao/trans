@@ -1,7 +1,8 @@
 import React, { useEffect, useRef, useState } from "react";
 import { Language, TRANSLATIONS } from "../../types";
 import { TiltCard } from "../TiltCard";
-import { Eyebrow, GradientText } from "./SectionHelpers";
+import { GlowDot, GradientText, HoverText } from "./SectionHelpers";
+import { AnimateOnScroll } from "../AnimateOnScroll";
 
 interface Point {
   x: number;
@@ -11,11 +12,15 @@ interface Point {
 interface SignalAsDrawingSectionProps {
   lang: Language;
   reducedMotion?: boolean;
+  id?: string;
+  nextId?: string;
 }
 
 export const SignalAsDrawingSection: React.FC<SignalAsDrawingSectionProps> = ({
   lang,
   reducedMotion,
+  id = "signal-drawing",
+  nextId,
 }) => {
   const t = TRANSLATIONS[lang];
   const motionClass = reducedMotion ? "" : "fade-up";
@@ -149,23 +154,62 @@ export const SignalAsDrawingSection: React.FC<SignalAsDrawingSectionProps> = ({
     drawingRef.current = false;
   };
 
-  return (
-    <section className={`w-full relative px-6 ${motionClass}`}>
-      <div className="max-w-6xl mx-auto grid grid-cols-1 lg:grid-cols-[1.1fr,0.9fr] gap-10 items-center">
-        <TiltCard glowColor="rgba(94,106,210,0.5)">
-          <div className="p-8 space-y-4 text-left">
-            <Eyebrow label={t.signalDrawingTitle} />
-            <h2 className="text-4xl md:text-5xl font-bold">
-              <GradientText>{t.signalDrawingTitle}</GradientText>
-            </h2>
-            <p className="text-lg text-[#D0D6E0] leading-relaxed">
-              {t.signalDrawingLead}
-            </p>
-            <p className="text-sm text-[#8A8F98]">{t.signalDrawingNote}</p>
-          </div>
-        </TiltCard>
+  if (reducedMotion) {
+    return (
+      <section id="signal-drawing" className="w-full relative px-6">
+        <div className="max-w-6xl mx-auto grid grid-cols-1 lg:grid-cols-[1.1fr,0.9fr] gap-10 items-center">
+          <TiltCard glowColor="rgba(94,106,210,0.5)">
+            <div className="p-8 space-y-4 text-left">
+              <div className="flex items-center gap-3">
+                <GlowDot color="#5E6AD2" />
+                <h2 className="text-4xl md:text-5xl font-bold"><GradientText>{t.signalDrawingTitle}</GradientText></h2>
+              </div>
+              <p className="text-lg text-[#D0D6E0] leading-relaxed">{t.signalDrawingLead}</p>
+              <p className="text-sm text-[#8A8F98]">{t.signalDrawingNote}</p>
+            </div>
+          </TiltCard>
+          <TiltCard glowColor="rgba(71,156,255,0.5)">
+            <div ref={containerRef} className="p-4 md:p-6 rounded-2xl bg-[#0D0F12]/40 border border-white/5 overflow-hidden">
+              <canvas ref={canvasRef} className="w-full h-[260px] rounded-xl bg-[#0B0C0E] cursor-crosshair" style={{ touchAction: "none" }}
+                onMouseDown={(e) => handlePointerDown(e.clientX, e.clientY)} onMouseMove={(e) => handlePointerMove(e.clientX, e.clientY)}
+                onMouseUp={stopDrawing} onMouseLeave={stopDrawing}
+                onTouchStart={(e) => { e.preventDefault(); const touch = e.touches[0]; if (touch) handlePointerDown(touch.clientX, touch.clientY); }}
+                onTouchMove={(e) => { e.preventDefault(); const touch = e.touches[0]; if (touch) handlePointerMove(touch.clientX, touch.clientY); }}
+                onTouchEnd={stopDrawing} />
+              <div className="flex justify-between items-center mt-4 text-xs text-[#8A8F98] uppercase tracking-[0.2em]">
+                <span>{t.lblTime}</span><span>{t.lblSignal || "Signal"}</span>
+              </div>
+            </div>
+          </TiltCard>
+        </div>
+      </section>
+    );
+  }
 
-        <TiltCard glowColor="rgba(71,156,255,0.5)">
+  return (
+    <section id="signal-drawing" className="w-full relative px-6">
+      <div className="max-w-6xl mx-auto grid grid-cols-1 lg:grid-cols-[1.1fr,0.9fr] gap-10 items-center">
+        <AnimateOnScroll animation="slide-left">
+          <TiltCard glowColor="rgba(94,106,210,0.5)">
+            <div className="p-8 space-y-4 text-left">
+              <div className="flex items-center gap-3">
+                <GlowDot color="#5E6AD2" />
+                <h2 className="text-4xl md:text-5xl font-bold">
+                  <GradientText>{t.signalDrawingTitle}</GradientText>
+                </h2>
+              </div>
+              <HoverText as="p" className="text-lg text-[#D0D6E0] leading-relaxed">
+                {t.signalDrawingLead}
+              </HoverText>
+              <HoverText as="p" className="text-sm text-[#8A8F98]">
+                {t.signalDrawingNote}
+              </HoverText>
+            </div>
+          </TiltCard>
+        </AnimateOnScroll>
+
+        <AnimateOnScroll animation="slide-right" delay={150}>
+          <TiltCard glowColor="rgba(71,156,255,0.5)">
           <div
             ref={containerRef}
             className="p-4 md:p-6 rounded-2xl bg-[#0D0F12]/40 border border-white/5 overflow-hidden"
@@ -191,11 +235,12 @@ export const SignalAsDrawingSection: React.FC<SignalAsDrawingSectionProps> = ({
               onTouchEnd={stopDrawing}
             />
             <div className="flex justify-between items-center mt-4 text-xs text-[#8A8F98] uppercase tracking-[0.2em]">
-              <span>{t.lblTime}</span>
-              <span>{t.lblSignal || "Signal"}</span>
+              <span className="transition-all duration-300 hover:text-[#479CFF] hover:scale-105 cursor-default">{t.lblTime}</span>
+              <span className="transition-all duration-300 hover:text-[#5E6AD2] hover:scale-105 cursor-default">{t.lblSignal || "Signal"}</span>
             </div>
           </div>
         </TiltCard>
+        </AnimateOnScroll>
       </div>
     </section>
   );

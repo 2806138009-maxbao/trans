@@ -1,7 +1,50 @@
-import React, { useEffect, useRef, useState } from "react";
+﻿import React, { useEffect, useRef, useState, useCallback } from "react";
 import p5 from "p5";
 import { COLORS, Language, TRANSLATIONS } from "../types";
-import { TiltCard } from "./TiltCard";
+import { Play, RotateCcw } from "lucide-react";
+
+// 加载动画组件
+const EpicycleLoader: React.FC<{ lang: Language }> = ({ lang }) => (
+  <div className="absolute inset-0 flex flex-col items-center justify-center bg-transparent z-20">
+    {/* 本轮动画 - 模拟 Epicycle */}
+    <div className="relative w-32 h-32 mb-6">
+      {/* 外圈 */}
+      <div className="absolute inset-0 rounded-full border border-white/10" />
+      {/* 旋转的轨道 1 */}
+      <div className="absolute inset-2 animate-spin" style={{ animationDuration: '4s' }}>
+        <div className="absolute inset-0 rounded-full border border-dashed border-[#5E6AD2]/30" />
+        <div className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-1/2">
+          {/* 小圆 1 */}
+          <div className="relative w-8 h-8">
+            <div className="absolute inset-0 rounded-full border border-[#5E6AD2]/50" />
+            <div className="absolute inset-0 animate-spin" style={{ animationDuration: '1.5s', animationDirection: 'reverse' }}>
+              <div className="absolute top-0 left-1/2 -translate-x-1/2 w-2 h-2 rounded-full bg-[#479CFF] shadow-[0_0_12px_#479CFF]" />
+            </div>
+          </div>
+        </div>
+      </div>
+      {/* 旋转的轨道 2 */}
+      <div className="absolute inset-6 animate-spin" style={{ animationDuration: '2.5s', animationDirection: 'reverse' }}>
+        <div className="absolute inset-0 rounded-full border border-[#479CFF]/20" />
+        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-2 h-2 -translate-y-1/2 rounded-full bg-[#5E6AD2] shadow-[0_0_10px_#5E6AD2]" />
+      </div>
+      {/* 中心点 */}
+      <div className="absolute inset-0 flex items-center justify-center">
+        <div className="w-2 h-2 rounded-full bg-white/50" />
+      </div>
+    </div>
+    
+    {/* 加载文字 */}
+    <div className="text-[#8A8F98] text-sm animate-pulse">
+      {lang === 'zh' ? '准备绘图引擎...' : 'Preparing drawing engine...'}
+    </div>
+    
+    {/* 进度条 */}
+    <div className="w-48 h-1 mt-4 rounded-full bg-white/10 overflow-hidden">
+      <div className="h-full bg-gradient-to-r from-[#479CFF] to-[#5E6AD2] rounded-full animate-loading-bar" />
+    </div>
+  </div>
+);
 
 interface EpicycleDrawingProps {
   lang: Language;
@@ -22,31 +65,111 @@ interface FourierCoef {
 
 type DrawMode = "IDLE" | "DRAWING" | "COMPUTING" | "ANIMATING";
 
+// 纯函数 DFT 计算 - 提取到组件外部
+const computeDFT = (x: Complex[]): FourierCoef[] => {
+  const X: FourierCoef[] = [];
+  const N = x.length;
+  for (let k = 0; k < N; k++) {
+    let re = 0;
+    let im = 0;
+    for (let n = 0; n < N; n++) {
+      const phi = (2 * Math.PI * k * n) / N;
+      re += x[n].re * Math.cos(phi) + x[n].im * Math.sin(phi);
+      im -= x[n].re * Math.sin(phi) - x[n].im * Math.cos(phi);
+    }
+    re = re / N;
+    im = im / N;
+    const freq = k;
+    const amp = Math.sqrt(re * re + im * im);
+    const phase = Math.atan2(im, re);
+    X.push({ re, im, freq, amp, phase });
+  }
+  return X.sort((a, b) => b.amp - a.amp);
+};
+
+const generateHeartPath = (): Complex[] => {
+  const examplePath: Complex[] = [];
+  const points = 200;
+  for (let i = 0; i < points; i++) {
+    const angle = (i / points) * Math.PI * 2;
+    const r = 10;
+    const x = 16 * Math.pow(Math.sin(angle), 3);
+    const y = -(13 * Math.cos(angle) - 5 * Math.cos(2 * angle) - 2 * Math.cos(3 * angle) - Math.cos(4 * angle));
+    examplePath.push({ re: x * r, im: y * r });
+  }
+  return examplePath;
+};
+
+// 鐢熸垚绀轰緥璺緞 - 鏄熷舰
+const generateStarPath = (): Complex[] => {
+  const examplePath: Complex[] = [];
+  const points = 200;
+  const outerRadius = 120;
+  const innerRadius = 50;
+  const spikes = 5;
+  
+  for (let i = 0; i < points; i++) {
+    const angle = (i / points) * Math.PI * 2 - Math.PI / 2;
+    const spikeAngle = (i / points) * spikes * Math.PI * 2;
+    const radius = innerRadius + (outerRadius - innerRadius) * (0.5 + 0.5 * Math.cos(spikeAngle));
+    examplePath.push({ 
+      re: radius * Math.cos(angle), 
+      im: radius * Math.sin(angle) 
+    });
+  }
+  return examplePath;
+};
+
 export const EpicycleDrawing: React.FC<EpicycleDrawingProps> = ({ lang }) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const p5Instance = useRef<p5 | null>(null);
   const [uiState, setUiState] = useState<DrawMode>("IDLE");
+  const [showExampleCTA, setShowExampleCTA] = useState(true);
+  const [isLoading, setIsLoading] = useState(true);
 
   const modeRef = useRef<DrawMode>("IDLE");
   const drawingPath = useRef<Complex[]>([]);
   const fourierX = useRef<FourierCoef[]>([]);
   const path = useRef<Complex[]>([]);
+  const timeRef = useRef(0);
 
   const t = TRANSLATIONS[lang];
 
-  const resetDrawing = () => {
+  const runDFT = useCallback((points: Complex[]) => {
+    if (!points.length) return;
+    timeRef.current = 0;
+    modeRef.current = "COMPUTING";
+    setUiState("COMPUTING");
+    setShowExampleCTA(false);
+
+    requestAnimationFrame(() => {
+      fourierX.current = computeDFT(points);
+      path.current = [];
+      modeRef.current = "ANIMATING";
+      setUiState("ANIMATING");
+    });
+  }, []);
+
+  const resetDrawing = useCallback(() => {
     drawingPath.current = [];
     fourierX.current = [];
     path.current = [];
     modeRef.current = "IDLE";
+    timeRef.current = 0;
     setUiState("IDLE");
-  };
+    setShowExampleCTA(true);
+  }, []);
+
+  const loadExample = useCallback((type: 'heart' | 'star' = 'heart') => {
+    const examplePath = type === 'heart' ? generateHeartPath() : generateStarPath();
+    drawingPath.current = examplePath;
+    runDFT(examplePath);
+  }, [runDFT]);
 
   useEffect(() => {
     if (!containerRef.current) return;
 
     const sketch = (p: p5) => {
-      let time = 0;
       const pointer = { x: 0, y: 0 };
       let pointerActive = false;
 
@@ -74,6 +197,8 @@ export const EpicycleDrawing: React.FC<EpicycleDrawingProps> = ({ lang }) => {
           pointerActive = false;
           return;
         }
+        // Guard: ignore clicks on bottom control bar (approx. bottom 100px)
+        // Note: coordinates are relative to the canvas
         if (
           pointer.y > p.height - 100 &&
           pointer.x > p.width / 2 - 200 &&
@@ -92,47 +217,22 @@ export const EpicycleDrawing: React.FC<EpicycleDrawingProps> = ({ lang }) => {
         setUiState("DRAWING");
         drawingPath.current = [];
         path.current = [];
-        time = 0;
+        timeRef.current = 0;
       };
 
       const endDrawingSession = () => {
         if (modeRef.current === "DRAWING") {
           pointerActive = false;
-          modeRef.current = "COMPUTING";
-          setUiState("COMPUTING");
-          setTimeout(() => {
-            const skip = 1;
-            const input: Complex[] = [];
-            for (let i = 0; i < drawingPath.current.length; i += skip) {
-              input.push(drawingPath.current[i]);
-            }
-            fourierX.current = dft(input);
-            modeRef.current = "ANIMATING";
-            setUiState("ANIMATING");
-          }, 50);
+          const skip = 1;
+          const input: Complex[] = [];
+          for (let i = 0; i < drawingPath.current.length; i += skip) {
+            input.push(drawingPath.current[i]);
+          }
+          runDFT(input);
         }
       };
 
-      const dft = (x: Complex[]): FourierCoef[] => {
-        const X: FourierCoef[] = [];
-        const N = x.length;
-        for (let k = 0; k < N; k++) {
-          let re = 0;
-          let im = 0;
-          for (let n = 0; n < N; n++) {
-            const phi = (2 * Math.PI * k * n) / N;
-            re += x[n].re * Math.cos(phi) + x[n].im * Math.sin(phi);
-            im -= x[n].re * Math.sin(phi) - x[n].im * Math.cos(phi);
-          }
-          re = re / N;
-          im = im / N;
-          const freq = k;
-          const amp = p.sqrt(re * re + im * im);
-          const phase = p.atan2(im, re);
-          X.push({ re, im, freq, amp, phase });
-        }
-        return X.sort((a, b) => b.amp - a.amp);
-      };
+      // 浣跨敤鎻愬彇鍑虹殑绾嚱鏁?computeDFT (鍦ㄧ粍浠跺閮ㄥ畾涔?
 
       p.setup = () => {
         const canvas = p.createCanvas(
@@ -142,6 +242,9 @@ export const EpicycleDrawing: React.FC<EpicycleDrawingProps> = ({ lang }) => {
         canvas.parent(containerRef.current!);
         canvas.elt.style.touchAction = "pan-y pinch-zoom";
         p.frameRate(60);
+        
+        // Canvas 准备好后隐藏加载动画
+        setTimeout(() => setIsLoading(false), 600);
       };
 
       p.windowResized = () => {
@@ -154,9 +257,15 @@ export const EpicycleDrawing: React.FC<EpicycleDrawingProps> = ({ lang }) => {
       };
 
       p.mousePressed = () => {
-        setPointerFromMouse();
-        pointerActive = true;
-        startDrawingSession();
+        // 濡傛灉鐐瑰嚮鐨勬槸鎸夐挳鍖哄煙锛屼笉瑕佸紑濮嬬敾鍥?        // 瀹為檯涓婏紝鎸夐挳鍦?canvas 涔嬩笂锛岀偣鍑绘寜閽笉浼氳Е鍙?canvas 鐨?mousePressed
+        // 浣嗘槸涓轰簡淇濋櫓锛屾垜浠鏌?event target
+        // p5 鐨?mousePressed 浼氭崟鑾锋墍鏈夌偣鍑伙紝闄ら潪 preventDefault
+        
+        // 绠€鍗曠殑閫昏緫锛氬鏋?mode 鏄?IDLE锛屼笖鐐瑰嚮浜嗘湁鏁堝尯鍩燂紝鍒欏紑濮?        setPointerFromMouse();
+        // 妫€鏌ユ槸鍚﹀湪鏈夋晥缁樺浘鍖哄煙
+        if (p.mouseY > 0 && p.mouseY < p.height - 100) { // 閬垮紑搴曢儴鏍?             pointerActive = true;
+             startDrawingSession();
+        }
       };
 
       p.mouseDragged = () => {
@@ -172,10 +281,15 @@ export const EpicycleDrawing: React.FC<EpicycleDrawingProps> = ({ lang }) => {
         const touch = event.touches?.[0] || (p.touches && p.touches[0]);
         if (touch) {
           setPointerFromTouch(touch as Touch);
-          pointerActive = true;
-          startDrawingSession();
-          if (p.canvas) {
-            (p.canvas as HTMLCanvasElement).style.touchAction = "none";
+          // Check area
+          const rect = containerRef.current!.getBoundingClientRect();
+          const y = touch.clientY - rect.top;
+          if (y > 0 && y < rect.height - 100) {
+              pointerActive = true;
+              startDrawingSession();
+              if (p.canvas) {
+                (p.canvas as HTMLCanvasElement).style.touchAction = "none";
+              }
           }
         }
         return false; // prevent scroll during draw
@@ -210,6 +324,7 @@ export const EpicycleDrawing: React.FC<EpicycleDrawingProps> = ({ lang }) => {
 
         const cx = p.width / 2;
         const cy = p.height / 2;
+        let time = timeRef.current;
 
         if (modeRef.current === "DRAWING" && pointerActive) {
           const mx = pointer.x - cx;
@@ -274,15 +389,23 @@ export const EpicycleDrawing: React.FC<EpicycleDrawingProps> = ({ lang }) => {
                 prevx,
                 prevy,
                 0,
-                prevx,
-                prevy,
+                0,
+                0,
                 radius
               );
-              gradient.addColorStop(0.7, "rgba(94, 106, 210, 0)"); // Center transparent
-              gradient.addColorStop(0.9, "rgba(71, 156, 255, 0.15)"); // Body faint blue
-              gradient.addColorStop(1, "rgba(255, 255, 255, 0.4)"); // Inner Rim White
+              // Note: Gradient center fixed at 0,0 relative to circle seems wrong in canvas API context?
+              // Actually createRadialGradient(x0, y0, r0, x1, y1, r1)
+              // Here we want it centered at (prevx, prevy)
+              const grad = ctx.createRadialGradient(
+                  prevx, prevy, 0,
+                  prevx, prevy, radius
+              );
+              
+              grad.addColorStop(0.7, "rgba(94, 106, 210, 0)"); // Center transparent
+              grad.addColorStop(0.9, "rgba(71, 156, 255, 0.15)"); // Body faint blue
+              grad.addColorStop(1, "rgba(255, 255, 255, 0.4)"); // Inner Rim White
 
-              ctx.fillStyle = gradient;
+              ctx.fillStyle = grad;
               p.noStroke();
               p.circle(prevx, prevy, radius * 2);
 
@@ -297,7 +420,6 @@ export const EpicycleDrawing: React.FC<EpicycleDrawingProps> = ({ lang }) => {
               p.strokeWeight(radius < 5 ? 1 : 1.5);
               p.noFill();
               p.circle(prevx, prevy, radius * 2);
-
               ctx.shadowBlur = 0;
 
               // C. Vector Line
@@ -375,6 +497,7 @@ export const EpicycleDrawing: React.FC<EpicycleDrawingProps> = ({ lang }) => {
             time = 0;
             path.current = [];
           }
+          timeRef.current = time;
         }
       };
     };
@@ -396,63 +519,84 @@ export const EpicycleDrawing: React.FC<EpicycleDrawingProps> = ({ lang }) => {
 
   return (
     <div className="relative w-full h-full min-h-[70vh] bg-transparent overflow-hidden">
+      {/* 加载动画 */}
+      {isLoading && <EpicycleLoader lang={lang} />}
+      
       <div
         ref={containerRef}
-        className="absolute inset-0 z-0 cursor-crosshair"
+        className={`absolute inset-0 z-0 cursor-crosshair transition-opacity duration-500 ${
+          isLoading ? 'opacity-0' : 'opacity-100'
+        }`}
         style={{ touchAction: "pan-y pinch-zoom" }}
       />
 
-      {/* Bottom Command Bar */}
-      <div className="absolute left-1/2 bottom-4 md:bottom-12 transform -translate-x-1/2 z-20 pointer-events-none w-full px-4 md:w-auto md:px-0">
-        <TiltCard
-          className="pointer-events-auto transition-all duration-300 hover:scale-[1.02] max-w-[520px] mx-auto"
-          glowColor="rgba(255,255,255,0.4)"
-        >
-          <div className="p-0 overflow-hidden">
-            <div className="p-4 flex flex-col gap-3">
-              <div className="flex items-center justify-center">
-                <div className="px-4 py-2 bg-black/20 rounded-md border border-white/5 min-w-[180px] flex items-center justify-center gap-3">
-                  <div className="flex items-center gap-3">
-                    {uiState === "IDLE" && (
-                      <div className="w-2 h-2 rounded-full bg-[#8A8F98]" />
-                    )}
-                    {uiState === "DRAWING" && (
-                      <div className="w-2 h-2 rounded-full bg-[#479CFF] animate-pulse shadow-[0_0_8px_#479CFF]" />
-                    )}
-                    {uiState === "COMPUTING" && (
-                      <div className="w-2 h-2 rounded-full border-2 border-[#5E6AD2] border-t-transparent animate-spin" />
-                    )}
-                    {uiState === "ANIMATING" && (
-                      <div className="w-2 h-2 rounded-full bg-[#00D68F] shadow-[0_0_8px_#00D68F]" />
-                    )}
-
-                    <span className="text-sm md:text-xs font-medium text-[#D0D6E0] tracking-wide font-mono truncate">
-                      {uiState === "IDLE"
-                        ? t.dftInstruction
-                        : uiState === "DRAWING"
-                        ? "Recording Input..."
-                        : uiState === "COMPUTING"
-                        ? t.dftComputing
-                        : "Replaying Signal"}
-                    </span>
-                  </div>
-                </div>
+      {/* IDLE State Overlay - Central CTA */}
+      {uiState === "IDLE" && !isLoading && (
+        <div className="absolute inset-0 z-10 flex items-center justify-center pointer-events-none">
+          <div className="pointer-events-auto flex flex-col items-center gap-4 text-center">
+            <button
+              onClick={() => loadExample('heart')}
+              className="group relative px-6 py-5 rounded-2xl bg-[#16171A]/90 backdrop-blur-xl border border-white/10 shadow-2xl shadow-black/50 flex flex-col items-center gap-3 transition-all duration-300 hover:-translate-y-0.5"
+            >
+              <div className="w-14 h-14 rounded-full bg-[#5E6AD2]/20 border border-[#5E6AD2]/30 flex items-center justify-center">
+                <Play size={22} className="text-[#5E6AD2]" />
               </div>
-
-              {(uiState === "ANIMATING" || uiState === "DRAWING") && (
-                <div className="border-t border-white/5 pt-3 text-center">
-                  <button
-                    onClick={resetDrawing}
-                    className="px-4 py-1.5 rounded bg-white/5 hover:bg-white/10 text-[11px] font-medium text-white transition-colors border border-white/5 hover:border-white/20 whitespace-nowrap"
-                  >
-                    {t.dftReset}
-                  </button>
-                </div>
-              )}
-            </div>
+              <div className="flex flex-col gap-1">
+                <span className="text-lg font-semibold text-white">
+                  {lang === 'zh' ? '点击播放示例' : 'Play the example'}
+                </span>
+                <span className="text-sm text-[#8A8F98]">
+                  {lang === 'zh' ? '或直接在画布中央落笔绘制' : 'Or start drawing anywhere on the canvas'}
+                </span>
+              </div>
+              <span className="absolute inset-0 rounded-2xl ring-1 ring-white/10 opacity-0 group-hover:opacity-100 transition-opacity duration-300" aria-hidden="true" />
+            </button>
           </div>
-        </TiltCard>
-      </div>
+        </div>
+      )}
+      {/* Status Bar - for DRAWING, COMPUTING, ANIMATING states */}
+      {uiState !== "IDLE" && (
+        <div className="absolute left-1/2 bottom-4 md:bottom-8 transform -translate-x-1/2 z-20 pointer-events-none">
+          <div className="pointer-events-auto flex items-center gap-4 px-5 py-3 rounded-full bg-[#16171A]/90 backdrop-blur-xl border border-white/10 shadow-lg">
+            {/* Status Indicator */}
+            <div className="flex items-center gap-3">
+              {uiState === "DRAWING" && (
+                <div className="w-2 h-2 rounded-full bg-[#479CFF] animate-pulse shadow-[0_0_8px_#479CFF]" />
+              )}
+              {uiState === "COMPUTING" && (
+                <div className="w-3 h-3 rounded-full border-2 border-[#5E6AD2] border-t-transparent animate-spin" />
+              )}
+              {uiState === "ANIMATING" && (
+                <div className="w-2 h-2 rounded-full bg-[#00D68F] shadow-[0_0_8px_#00D68F]" />
+              )}
+
+              <span className="text-sm font-medium text-[#D0D6E0] tracking-wide">
+                {uiState === "DRAWING"
+                  ? (lang === 'zh' ? '正在录制...' : 'Recording...')
+                  : uiState === "COMPUTING"
+                  ? t.dftComputing
+                  : (lang === 'zh' ? '正在重现信号' : 'Replaying Signal')}
+              </span>
+            </div>
+
+            {/* Reset Button */}
+            {(uiState === "ANIMATING" || uiState === "DRAWING") && (
+              <>
+                <div className="w-px h-5 bg-white/10" />
+                <button
+                  onClick={resetDrawing}
+                  className="flex items-center gap-2 px-3 py-1.5 rounded-full 
+                    bg-white/10 hover:bg-white/15 text-white text-xs font-medium
+                    transition-all duration-200 border border-white/10 hover:border-white/20"
+                >
+                  <RotateCcw size={12} />
+                  {t.dftReset}
+                </button>
+              </>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 };
@@ -506,3 +650,4 @@ const drawAmbientGlow = (p: p5, cx: number, cy: number) => {
   p.noStroke();
   p.circle(cx, cy, 800);
 };
+

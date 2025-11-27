@@ -1,7 +1,8 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { Language, TRANSLATIONS } from '../../types';
 import { TiltCard } from '../TiltCard';
-import { Eyebrow, GradientText } from './SectionHelpers';
+import { GlowDot, GradientText, HoverText } from './SectionHelpers';
+import { AnimateOnScroll } from '../AnimateOnScroll';
 
 interface SineAsLegoSectionProps {
   lang: Language;
@@ -92,54 +93,70 @@ export const SineAsLegoSection: React.FC<SineAsLegoSectionProps> = ({ lang, redu
     draw();
   }, [amp, freq]);
 
-  return (
-    <section className={`w-full relative px-6 ${motionClass}`}>
-      <div className="max-w-6xl mx-auto grid grid-cols-1 lg:grid-cols-[0.9fr,1.1fr] gap-10 items-center">
-        <TiltCard glowColor="rgba(255,255,255,0.3)">
-          <div className="p-8 space-y-4 text-left">
-            <Eyebrow label={t.sineLegoTitle} color="#ffffff" />
-            <h2 className="text-4xl md:text-5xl font-bold">
-              <GradientText>{t.sineLegoTitle}</GradientText>
-            </h2>
-            <p className="text-lg text-[#D0D6E0] leading-relaxed">{t.sineLegoLead}</p>
-          </div>
-        </TiltCard>
-
-        <TiltCard glowColor="rgba(94,106,210,0.5)">
-          <div className="p-6 space-y-6">
-            <canvas ref={canvasRef} className="w-full rounded-xl bg-[#0B0C0E]" />
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div className="flex flex-col gap-2">
-                <label className="text-xs uppercase tracking-widest text-[#8A8F98]">
-                  {t.sineLegoAmp}
-                </label>
-                <input
-                  type="range"
-                  min={0.2}
-                  max={2}
-                  step={0.1}
-                  value={amp}
-                  onChange={(e) => setAmp(parseFloat(e.target.value))}
-                  className="w-full"
-                />
-              </div>
-              <div className="flex flex-col gap-2">
-                <label className="text-xs uppercase tracking-widest text-[#8A8F98]">
-                  {t.sineLegoFreq}
-                </label>
-                <input
-                  type="range"
-                  min={0.5}
-                  max={8}
-                  step={0.5}
-                  value={freq}
-                  onChange={(e) => setFreq(parseFloat(e.target.value))}
-                  className="w-full"
-                />
+  if (reducedMotion) {
+    return (
+      <section id="sine-lego" className="w-full relative px-6">
+        <div className="max-w-6xl mx-auto grid grid-cols-1 lg:grid-cols-[0.9fr,1.1fr] gap-10 items-center">
+          <TiltCard glowColor="rgba(255,255,255,0.3)">
+            <div className="p-8 space-y-4 text-left">
+              <div className="flex items-center gap-3"><GlowDot color="#ffffff" /><h2 className="text-4xl md:text-5xl font-bold"><GradientText>{t.sineLegoTitle}</GradientText></h2></div>
+              <p className="text-lg text-[#D0D6E0] leading-relaxed">{t.sineLegoLead}</p>
+            </div>
+          </TiltCard>
+          <TiltCard glowColor="rgba(94,106,210,0.5)">
+            <div className="p-6 space-y-6">
+              <canvas ref={canvasRef} className="w-full rounded-xl bg-[#0B0C0E]" />
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="flex flex-col gap-2"><label className="text-xs uppercase tracking-widest text-[#8A8F98]">{t.sineLegoAmp}</label><input type="range" min={0.2} max={2} step={0.1} value={amp} onChange={(e) => setAmp(parseFloat(e.target.value))} className="w-full" /></div>
+                <div className="flex flex-col gap-2"><label className="text-xs uppercase tracking-widest text-[#8A8F98]">{t.sineLegoFreq}</label><input type="range" min={0.5} max={8} step={0.5} value={freq} onChange={(e) => setFreq(parseFloat(e.target.value))} className="w-full" /></div>
               </div>
             </div>
-          </div>
-        </TiltCard>
+          </TiltCard>
+        </div>
+      </section>
+    );
+  }
+
+  return (
+    <section id="sine-lego" className="w-full relative px-6">
+      <div className="max-w-6xl mx-auto grid grid-cols-1 lg:grid-cols-[0.9fr,1.1fr] gap-10 items-center">
+        <AnimateOnScroll animation="slide-left">
+          <TiltCard glowColor="rgba(255,255,255,0.3)">
+            <div className="p-8 space-y-4 text-left">
+              <div className="flex items-center gap-3">
+                <GlowDot color="#ffffff" />
+                <h2 className="text-4xl md:text-5xl font-bold">
+                  <GradientText>{t.sineLegoTitle}</GradientText>
+                </h2>
+              </div>
+              <HoverText as="p" className="text-lg text-[#D0D6E0] leading-relaxed">
+                {t.sineLegoLead}
+              </HoverText>
+            </div>
+          </TiltCard>
+        </AnimateOnScroll>
+
+        <AnimateOnScroll animation="slide-right" delay={150}>
+          <TiltCard glowColor="rgba(94,106,210,0.5)">
+            <div className="p-6 space-y-6">
+              <canvas ref={canvasRef} className="w-full rounded-xl bg-[#0B0C0E]" />
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="flex flex-col gap-2">
+                  <label className="text-xs uppercase tracking-widest text-[#8A8F98] transition-all duration-300 hover:text-white hover:scale-105 cursor-default inline-block origin-left">
+                    {t.sineLegoAmp}
+                  </label>
+                  <input type="range" min={0.2} max={2} step={0.1} value={amp} onChange={(e) => setAmp(parseFloat(e.target.value))} className="w-full" />
+                </div>
+                <div className="flex flex-col gap-2">
+                  <label className="text-xs uppercase tracking-widest text-[#8A8F98] transition-all duration-300 hover:text-white hover:scale-105 cursor-default inline-block origin-left">
+                    {t.sineLegoFreq}
+                  </label>
+                  <input type="range" min={0.5} max={8} step={0.5} value={freq} onChange={(e) => setFreq(parseFloat(e.target.value))} className="w-full" />
+                </div>
+              </div>
+            </div>
+          </TiltCard>
+        </AnimateOnScroll>
       </div>
     </section>
   );

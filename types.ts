@@ -1,5 +1,7 @@
+export type WaveformType = "square" | "triangle" | "sawtooth";
+
 export interface FourierConfig {
-  waveType: "square" | "sawtooth";
+  waveType: WaveformType;
   numCircles: number;
   speed: number;
 }

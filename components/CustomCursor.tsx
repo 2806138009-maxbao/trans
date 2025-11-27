@@ -24,7 +24,11 @@ export const CustomCursor: React.FC = () => {
     const onMouseUp = () => setIsClicking(false);
 
     const onMouseOver = (e: MouseEvent) => {
-      const target = e.target as HTMLElement;
+      const target = e.target;
+      if (!(target instanceof HTMLElement)) {
+        setIsHovering(false);
+        return;
+      }
       // Check for interactive elements based on tags and styles
       const isInteractive = 
         target.tagName === 'BUTTON' ||

@@ -1,8 +1,10 @@
-import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect, useRef, useState, useCallback } from "react";
 import { WaveBackground } from "./components/WaveBackground";
 import { CustomCursor } from "./components/CustomCursor";
-import { Language, TooltipContent, TRANSLATIONS } from "./types";
+import { SectionNavigation } from "./components/SectionNavigation";
+import { Language, TooltipContent, TRANSLATIONS, WaveformType } from "./types";
 import { BuildWavesSection } from "./components/sections/BuildWavesSection";
+import { IntroNarrativeSection } from "./components/sections/IntroNarrativeSection";
 import { SignalAsDrawingSection } from "./components/sections/SignalAsDrawingSection";
 import { SineAsLegoSection } from "./components/sections/SineAsLegoSection";
 import { SeriesFormulaSection } from "./components/sections/SeriesFormulaSection";
@@ -10,37 +12,42 @@ import { TimeFrequencySection } from "./components/sections/TimeFrequencySection
 import { EpicycleSection } from "./components/sections/EpicycleSection";
 import { EngineeringAppsSection } from "./components/sections/EngineeringAppsSection";
 import { RecapAndCTASection } from "./components/sections/RecapAndCTASection";
-import { TeacherGuideTeaserSection } from "./components/sections/TeacherGuideTeaserSection";
 import { HeroSection } from "./components/sections/HeroSection";
-import { Eyebrow } from "./components/sections/SectionHelpers";
-import { ContextSection } from "./components/sections/ContextSection";
 import { NextSection } from "./components/sections/NextSection";
 import { usePrefersReducedMotion } from "./hooks/usePrefersReducedMotion";
 
 const App: React.FC = () => {
   const [n, setN] = useState<number>(3);
   const [lang, setLang] = useState<Language>("zh");
-  const [externalTooltip, setExternalTooltip] = useState<TooltipContent | null>(
-    null
-  );
+  const [waveformType, setWaveformType] = useState<WaveformType>("square");
+  const [externalTooltip, setExternalTooltip] = useState<TooltipContent | null>(null);
   const [buildInView, setBuildInView] = useState(false);
   const [epicycleInView, setEpicycleInView] = useState(false);
+  const [userMotionPref, setUserMotionPref] = useState<boolean | null>(null); // null = follow system
 
   const buildRef = useRef<HTMLDivElement>(null);
   const epicycleRef = useRef<HTMLDivElement>(null);
   const engineeringRef = useRef<HTMLDivElement>(null);
 
   const t = TRANSLATIONS[lang];
-  const prefersReducedMotion = usePrefersReducedMotion();
+  const systemPrefersReducedMotion = usePrefersReducedMotion();
+  
+  // 用户可以覆盖系统偏好
+  const reducedMotion = userMotionPref !== null ? userMotionPref : systemPrefersReducedMotion;
+
+  const toggleMotion = useCallback(() => {
+    setUserMotionPref(prev => {
+      if (prev === null) return true; // first toggle: disable motion
+      return !prev;
+    });
+  }, []);
 
   useEffect(() => {
     const observer = new IntersectionObserver(
       (entries) => {
         entries.forEach((entry) => {
-          if (entry.target === buildRef.current)
-            setBuildInView(entry.isIntersecting);
-          if (entry.target === epicycleRef.current)
-            setEpicycleInView(entry.isIntersecting);
+          if (entry.target === buildRef.current) setBuildInView(entry.isIntersecting);
+          if (entry.target === epicycleRef.current) setEpicycleInView(entry.isIntersecting);
         });
       },
       { threshold: 0.25 }
@@ -67,14 +74,23 @@ const App: React.FC = () => {
     ref.current?.scrollIntoView({ behavior: "smooth", block: "start" });
   };
 
+  // 交互模式：在实验区时减弱背景
   const isInteractiveMode = buildInView || epicycleInView;
+  const showCustomCursor = !reducedMotion;
 
   return (
     <div className="relative w-full min-h-screen text-white bg-[#0B0C0E]">
-      <CustomCursor />
+      {showCustomCursor && <CustomCursor />}
       <WaveBackground
         dimmed={isInteractiveMode}
-        reducedMotion={prefersReducedMotion}
+        reducedMotion={reducedMotion}
+      />
+      
+      {/* Section Navigation with Motion Toggle */}
+      <SectionNavigation 
+        lang={lang} 
+        reducedMotion={reducedMotion}
+        onToggleMotion={toggleMotion}
       />
 
       {/* Global Grain/Noise Texture */}
@@ -89,8 +105,7 @@ const App: React.FC = () => {
       <div
         className="fixed inset-0 pointer-events-none z-[3]"
         style={{
-          background:
-            "radial-gradient(circle at center, transparent 0%, rgba(5, 6, 8, 0.5) 100%)",
+          background: "radial-gradient(circle at center, transparent 0%, rgba(5, 6, 8, 0.5) 100%)",
         }}
       />
 
@@ -104,79 +119,75 @@ const App: React.FC = () => {
         </button>
       </div>
 
-      {/* Header */}
-      <header
-        className="fixed top-0 left-0 w-full py-5 px-8 z-40 pointer-events-none"
-        style={{
-          background:
-            "linear-gradient(to bottom, rgba(11,12,14,0.9) 0%, rgba(11,12,14,0) 100%)",
-        }}
-      >
-        <div className="max-w-7xl mx-auto flex justify-between items-center">
-          <div className="pointer-events-auto flex items-center gap-3">
-            <div className="w-4 h-4 rounded-full bg-[#5E6AD2] shadow-[0_0_12px_rgba(94,106,210,0.6)]" />
-            <h1 className="text-sm font-sans font-medium tracking-tight text-white/90">
-              {t.titleMain}{" "}
-              <span className="text-[#5E6AD2] opacity-80">
-                / {t.titleSuffix}
-              </span>
-            </h1>
-          </div>
-          <div className="pointer-events-auto hidden md:block">
-            <Eyebrow label={t.heroBadge} />
-          </div>
-        </div>
-      </header>
-
-      <main className="relative z-10 flex flex-col gap-28 md:gap-32 pb-32 pt-24">
+      <main className="relative z-10 flex flex-col pb-32">
+        {/* Hero */}
         <HeroSection
           lang={lang}
           onStart={() => scrollToRef(buildRef)}
           onWhy={() => scrollToRef(engineeringRef)}
-          reducedMotion={prefersReducedMotion}
+          reducedMotion={reducedMotion}
         />
-        <ContextSection lang={lang} reducedMotion={prefersReducedMotion} />
-        <SignalAsDrawingSection
-          lang={lang}
-          reducedMotion={prefersReducedMotion}
-        />
-        <SineAsLegoSection lang={lang} reducedMotion={prefersReducedMotion} />
-        <BuildWavesSection
-          ref={buildRef}
-          lang={lang}
-          n={n}
-          setN={setN}
-          externalTooltip={externalTooltip}
-          onHoverLabel={handleLabelHover}
-          showControls={buildInView}
-          reducedMotion={prefersReducedMotion}
-        />
-        <SeriesFormulaSection
-          lang={lang}
-          n={n}
-          reducedMotion={prefersReducedMotion}
-        />
-        <TimeFrequencySection
-          lang={lang}
-          n={n}
-          reducedMotion={prefersReducedMotion}
-        />
-        <EpicycleSection
-          ref={epicycleRef}
-          lang={lang}
-          reducedMotion={prefersReducedMotion}
-        />
-        <EngineeringAppsSection
-          ref={engineeringRef}
-          lang={lang}
-          reducedMotion={prefersReducedMotion}
-        />
-        <RecapAndCTASection lang={lang} reducedMotion={prefersReducedMotion} />
-        <TeacherGuideTeaserSection
-          lang={lang}
-          reducedMotion={prefersReducedMotion}
-        />
-        <NextSection lang={lang} reducedMotion={prefersReducedMotion} />
+
+        {/* 第一章：直觉 - 长文式叙事区 */}
+        <IntroNarrativeSection id="intuition" lang={lang} reducedMotion={reducedMotion} />
+
+        {/* 第二章：实验 */}
+        <div id="experiment" className="space-y-28 md:space-y-32 mt-16">
+          {/* 信号绘制 */}
+          <SignalAsDrawingSection
+            lang={lang}
+            reducedMotion={reducedMotion}
+            id="signal-drawing"
+            nextId="sine-lego"
+          />
+          
+          {/* 正弦积木 */}
+          <SineAsLegoSection lang={lang} reducedMotion={reducedMotion} />
+          
+          {/* 核心实验区 */}
+          <BuildWavesSection
+            ref={buildRef}
+            lang={lang}
+            n={n}
+            setN={setN}
+            waveformType={waveformType}
+            setWaveformType={setWaveformType}
+            externalTooltip={externalTooltip}
+            onHoverLabel={handleLabelHover}
+            showControls={buildInView}
+            reducedMotion={reducedMotion}
+          />
+          
+          {/* 公式解释 */}
+          <SeriesFormulaSection
+            lang={lang}
+            n={n}
+            waveformType={waveformType}
+            reducedMotion={reducedMotion}
+          />
+          
+          {/* 时频对照 - 现在接收波形类型 */}
+          <TimeFrequencySection
+            lang={lang}
+            n={n}
+            waveformType={waveformType}
+            reducedMotion={reducedMotion}
+          />
+          
+          {/* 本轮绘制 */}
+          <EpicycleSection ref={epicycleRef} lang={lang} reducedMotion={reducedMotion} />
+        </div>
+
+        {/* 第三章：应用与总结 */}
+        <div className="space-y-28 md:space-y-32 mt-28">
+          <EngineeringAppsSection id="application" ref={engineeringRef} lang={lang} reducedMotion={reducedMotion} />
+          
+          {/* 合并后的总结与 CTA */}
+          <RecapAndCTASection id="recap" lang={lang} reducedMotion={reducedMotion} />
+          
+          {/* 系列预告 */}
+          <NextSection lang={lang} reducedMotion={reducedMotion} />
+        </div>
       </main>
     </div>
   );
