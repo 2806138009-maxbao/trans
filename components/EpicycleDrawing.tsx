@@ -276,43 +276,54 @@ export const EpicycleDrawing: React.FC<EpicycleDrawingProps> = ({ lang }) => {
         endDrawingSession();
       };
 
-      // Mobile touch handling: allow drawing on touch, but don't trap scroll when idle
+      // Mobile touch handling: allow scrolling by default, only capture when drawing
       p.touchStarted = (event: TouchEvent) => {
         const touch = event.touches?.[0] || (p.touches && p.touches[0]);
-        if (touch) {
-          setPointerFromTouch(touch as Touch);
-          // Check area
-          const rect = containerRef.current!.getBoundingClientRect();
-          const y = touch.clientY - rect.top;
-          if (y > 0 && y < rect.height - 100) {
-              pointerActive = true;
-              startDrawingSession();
-              if (p.canvas) {
-                (p.canvas as HTMLCanvasElement).style.touchAction = "none";
-              }
-          }
+        if (!touch) return true; // 允许滚动
+        
+        // 如果正在动画或计算中，不开始新绘制，允许滚动
+        if (modeRef.current === "COMPUTING" || modeRef.current === "ANIMATING") {
+          return true; // 允许滚动
         }
-        return false; // prevent scroll during draw
+        
+        setPointerFromTouch(touch as Touch);
+        const rect = containerRef.current!.getBoundingClientRect();
+        const y = touch.clientY - rect.top;
+        const x = touch.clientX - rect.left;
+        
+        // 只有在有效绘图区域内才开始绘制
+        // 排除底部控制栏区域
+        if (y > 50 && y < rect.height - 120 && x > 20 && x < rect.width - 20) {
+          pointerActive = true;
+          startDrawingSession();
+          if (p.canvas) {
+            (p.canvas as HTMLCanvasElement).style.touchAction = "none";
+          }
+          return false; // 阻止滚动，开始绘图
+        }
+        
+        return true; // 其他区域允许滚动
       };
 
       p.touchMoved = (event: TouchEvent) => {
         const touch = event.touches?.[0] || (p.touches && p.touches[0]);
         if (!touch) return true;
-        if (pointerActive) {
+        if (pointerActive && modeRef.current === "DRAWING") {
           setPointerFromTouch(touch as Touch);
-          return false; // keep drawing
+          return false; // 绘图中，阻止滚动
         }
-        return true;
+        return true; // 允许滚动
       };
 
       p.touchEnded = () => {
-        endDrawingSession();
+        if (pointerActive) {
+          endDrawingSession();
+        }
         pointerActive = false;
         if (p.canvas) {
-          (p.canvas as HTMLCanvasElement).style.touchAction =
-            "pan-y pinch-zoom";
+          (p.canvas as HTMLCanvasElement).style.touchAction = "pan-y pinch-zoom";
         }
-        return false;
+        return true; // 允许后续滚动
       };
 
       p.draw = () => {

@@ -1,4 +1,4 @@
-import React, { useRef, useState, MouseEvent } from 'react';
+import React, { useRef, useState, useEffect, MouseEvent } from 'react';
 
 interface HudTiltContainerProps {
   children: React.ReactNode;
@@ -9,6 +9,7 @@ interface HudTiltContainerProps {
 /**
  * HUD 容器组件，带有 TiltCard 相同的 3D 倾斜和光晕效果
  * 用于包裹画布等大型交互区域
+ * 移动端自动禁用 3D 效果以保证滚动流畅
  */
 export const HudTiltContainer: React.FC<HudTiltContainerProps> = ({
   children,
@@ -18,9 +19,22 @@ export const HudTiltContainer: React.FC<HudTiltContainerProps> = ({
   const containerRef = useRef<HTMLDivElement>(null);
   const [rotation, setRotation] = useState({ x: 0, y: 0 });
   const [spotlight, setSpotlight] = useState({ x: 50, y: 50, opacity: 0 });
+  const [isMobile, setIsMobile] = useState(false);
+
+  // 检测移动端
+  useEffect(() => {
+    const checkMobile = () => {
+      const isNarrowScreen = window.innerWidth < 768;
+      const isMobileUA = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+      setIsMobile(isNarrowScreen || isMobileUA);
+    };
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
 
   const handleMouseMove = (e: MouseEvent<HTMLDivElement>) => {
-    if (!containerRef.current) return;
+    if (isMobile || !containerRef.current) return;
 
     const rect = containerRef.current.getBoundingClientRect();
     const x = e.clientX - rect.left;
@@ -42,9 +56,38 @@ export const HudTiltContainer: React.FC<HudTiltContainerProps> = ({
   };
 
   const handleMouseLeave = () => {
+    if (isMobile) return;
     setRotation({ x: 0, y: 0 });
     setSpotlight((prev) => ({ ...prev, opacity: 0 }));
   };
+
+  // 移动端简化版本 - 无 3D 效果，保证滚动流畅
+  if (isMobile) {
+    return (
+      <div
+        ref={containerRef}
+        className={`relative rounded-3xl group ${className}`}
+      >
+        {/* Content Container (HUD Glass) - 简化版 */}
+        <div
+          className="relative z-10 w-full h-full rounded-3xl overflow-hidden"
+          style={{
+            background: 'radial-gradient(circle at 50% 50%, rgba(30, 30, 40, 0.15) 0%, rgba(0, 0, 0, 0) 80%)',
+            border: '1px solid rgba(255, 255, 255, 0.08)',
+            boxShadow: '0 0 0 1px rgba(255, 255, 255, 0.02), 0 20px 60px rgba(0, 0, 0, 0.4)',
+          }}
+        >
+          {children}
+          <div className="absolute inset-0 opacity-[0.02] pointer-events-none bg-[url('https://grainy-gradients.vercel.app/noise.svg')]" />
+          {/* Corner accents */}
+          <div className="absolute top-3 left-3 w-6 h-6 border-t border-l border-white/10 rounded-tl-lg pointer-events-none" />
+          <div className="absolute top-3 right-3 w-6 h-6 border-t border-r border-white/10 rounded-tr-lg pointer-events-none" />
+          <div className="absolute bottom-3 left-3 w-6 h-6 border-b border-l border-white/10 rounded-bl-lg pointer-events-none" />
+          <div className="absolute bottom-3 right-3 w-6 h-6 border-b border-r border-white/10 rounded-br-lg pointer-events-none" />
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div
