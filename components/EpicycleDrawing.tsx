@@ -533,10 +533,10 @@ export const EpicycleDrawing: React.FC<EpicycleDrawingProps> = ({ lang }) => {
       {/* IDLE State Overlay - Central CTA */}
       {uiState === "IDLE" && !isLoading && (
         <div className="absolute inset-0 z-10 flex items-center justify-center pointer-events-none">
-          <div className="pointer-events-auto flex flex-col items-center gap-4 text-center">
+          <div className="pointer-events-auto flex flex-col items-center gap-4 text-center px-4">
             <button
               onClick={() => loadExample('heart')}
-              className="group relative px-6 py-5 rounded-2xl bg-[#16171A]/90 backdrop-blur-xl border border-white/10 shadow-2xl shadow-black/50 flex flex-col items-center gap-3 transition-all duration-300 hover:-translate-y-0.5"
+              className="group relative px-6 py-5 rounded-2xl bg-[#16171A]/90 backdrop-blur-xl border border-white/10 shadow-2xl shadow-black/50 flex flex-col items-center gap-3 transition-all duration-300 hover:-translate-y-0.5 active:scale-[0.98]"
             >
               <div className="w-14 h-14 rounded-full bg-[#5E6AD2]/20 border border-[#5E6AD2]/30 flex items-center justify-center">
                 <Play size={22} className="text-[#5E6AD2]" />
@@ -546,11 +546,20 @@ export const EpicycleDrawing: React.FC<EpicycleDrawingProps> = ({ lang }) => {
                   {lang === 'zh' ? '点击播放示例' : 'Play the example'}
                 </span>
                 <span className="text-sm text-[#8A8F98]">
-                  {lang === 'zh' ? '或直接在画布中央落笔绘制' : 'Or start drawing anywhere on the canvas'}
+                  {lang === 'zh' ? '或用手指在画布上绘制图形' : 'Or draw with your finger on the canvas'}
                 </span>
               </div>
               <span className="absolute inset-0 rounded-2xl ring-1 ring-white/10 opacity-0 group-hover:opacity-100 transition-opacity duration-300" aria-hidden="true" />
             </button>
+            
+            {/* 移动端手势提示 */}
+            <div className="md:hidden flex items-center gap-2 text-[#8A8F98] text-xs mt-2">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M12 22c5.523 0 10-4.477 10-10S17.523 2 12 2 2 6.477 2 12s4.477 10 10 10z"/>
+                <path d="M12 8v4l2 2"/>
+              </svg>
+              <span>{lang === 'zh' ? '用手指画一个形状，然后松开' : 'Draw a shape with your finger, then release'}</span>
+            </div>
           </div>
         </div>
       )}

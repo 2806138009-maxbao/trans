@@ -40,3 +40,4 @@ export const usePrefersReducedMotion = (): boolean => {
   return prefersReduced;
 };
 
+

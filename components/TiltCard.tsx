@@ -1,4 +1,4 @@
-import React, { useRef, useState, MouseEvent, useEffect } from 'react';
+import React, { useRef, useState, MouseEvent, TouchEvent, useEffect } from 'react';
 
 interface TiltCardProps {
   children: React.ReactNode;
@@ -17,6 +17,7 @@ export const TiltCard: React.FC<TiltCardProps> = ({
   const [rotation, setRotation] = useState({ x: 0, y: 0 });
   const [spotlight, setSpotlight] = useState({ x: 50, y: 50, opacity: 0 });
   const [isMobile, setIsMobile] = useState(false);
+  const [isTouched, setIsTouched] = useState(false); // 移动端触摸状态
 
   // 检测移动端 - 只在窄屏幕时禁用，不再检测触屏（因为很多桌面也有触屏）
   useEffect(() => {
@@ -33,6 +34,29 @@ export const TiltCard: React.FC<TiltCardProps> = ({
   }, []);
 
   const shouldDisable = disabled || isMobile;
+
+  // 移动端触摸反馈
+  const handleTouchStart = (e: TouchEvent<HTMLDivElement>) => {
+    if (!isMobile) return;
+    setIsTouched(true);
+    
+    // 可选：根据触摸位置显示高光
+    if (cardRef.current) {
+      const rect = cardRef.current.getBoundingClientRect();
+      const touch = e.touches[0];
+      const x = touch.clientX - rect.left;
+      const y = touch.clientY - rect.top;
+      const perX = (x / rect.width) * 100;
+      const perY = (y / rect.height) * 100;
+      setSpotlight({ x: perX, y: perY, opacity: 0.6 });
+    }
+  };
+
+  const handleTouchEnd = () => {
+    if (!isMobile) return;
+    setIsTouched(false);
+    setSpotlight(prev => ({ ...prev, opacity: 0 }));
+  };
 
   const handleMouseMove = (e: MouseEvent<HTMLDivElement>) => {
     if (shouldDisable || !cardRef.current) return;
@@ -59,10 +83,26 @@ export const TiltCard: React.FC<TiltCardProps> = ({
     setSpotlight(prev => ({ ...prev, opacity: 0 }));
   };
 
-  // 移动端简化版本
+  // 移动端简化版本 - 带触摸反馈
   if (shouldDisable) {
     return (
-      <div className={`relative rounded-2xl group ${className}`}>
+      <div 
+        ref={cardRef}
+        onTouchStart={handleTouchStart}
+        onTouchEnd={handleTouchEnd}
+        onTouchCancel={handleTouchEnd}
+        className={`relative rounded-2xl group transition-all duration-200 ${className} ${
+          isTouched ? 'scale-[0.98] brightness-110' : ''
+        }`}
+      >
+        {/* 触摸时的高光效果 */}
+        <div 
+          className="absolute inset-0 rounded-2xl z-20 pointer-events-none transition-opacity duration-200"
+          style={{
+            background: `radial-gradient(300px circle at ${spotlight.x}% ${spotlight.y}%, rgba(255,255,255,0.1), transparent 50%)`,
+            opacity: spotlight.opacity,
+          }}
+        />
         <div className="relative z-10 w-full h-full rounded-2xl bg-[#121316]/80 backdrop-blur-xl border border-white/5 shadow-2xl overflow-hidden">
           {children}
           <div className="absolute inset-0 opacity-[0.03] pointer-events-none bg-[url('https://grainy-gradients.vercel.app/noise.svg')]" />

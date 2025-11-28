@@ -158,3 +158,4 @@ export const HarmonicsSlider: React.FC<HarmonicsSliderProps> = ({
   );
 };
 
+

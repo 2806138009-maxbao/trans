@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useRef, useState, MouseEvent } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState, MouseEvent, TouchEvent } from "react";
 import { createPortal } from "react-dom";
 import {
   PlayCircle,
@@ -11,6 +11,24 @@ import {
   ArrowLeft,
 } from "lucide-react";
 import { Language } from "../types";
+
+// 检测是否为移动端
+const useIsMobile = () => {
+  const [isMobile, setIsMobile] = useState(false);
+  
+  useEffect(() => {
+    const checkMobile = () => {
+      const isNarrowScreen = window.innerWidth < 768;
+      const isMobileUA = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+      setIsMobile(isNarrowScreen || isMobileUA);
+    };
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
+  
+  return isMobile;
+};
 
 interface SectionNavigationProps {
   lang: Language;
@@ -221,6 +239,7 @@ export const SectionNavigation: React.FC<SectionNavigationProps> = ({
   const navRef = useRef<HTMLDivElement>(null);
   const buttonRefs = useRef<Map<string, HTMLButtonElement>>(new Map());
   const lastScrollY = useRef(0);
+  const isMobile = useIsMobile();
 
   const anchorOrder = useMemo(
     () =>
@@ -352,12 +371,13 @@ export const SectionNavigation: React.FC<SectionNavigationProps> = ({
   const navLabel = lang === "zh" ? "章节导航" : "Section Navigation";
   const brandText = lang === "zh" ? "Luminous Lab" : "Luminous Lab";
 
-  // 3D Tilt effect state
+  // 3D Tilt effect state (仅桌面端)
   const [rotation, setRotation] = useState({ x: 0, y: 0 });
   const [spotlight, setSpotlight] = useState({ x: 50, y: 50, opacity: 0 });
+  const [isTouched, setIsTouched] = useState(false); // 移动端触摸反馈
 
   const handleNavMouseMove = (e: MouseEvent<HTMLDivElement>) => {
-    if (!navRef.current) return;
+    if (isMobile || !navRef.current) return;
 
     const rect = navRef.current.getBoundingClientRect();
     const x = e.clientX - rect.left;
@@ -377,8 +397,22 @@ export const SectionNavigation: React.FC<SectionNavigationProps> = ({
   };
 
   const handleNavMouseLeave = () => {
+    if (isMobile) return;
     setRotation({ x: 0, y: 0 });
     setSpotlight(prev => ({ ...prev, opacity: 0 }));
+  };
+
+  // 移动端触摸反馈
+  const handleTouchStart = () => {
+    if (isMobile) {
+      setIsTouched(true);
+    }
+  };
+
+  const handleTouchEnd = () => {
+    if (isMobile) {
+      setTimeout(() => setIsTouched(false), 150);
+    }
   };
 
   return (
@@ -386,10 +420,16 @@ export const SectionNavigation: React.FC<SectionNavigationProps> = ({
       ref={navRef}
       onMouseMove={handleNavMouseMove}
       onMouseLeave={handleNavMouseLeave}
+      onTouchStart={handleTouchStart}
+      onTouchEnd={handleTouchEnd}
       className={`fixed bottom-6 left-1/2 -translate-x-1/2 z-50 pointer-events-auto transition-all duration-300 group ${
         isVisible ? "translate-y-0 opacity-100" : "translate-y-20 opacity-0"
-      }`}
-      style={{
+      } ${isTouched ? "scale-[0.98]" : ""}`}
+      style={isMobile ? {
+        // 移动端：简化样式，无3D变换
+        transform: `translateX(-50%) ${isVisible ? "translateY(0)" : "translateY(5rem)"}`,
+      } : {
+        // 桌面端：完整3D效果
         transform: `translateX(-50%) perspective(800px) rotateX(${rotation.x}deg) rotateY(${rotation.y}deg) ${
           isVisible ? "translateY(0)" : "translateY(5rem)"
         }`,
