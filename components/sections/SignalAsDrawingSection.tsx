@@ -16,6 +16,22 @@ interface SignalAsDrawingSectionProps {
   nextId?: string;
 }
 
+// 检测移动端
+const useIsMobile = () => {
+  const [isMobile, setIsMobile] = useState(false);
+  useEffect(() => {
+    const checkMobile = () => {
+      const isNarrowScreen = window.innerWidth < 768;
+      const isMobileUA = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+      setIsMobile(isNarrowScreen || isMobileUA);
+    };
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
+  return isMobile;
+};
+
 export const SignalAsDrawingSection: React.FC<SignalAsDrawingSectionProps> = ({
   lang,
   reducedMotion,
@@ -28,6 +44,7 @@ export const SignalAsDrawingSection: React.FC<SignalAsDrawingSectionProps> = ({
   const containerRef = useRef<HTMLDivElement>(null);
   const [path, setPath] = useState<Point[]>([]);
   const drawingRef = useRef(false);
+  const isMobile = useIsMobile();
   const rafRef = useRef<number>();
 
   // Seed with a friendly default path
@@ -170,11 +187,11 @@ export const SignalAsDrawingSection: React.FC<SignalAsDrawingSectionProps> = ({
           </TiltCard>
           <TiltCard glowColor="rgba(71,156,255,0.5)">
             <div ref={containerRef} className="p-4 md:p-6 rounded-2xl bg-[#0D0F12]/40 border border-white/5 overflow-hidden">
-              <canvas ref={canvasRef} className="w-full h-[260px] rounded-xl bg-[#0B0C0E] cursor-crosshair" style={{ touchAction: "none" }}
+              <canvas ref={canvasRef} className="w-full h-[260px] rounded-xl bg-[#0B0C0E] cursor-crosshair" style={{ touchAction: isMobile ? "pan-y" : "none" }}
                 onMouseDown={(e) => handlePointerDown(e.clientX, e.clientY)} onMouseMove={(e) => handlePointerMove(e.clientX, e.clientY)}
                 onMouseUp={stopDrawing} onMouseLeave={stopDrawing}
-                onTouchStart={(e) => { e.preventDefault(); const touch = e.touches[0]; if (touch) handlePointerDown(touch.clientX, touch.clientY); }}
-                onTouchMove={(e) => { e.preventDefault(); const touch = e.touches[0]; if (touch) handlePointerMove(touch.clientX, touch.clientY); }}
+                onTouchStart={(e) => { if (!isMobile) e.preventDefault(); const touch = e.touches[0]; if (touch) handlePointerDown(touch.clientX, touch.clientY); }}
+                onTouchMove={(e) => { if (!isMobile && drawingRef.current) e.preventDefault(); const touch = e.touches[0]; if (touch) handlePointerMove(touch.clientX, touch.clientY); }}
                 onTouchEnd={stopDrawing} />
               <div className="flex justify-between items-center mt-4 text-xs text-[#8A8F98] uppercase tracking-[0.2em]">
                 <span>{t.lblTime}</span><span>{t.lblSignal || "Signal"}</span>
@@ -217,18 +234,20 @@ export const SignalAsDrawingSection: React.FC<SignalAsDrawingSectionProps> = ({
             <canvas
               ref={canvasRef}
               className="w-full h-[260px] rounded-xl bg-[#0B0C0E] cursor-crosshair"
-              style={{ touchAction: "none" }}
+              style={{ touchAction: isMobile ? "pan-y" : "none" }}
               onMouseDown={(e) => handlePointerDown(e.clientX, e.clientY)}
               onMouseMove={(e) => handlePointerMove(e.clientX, e.clientY)}
               onMouseUp={stopDrawing}
               onMouseLeave={stopDrawing}
               onTouchStart={(e) => {
-                e.preventDefault();
+                // 移动端允许滚动，不阻止默认行为
+                if (!isMobile) e.preventDefault();
                 const touch = e.touches[0];
                 if (touch) handlePointerDown(touch.clientX, touch.clientY);
               }}
               onTouchMove={(e) => {
-                e.preventDefault();
+                // 移动端只有在绘图时才阻止滚动
+                if (!isMobile && drawingRef.current) e.preventDefault();
                 const touch = e.touches[0];
                 if (touch) handlePointerMove(touch.clientX, touch.clientY);
               }}
