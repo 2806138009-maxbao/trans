@@ -240,7 +240,10 @@ export const EpicycleDrawing: React.FC<EpicycleDrawingProps> = ({ lang }) => {
           containerRef.current!.clientHeight
         );
         canvas.parent(containerRef.current!);
+        // 确保移动端可以滚动
         canvas.elt.style.touchAction = "pan-y pinch-zoom";
+        // 关键：阻止 p5.js 默认的触摸事件捕获
+        canvas.elt.style.setProperty('touch-action', 'pan-y pinch-zoom', 'important');
         p.frameRate(60);
         
         // Canvas 准备好后隐藏加载动画
@@ -276,54 +279,21 @@ export const EpicycleDrawing: React.FC<EpicycleDrawingProps> = ({ lang }) => {
         endDrawingSession();
       };
 
-      // Mobile touch handling: allow scrolling by default, only capture when drawing
-      p.touchStarted = (event: TouchEvent) => {
-        const touch = event.touches?.[0] || (p.touches && p.touches[0]);
-        if (!touch) return true; // 允许滚动
-        
-        // 如果正在动画或计算中，不开始新绘制，允许滚动
-        if (modeRef.current === "COMPUTING" || modeRef.current === "ANIMATING") {
-          return true; // 允许滚动
-        }
-        
-        setPointerFromTouch(touch as Touch);
-        const rect = containerRef.current!.getBoundingClientRect();
-        const y = touch.clientY - rect.top;
-        const x = touch.clientX - rect.left;
-        
-        // 只有在有效绘图区域内才开始绘制
-        // 排除底部控制栏区域
-        if (y > 50 && y < rect.height - 120 && x > 20 && x < rect.width - 20) {
-          pointerActive = true;
-          startDrawingSession();
-          if (p.canvas) {
-            (p.canvas as HTMLCanvasElement).style.touchAction = "none";
-          }
-          return false; // 阻止滚动，开始绘图
-        }
-        
-        return true; // 其他区域允许滚动
+      // Mobile touch handling: 完全允许滚动，不拦截触摸事件
+      // 移动端用户可以通过点击 "播放示例" 按钮来体验功能
+      p.touchStarted = () => {
+        // 始终返回 true，让浏览器处理滚动
+        return true;
       };
 
-      p.touchMoved = (event: TouchEvent) => {
-        const touch = event.touches?.[0] || (p.touches && p.touches[0]);
-        if (!touch) return true;
-        if (pointerActive && modeRef.current === "DRAWING") {
-          setPointerFromTouch(touch as Touch);
-          return false; // 绘图中，阻止滚动
-        }
-        return true; // 允许滚动
+      p.touchMoved = () => {
+        // 始终返回 true，让浏览器处理滚动
+        return true;
       };
 
       p.touchEnded = () => {
-        if (pointerActive) {
-          endDrawingSession();
-        }
-        pointerActive = false;
-        if (p.canvas) {
-          (p.canvas as HTMLCanvasElement).style.touchAction = "pan-y pinch-zoom";
-        }
-        return true; // 允许后续滚动
+        // 始终返回 true
+        return true;
       };
 
       p.draw = () => {
@@ -529,13 +499,14 @@ export const EpicycleDrawing: React.FC<EpicycleDrawingProps> = ({ lang }) => {
   }, []);
 
   return (
-    <div className="relative w-full h-full min-h-[70vh] bg-transparent overflow-hidden">
+    <div className="relative w-full h-full min-h-[70vh] bg-transparent" style={{ overflow: 'visible', touchAction: 'pan-y pinch-zoom' }}>
       {/* 加载动画 */}
       {isLoading && <EpicycleLoader lang={lang} />}
       
+      {/* Canvas 容器 - 移动端设为 pointer-events: none 以允许滚动穿透 */}
       <div
         ref={containerRef}
-        className={`absolute inset-0 z-0 cursor-crosshair transition-opacity duration-500 ${
+        className={`absolute inset-0 z-0 transition-opacity duration-500 ${
           isLoading ? 'opacity-0' : 'opacity-100'
         }`}
         style={{ touchAction: "pan-y pinch-zoom" }}
@@ -563,13 +534,13 @@ export const EpicycleDrawing: React.FC<EpicycleDrawingProps> = ({ lang }) => {
               <span className="absolute inset-0 rounded-2xl ring-1 ring-white/10 opacity-0 group-hover:opacity-100 transition-opacity duration-300" aria-hidden="true" />
             </button>
             
-            {/* 移动端手势提示 */}
+            {/* 移动端提示 */}
             <div className="md:hidden flex items-center gap-2 text-[#8A8F98] text-xs mt-2">
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
                 <path d="M12 22c5.523 0 10-4.477 10-10S17.523 2 12 2 2 6.477 2 12s4.477 10 10 10z"/>
-                <path d="M12 8v4l2 2"/>
+                <path d="M9 12l2 2 4-4"/>
               </svg>
-              <span>{lang === 'zh' ? '用手指画一个形状，然后松开' : 'Draw a shape with your finger, then release'}</span>
+              <span>{lang === 'zh' ? '点击上方按钮观看动画演示' : 'Tap the button above to watch the animation'}</span>
             </div>
           </div>
         </div>

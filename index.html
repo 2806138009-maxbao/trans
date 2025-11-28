@@ -21,7 +21,8 @@
       }
       html {
         height: 100%;
-        overflow-y: scroll;
+        overflow-y: scroll !important;
+        overflow-x: hidden;
         -webkit-overflow-scrolling: touch;
       }
       body {
@@ -32,19 +33,26 @@
         font-family: -apple-system, BlinkMacSystemFont, "Inter", "Segoe UI",
           Roboto, Helvetica, Arial, sans-serif;
         overflow-x: hidden;
-        overflow-y: visible;
+        overflow-y: visible !important;
         -webkit-font-smoothing: antialiased;
         -moz-osx-font-smoothing: grayscale;
         -webkit-overflow-scrolling: touch;
+        /* 确保移动端可以滚动 */
+        touch-action: pan-y pinch-zoom;
       }
 
       #root {
         min-height: 100%;
-        overflow: visible;
+        overflow: visible !important;
         /* Safe area padding for notched devices */
         padding-left: env(safe-area-inset-left);
         padding-right: env(safe-area-inset-right);
         padding-bottom: env(safe-area-inset-bottom);
+      }
+      
+      /* 确保所有 canvas 元素默认允许滚动 */
+      canvas {
+        touch-action: pan-y pinch-zoom;
       }
 
       /* Ensure fixed elements don't block scroll */

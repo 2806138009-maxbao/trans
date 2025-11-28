@@ -187,12 +187,12 @@ export const SignalAsDrawingSection: React.FC<SignalAsDrawingSectionProps> = ({
           </TiltCard>
           <TiltCard glowColor="rgba(71,156,255,0.5)">
             <div ref={containerRef} className="p-4 md:p-6 rounded-2xl bg-[#0D0F12]/40 border border-white/5 overflow-hidden">
-              <canvas ref={canvasRef} className="w-full h-[260px] rounded-xl bg-[#0B0C0E] cursor-crosshair" style={{ touchAction: isMobile ? "pan-y" : "none" }}
-                onMouseDown={(e) => handlePointerDown(e.clientX, e.clientY)} onMouseMove={(e) => handlePointerMove(e.clientX, e.clientY)}
-                onMouseUp={stopDrawing} onMouseLeave={stopDrawing}
-                onTouchStart={(e) => { if (!isMobile) e.preventDefault(); const touch = e.touches[0]; if (touch) handlePointerDown(touch.clientX, touch.clientY); }}
-                onTouchMove={(e) => { if (!isMobile && drawingRef.current) e.preventDefault(); const touch = e.touches[0]; if (touch) handlePointerMove(touch.clientX, touch.clientY); }}
-                onTouchEnd={stopDrawing} />
+              <canvas ref={canvasRef} className="w-full h-[260px] rounded-xl bg-[#0B0C0E] cursor-crosshair" 
+                style={{ touchAction: isMobile ? "pan-y pinch-zoom" : "none", pointerEvents: isMobile ? "none" : "auto" }}
+                onMouseDown={(e) => handlePointerDown(e.clientX, e.clientY)} 
+                onMouseMove={(e) => handlePointerMove(e.clientX, e.clientY)}
+                onMouseUp={stopDrawing} 
+                onMouseLeave={stopDrawing} />
               <div className="flex justify-between items-center mt-4 text-xs text-[#8A8F98] uppercase tracking-[0.2em]">
                 <span>{t.lblTime}</span><span>{t.lblSignal || "Signal"}</span>
               </div>
@@ -234,24 +234,14 @@ export const SignalAsDrawingSection: React.FC<SignalAsDrawingSectionProps> = ({
             <canvas
               ref={canvasRef}
               className="w-full h-[260px] rounded-xl bg-[#0B0C0E] cursor-crosshair"
-              style={{ touchAction: isMobile ? "pan-y" : "none" }}
+              style={{ 
+                touchAction: isMobile ? "pan-y pinch-zoom" : "none",
+                pointerEvents: isMobile ? "none" : "auto" 
+              }}
               onMouseDown={(e) => handlePointerDown(e.clientX, e.clientY)}
               onMouseMove={(e) => handlePointerMove(e.clientX, e.clientY)}
               onMouseUp={stopDrawing}
               onMouseLeave={stopDrawing}
-              onTouchStart={(e) => {
-                // 移动端允许滚动，不阻止默认行为
-                if (!isMobile) e.preventDefault();
-                const touch = e.touches[0];
-                if (touch) handlePointerDown(touch.clientX, touch.clientY);
-              }}
-              onTouchMove={(e) => {
-                // 移动端只有在绘图时才阻止滚动
-                if (!isMobile && drawingRef.current) e.preventDefault();
-                const touch = e.touches[0];
-                if (touch) handlePointerMove(touch.clientX, touch.clientY);
-              }}
-              onTouchEnd={stopDrawing}
             />
             <div className="flex justify-between items-center mt-4 text-xs text-[#8A8F98] uppercase tracking-[0.2em]">
               <span className="transition-all duration-300 hover:text-[#479CFF] hover:scale-105 cursor-default">{t.lblTime}</span>

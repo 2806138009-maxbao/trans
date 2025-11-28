@@ -457,15 +457,17 @@ export const SectionNavigation: React.FC<SectionNavigationProps> = ({
       />
 
       <div
-        className="relative z-20 flex items-center gap-1 p-1.5 rounded-full bg-[#16171A]/90 backdrop-blur-xl border border-white/10 shadow-2xl shadow-black/50"
-        style={{
-          transform: 'translateZ(15px)',
-        }}
+        className={`relative z-20 flex items-center p-1.5 rounded-full bg-[#16171A]/90 backdrop-blur-xl border border-white/10 shadow-2xl shadow-black/50 ${
+          isMobile ? 'gap-0.5' : 'gap-1'
+        }`}
+        style={isMobile ? {} : { transform: 'translateZ(15px)' }}
         role="menubar"
         aria-live="polite"
       >
         {/* Noise Texture */}
         <div className="absolute inset-0 opacity-[0.03] pointer-events-none bg-[url('https://grainy-gradients.vercel.app/noise.svg')]" />
+        
+        {/* 桌面端品牌标识 */}
         <button
           onClick={scrollToTop}
           className="hidden md:flex items-center gap-2 pl-3 pr-4 py-2 rounded-full text-[11px] uppercase tracking-[0.2em] text-[#8A8F98] hover:text-white hover:bg-white/5 transition-all"
@@ -508,7 +510,11 @@ export const SectionNavigation: React.FC<SectionNavigationProps> = ({
                   }
                 }}
                 onKeyDown={(e) => handleKeyDown(e, section.id, !!hasSubsections)}
-                className={`relative flex items-center gap-2 px-4 py-2 rounded-full transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-[#5E6AD2]/50 focus:ring-offset-1 focus:ring-offset-[#16171A] ${
+                className={`relative flex items-center rounded-full transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-[#5E6AD2]/50 focus:ring-offset-1 focus:ring-offset-[#16171A] ${
+                  isMobile 
+                    ? 'gap-1 px-2.5 py-2' // 移动端：更紧凑
+                    : 'gap-2 px-4 py-2'   // 桌面端：正常间距
+                } ${
                   isActive || hasActiveChild
                     ? "bg-white/10 text-white shadow-[0_0_15px_rgba(255,255,255,0.1)]"
                     : "text-[#8A8F98] hover:text-white hover:bg-white/5"
@@ -521,13 +527,14 @@ export const SectionNavigation: React.FC<SectionNavigationProps> = ({
                 tabIndex={0}
               >
                 {section.icon}
-                <span className="text-xs font-medium tracking-wide">
+                {/* 移动端只显示图标，桌面端显示文字 */}
+                <span className={`font-medium tracking-wide ${isMobile ? 'hidden' : 'text-xs'}`}>
                   {section.label[lang]}
                 </span>
                 {hasSubsections && (
                   <ChevronDown
                     size={12}
-                    className={`transition-transform duration-200 ${
+                    className={`transition-transform duration-200 ${isMobile ? 'hidden' : ''} ${
                       isExpanded ? "rotate-180" : ""
                     }`}
                     aria-hidden="true"
@@ -556,7 +563,8 @@ export const SectionNavigation: React.FC<SectionNavigationProps> = ({
           );
         })}
 
-        {onToggleMotion && (
+        {/* 桌面端额外控制按钮 */}
+        {onToggleMotion && !isMobile && (
           <>
             <div className="w-px h-5 bg-white/10 mx-1" aria-hidden="true" />
             <div className="flex items-center gap-1">
@@ -592,7 +600,7 @@ export const SectionNavigation: React.FC<SectionNavigationProps> = ({
               tabIndex={0}
             >
               <Layers size={14} className={reducedMotion ? "opacity-50" : ""} />
-              <span className="text-[10px] font-medium tracking-wide hidden sm:inline">
+              <span className="text-[10px] font-medium tracking-wide">
                 {reducedMotion
                   ? lang === "zh"
                     ? "动画已关"
