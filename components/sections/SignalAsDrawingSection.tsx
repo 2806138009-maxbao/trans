@@ -46,6 +46,7 @@ export const SignalAsDrawingSection: React.FC<SignalAsDrawingSectionProps> = ({
   const drawingRef = useRef(false);
   const isMobile = useIsMobile();
   const rafRef = useRef<number>();
+  const [drawingModeEnabled, setDrawingModeEnabled] = useState(false); // 移动端绘图模式
 
   // Seed with a friendly default path
   useEffect(() => {
@@ -186,14 +187,27 @@ export const SignalAsDrawingSection: React.FC<SignalAsDrawingSectionProps> = ({
             </div>
           </TiltCard>
           <TiltCard glowColor="rgba(71,156,255,0.5)">
-            <div ref={containerRef} className="p-4 md:p-6 rounded-2xl bg-[#0D0F12]/40 border border-white/5 overflow-hidden">
-              <canvas ref={canvasRef} className="w-full h-[260px] rounded-xl bg-[#0B0C0E] cursor-crosshair" 
-                style={{ touchAction: isMobile ? "pan-y pinch-zoom" : "none", pointerEvents: isMobile ? "none" : "auto" }}
-                onMouseDown={(e) => handlePointerDown(e.clientX, e.clientY)} 
-                onMouseMove={(e) => handlePointerMove(e.clientX, e.clientY)}
-                onMouseUp={stopDrawing} 
-                onMouseLeave={stopDrawing} />
-              <div className="flex justify-between items-center mt-4 text-xs text-[#8A8F98] uppercase tracking-[0.2em]">
+            <div ref={containerRef} className="p-3 sm:p-4 md:p-6 rounded-2xl bg-[#0D0F12]/40 border border-white/5 overflow-hidden">
+              <div className="relative">
+                <canvas ref={canvasRef} className={`w-full h-[200px] sm:h-[260px] rounded-xl bg-[#0B0C0E] ${drawingModeEnabled || !isMobile ? 'cursor-crosshair' : ''}`}
+                  style={{ touchAction: (isMobile && !drawingModeEnabled) ? "pan-y pinch-zoom" : "none", pointerEvents: (isMobile && !drawingModeEnabled) ? "none" : "auto" }}
+                  onMouseDown={(e) => handlePointerDown(e.clientX, e.clientY)} 
+                  onMouseMove={(e) => handlePointerMove(e.clientX, e.clientY)}
+                  onMouseUp={stopDrawing} 
+                  onMouseLeave={stopDrawing}
+                  onTouchStart={(e) => { if (!drawingModeEnabled && isMobile) return; e.preventDefault(); const touch = e.touches[0]; if (touch) handlePointerDown(touch.clientX, touch.clientY); }}
+                  onTouchMove={(e) => { if (!drawingModeEnabled && isMobile) return; e.preventDefault(); const touch = e.touches[0]; if (touch) handlePointerMove(touch.clientX, touch.clientY); }}
+                  onTouchEnd={() => { stopDrawing(); if (isMobile) setDrawingModeEnabled(false); }} />
+                {isMobile && !drawingModeEnabled && (
+                  <button onClick={() => setDrawingModeEnabled(true)} className="absolute inset-0 flex items-center justify-center bg-black/30 rounded-xl">
+                    <div className="flex flex-col items-center gap-2 text-white">
+                      <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5"><path d="M12 19l7-7 3 3-7 7-3-3z"/><path d="M18 13l-1.5-7.5L2 2l3.5 14.5L13 18l5-5z"/></svg>
+                      <span className="text-sm">{lang === 'zh' ? '点击绘图' : 'Tap to Draw'}</span>
+                    </div>
+                  </button>
+                )}
+              </div>
+              <div className="flex justify-between items-center mt-3 sm:mt-4 text-[10px] sm:text-xs text-[#8A8F98] uppercase tracking-[0.15em] sm:tracking-[0.2em]">
                 <span>{t.lblTime}</span><span>{t.lblSignal || "Signal"}</span>
               </div>
             </div>
@@ -204,21 +218,21 @@ export const SignalAsDrawingSection: React.FC<SignalAsDrawingSectionProps> = ({
   }
 
   return (
-    <section id="signal-drawing" className="w-full relative px-6">
-      <div className="max-w-6xl mx-auto grid grid-cols-1 lg:grid-cols-[1.1fr,0.9fr] gap-10 items-center">
+    <section id="signal-drawing" className="w-full relative px-4 sm:px-6">
+      <div className="max-w-6xl mx-auto grid grid-cols-1 lg:grid-cols-[1.1fr,0.9fr] gap-6 sm:gap-10 items-center">
         <AnimateOnScroll animation="slide-left">
           <TiltCard glowColor="rgba(94,106,210,0.5)">
-            <div className="p-8 space-y-4 text-left">
-              <div className="flex items-center gap-3">
+            <div className="p-4 sm:p-6 md:p-8 space-y-3 sm:space-y-4 text-left">
+              <div className="flex items-center gap-2 sm:gap-3">
                 <GlowDot color="#5E6AD2" />
-                <h2 className="text-4xl md:text-5xl font-bold">
+                <h2 className="text-2xl sm:text-4xl md:text-5xl font-bold">
                   <GradientText>{t.signalDrawingTitle}</GradientText>
                 </h2>
               </div>
-              <HoverText as="p" className="text-lg text-[#D0D6E0] leading-relaxed">
+              <HoverText as="p" className="text-base sm:text-lg text-[#D0D6E0] leading-relaxed">
                 {t.signalDrawingLead}
               </HoverText>
-              <HoverText as="p" className="text-sm text-[#8A8F98]">
+              <HoverText as="p" className="text-xs sm:text-sm text-[#8A8F98]">
                 {t.signalDrawingNote}
               </HoverText>
             </div>
@@ -229,21 +243,68 @@ export const SignalAsDrawingSection: React.FC<SignalAsDrawingSectionProps> = ({
           <TiltCard glowColor="rgba(71,156,255,0.5)">
           <div
             ref={containerRef}
-            className="p-4 md:p-6 rounded-2xl bg-[#0D0F12]/40 border border-white/5 overflow-hidden"
+            className="p-3 sm:p-4 md:p-6 rounded-2xl bg-[#0D0F12]/40 border border-white/5 overflow-hidden"
           >
-            <canvas
-              ref={canvasRef}
-              className="w-full h-[260px] rounded-xl bg-[#0B0C0E] cursor-crosshair"
-              style={{ 
-                touchAction: isMobile ? "pan-y pinch-zoom" : "none",
-                pointerEvents: isMobile ? "none" : "auto" 
-              }}
-              onMouseDown={(e) => handlePointerDown(e.clientX, e.clientY)}
-              onMouseMove={(e) => handlePointerMove(e.clientX, e.clientY)}
-              onMouseUp={stopDrawing}
-              onMouseLeave={stopDrawing}
-            />
-            <div className="flex justify-between items-center mt-4 text-xs text-[#8A8F98] uppercase tracking-[0.2em]">
+            <div className="relative">
+              <canvas
+                ref={canvasRef}
+                className={`w-full h-[200px] sm:h-[260px] rounded-xl bg-[#0B0C0E] ${drawingModeEnabled || !isMobile ? 'cursor-crosshair' : ''}`}
+                style={{ 
+                  touchAction: (isMobile && !drawingModeEnabled) ? "pan-y pinch-zoom" : "none",
+                  pointerEvents: (isMobile && !drawingModeEnabled) ? "none" : "auto" 
+                }}
+                onMouseDown={(e) => handlePointerDown(e.clientX, e.clientY)}
+                onMouseMove={(e) => handlePointerMove(e.clientX, e.clientY)}
+                onMouseUp={stopDrawing}
+                onMouseLeave={stopDrawing}
+                onTouchStart={(e) => {
+                  if (!drawingModeEnabled && isMobile) return;
+                  e.preventDefault();
+                  const touch = e.touches[0];
+                  if (touch) handlePointerDown(touch.clientX, touch.clientY);
+                }}
+                onTouchMove={(e) => {
+                  if (!drawingModeEnabled && isMobile) return;
+                  e.preventDefault();
+                  const touch = e.touches[0];
+                  if (touch) handlePointerMove(touch.clientX, touch.clientY);
+                }}
+                onTouchEnd={() => {
+                  stopDrawing();
+                  if (isMobile) setDrawingModeEnabled(false);
+                }}
+              />
+              {/* 移动端绘图模式按钮 */}
+              {isMobile && !drawingModeEnabled && (
+                <button
+                  onClick={() => setDrawingModeEnabled(true)}
+                  className="absolute inset-0 flex items-center justify-center bg-black/30 rounded-xl transition-all active:bg-black/40"
+                >
+                  <div className="flex flex-col items-center gap-2 text-white">
+                    <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M12 19l7-7 3 3-7 7-3-3z"/>
+                      <path d="M18 13l-1.5-7.5L2 2l3.5 14.5L13 18l5-5z"/>
+                    </svg>
+                    <span className="text-sm font-medium">{lang === 'zh' ? '点击开始绘图' : 'Tap to Draw'}</span>
+                  </div>
+                </button>
+              )}
+              {/* 移动端绘图模式提示 */}
+              {isMobile && drawingModeEnabled && (
+                <div className="absolute top-2 left-2 right-2 flex justify-between items-center">
+                  <span className="px-2 py-1 rounded bg-[#479CFF]/20 text-[#479CFF] text-xs font-medium">
+                    {lang === 'zh' ? '绘图中...' : 'Drawing...'}
+                  </span>
+                  <button
+                    onClick={() => setDrawingModeEnabled(false)}
+                    className="px-2 py-1 rounded bg-white/10 text-white text-xs"
+                  >
+                    {lang === 'zh' ? '完成' : 'Done'}
+                  </button>
+                </div>
+              )}
+            </div>
+            <div className="flex justify-between items-center mt-3 sm:mt-4 text-[10px] sm:text-xs text-[#8A8F98] uppercase tracking-[0.15em] sm:tracking-[0.2em]">
               <span className="transition-all duration-300 hover:text-[#479CFF] hover:scale-105 cursor-default">{t.lblTime}</span>
               <span className="transition-all duration-300 hover:text-[#5E6AD2] hover:scale-105 cursor-default">{t.lblSignal || "Signal"}</span>
             </div>

@@ -103,9 +103,9 @@ export const TiltCard: React.FC<TiltCardProps> = ({
             opacity: spotlight.opacity,
           }}
         />
-        <div className="relative z-10 w-full h-full rounded-2xl bg-[#121316]/80 backdrop-blur-xl border border-white/5 shadow-2xl overflow-hidden">
+        <div className="relative z-10 w-full h-full rounded-2xl bg-[#121316]/80 backdrop-blur-xl border border-white/5 shadow-2xl">
           {children}
-          <div className="absolute inset-0 opacity-[0.03] pointer-events-none bg-[url('https://grainy-gradients.vercel.app/noise.svg')]" />
+          <div className="absolute inset-0 rounded-2xl opacity-[0.03] pointer-events-none bg-[url('https://grainy-gradients.vercel.app/noise.svg')]" />
         </div>
       </div>
     );
@@ -143,11 +143,11 @@ export const TiltCard: React.FC<TiltCardProps> = ({
 
       {/* Content Container */}
       <div 
-        className="relative z-10 w-full h-full rounded-2xl bg-[#121316]/80 backdrop-blur-xl border border-white/5 shadow-2xl overflow-hidden"
+        className="relative z-10 w-full h-full rounded-2xl bg-[#121316]/80 backdrop-blur-xl border border-white/5 shadow-2xl"
         style={{ transform: 'translateZ(20px)' }}
       >
         {children}
-        <div className="absolute inset-0 opacity-[0.03] pointer-events-none bg-[url('https://grainy-gradients.vercel.app/noise.svg')]" />
+        <div className="absolute inset-0 rounded-2xl opacity-[0.03] pointer-events-none bg-[url('https://grainy-gradients.vercel.app/noise.svg')]" />
       </div>
     </div>
   );

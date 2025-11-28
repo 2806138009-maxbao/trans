@@ -99,43 +99,43 @@ export const IntroNarrativeSection: React.FC<IntroNarrativeSectionProps> = ({
   }
 
   return (
-    <section id={id} className="w-full relative px-6 py-16">
+    <section id={id} className="w-full relative px-4 sm:px-6 py-10 sm:py-16">
       <div className="relative max-w-3xl mx-auto">
         {/* 章节标题 */}
         <AnimateOnScroll animation="fade-up">
-          <div className="mb-12 text-center">
+          <div className="mb-8 sm:mb-12 text-center">
             <div 
-              className="inline-flex items-center gap-2 mb-4 px-4 py-2 rounded-full 
+              className="inline-flex items-center gap-2 mb-3 sm:mb-4 px-3 sm:px-4 py-1.5 sm:py-2 rounded-full 
                 bg-white/5 border border-white/10 backdrop-blur-sm
                 transition-all duration-300 hover:bg-white/10 hover:border-white/20"
             >
               <span className="w-1.5 h-1.5 rounded-full bg-[#5E6AD2] shadow-[0_0_8px_#5E6AD2]" />
-              <span className="text-[11px] uppercase tracking-[0.2em] text-[#8A8F98]">
+              <span className="text-[10px] sm:text-[11px] uppercase tracking-[0.15em] sm:tracking-[0.2em] text-[#8A8F98]">
                 {lang === 'zh' ? '第一章 · 直觉' : 'Chapter 1 · Intuition'}
               </span>
             </div>
-            <h2 className="text-3xl md:text-4xl font-semibold mb-4">
+            <h2 className="text-2xl sm:text-3xl md:text-4xl font-semibold mb-3 sm:mb-4">
               <GradientText>
                 {lang === 'zh' ? '理解傅里叶级数' : 'Understanding Fourier Series'}
               </GradientText>
             </h2>
-            <HoverText as="p" className="text-[#8A8F98] text-base leading-relaxed max-w-xl mx-auto">
+            <HoverText as="p" className="text-[#8A8F98] text-sm sm:text-base leading-relaxed max-w-xl mx-auto px-2">
               {t.seriesVsTransformLead}
             </HoverText>
           </div>
         </AnimateOnScroll>
 
         {/* 叙事块 - 带交互效果和出场动画 */}
-        <div className="space-y-10">
+        <div className="space-y-6 sm:space-y-10">
           {narrativeBlocks.map((block, idx) => (
             <AnimateOnScroll key={block.id} animation="slide-left" delay={idx * 150}>
               <article 
-                className="group relative pl-6 border-l-2 transition-all duration-300 hover:pl-8"
+                className="group relative pl-4 sm:pl-6 border-l-2 transition-all duration-300 hover:pl-5 sm:hover:pl-8"
                 style={{ borderColor: `${block.accent}40` }}
               >
               {/* 时间线节点 */}
               <div 
-                className="absolute -left-[7px] top-1 w-3 h-3 rounded-full border-2 bg-[#0B0C0E] 
+                className="absolute -left-[6px] sm:-left-[7px] top-1 w-2.5 sm:w-3 h-2.5 sm:h-3 rounded-full border-2 bg-[#0B0C0E] 
                   transition-all duration-300 group-hover:scale-125 group-hover:shadow-lg"
                 style={{ 
                   borderColor: block.accent,
@@ -151,7 +151,7 @@ export const IntroNarrativeSection: React.FC<IntroNarrativeSectionProps> = ({
               
               {/* Eyebrow */}
               <div 
-                className="text-[11px] uppercase tracking-[0.15em] mb-2 font-medium 
+                className="text-[10px] sm:text-[11px] uppercase tracking-[0.12em] sm:tracking-[0.15em] mb-1.5 sm:mb-2 font-medium 
                   transition-all duration-300 group-hover:tracking-[0.2em]"
                 style={{ color: block.accent }}
               >
@@ -159,13 +159,13 @@ export const IntroNarrativeSection: React.FC<IntroNarrativeSectionProps> = ({
               </div>
               
               {/* Title */}
-              <h3 className="text-xl md:text-2xl font-semibold text-white mb-3 
+              <h3 className="text-lg sm:text-xl md:text-2xl font-semibold text-white mb-2 sm:mb-3 
                 transition-all duration-300 group-hover:translate-x-1">
                 <GradientText>{block.title}</GradientText>
               </h3>
               
               {/* Body */}
-              <HoverText as="p" className="text-[#C7CBD4] text-base leading-[1.8] font-normal">
+              <HoverText as="p" className="text-[#C7CBD4] text-sm sm:text-base leading-[1.7] sm:leading-[1.8] font-normal">
                 {block.body}
               </HoverText>
             </article>

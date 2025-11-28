@@ -67,7 +67,7 @@ export const RecapAndCTASection: React.FC<RecapAndCTASectionProps> = ({
                   <span className="flex-shrink-0 w-6 h-6 rounded-full bg-[#5E6AD2]/10 text-[#5E6AD2] text-xs font-medium flex items-center justify-center">
                     {idx + 1}
                   </span>
-                  <span className="flex-1 text-[#D0D6E0] text-sm leading-relaxed">{line}</span>
+                  <span className="flex-1 text-[#D0D6E0] text-sm leading-relaxed hover-text-subtle">{line}</span>
                 </li>
               ))}
             </ul>
@@ -89,10 +89,10 @@ export const RecapAndCTASection: React.FC<RecapAndCTASectionProps> = ({
                 </span>
                 <h3 className="text-lg font-semibold text-white">{t.recapStudentsTitle}</h3>
               </div>
-              <p className="text-sm text-[#C7CBD4] leading-relaxed">{t.recapStudentsLead}</p>
+              <p className="text-sm text-[#C7CBD4] leading-relaxed hover-text">{t.recapStudentsLead}</p>
               <ul className="space-y-2">
                 {t.recapStudentsBullets.slice(0, 3).map((line, idx) => (
-                  <li key={idx} className="flex gap-2 text-sm text-[#D0D6E0]">
+                  <li key={idx} className="flex gap-2 text-sm text-[#D0D6E0] hover-text-subtle">
                     <span className="text-[#479CFF] flex-shrink-0">{idx + 1}.</span>
                     <span className="leading-relaxed">{line}</span>
                   </li>
@@ -114,10 +114,10 @@ export const RecapAndCTASection: React.FC<RecapAndCTASectionProps> = ({
                 </span>
                 <h3 className="text-lg font-semibold text-white">{t.recapTeachersTitle}</h3>
               </div>
-              <p className="text-sm text-[#C7CBD4] leading-relaxed">{t.recapTeachersLead}</p>
+              <p className="text-sm text-[#C7CBD4] leading-relaxed hover-text">{t.recapTeachersLead}</p>
               <ul className="space-y-2">
                 {t.recapTeachersBullets.slice(0, 3).map((line, idx) => (
-                  <li key={idx} className="flex gap-2 text-sm text-[#D0D6E0]">
+                  <li key={idx} className="flex gap-2 text-sm text-[#D0D6E0] hover-text-subtle">
                     <span className="text-[#5E6AD2] flex-shrink-0">{idx + 1}.</span>
                     <span className="leading-relaxed">{line}</span>
                   </li>
@@ -137,7 +137,7 @@ export const RecapAndCTASection: React.FC<RecapAndCTASectionProps> = ({
                 <h3 className="text-2xl font-semibold text-white mb-2">
                   {lang === "en" ? "Stay Updated" : "保持联系"}
                 </h3>
-                <p className="text-sm text-[#8A8F98] leading-relaxed">
+                <p className="text-sm text-[#8A8F98] leading-relaxed hover-text-subtle">
                   {lang === "en" 
                     ? "Get notified when new experiments (Bode plots, filters, control systems) go live."
                     : "当新实验（Bode 图、滤波器、控制系统）上线时，第一时间收到通知。"}

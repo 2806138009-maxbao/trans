@@ -61,6 +61,7 @@ export const SectionTransition: React.FC<{
 
 /**
  * 渐变文字组件 - 带 hover 效果
+ * 使用 background-clip: text 实现渐变，但保留选中功能
  */
 export const GradientText = ({ 
   children, 
@@ -71,10 +72,15 @@ export const GradientText = ({
 }) => (
   <span 
     className={`bg-gradient-to-b from-white to-white/60 bg-clip-text text-transparent 
-      inline-block transition-all duration-300 ease-out
+      inline-block transition-all duration-300 ease-out select-text
       hover:from-white hover:to-white/80 hover:drop-shadow-[0_0_20px_rgba(255,255,255,0.3)]
+      selection:bg-[#5E6AD2]/50 selection:text-white
       ${className}`}
-    style={{ transition: 'transform 0.3s ease-out, filter 0.3s' }}
+    style={{ 
+      transition: 'transform 0.3s ease-out, filter 0.3s',
+      WebkitBackgroundClip: 'text',
+      WebkitTextFillColor: 'transparent',
+    }}
     onMouseEnter={(e) => {
       (e.target as HTMLElement).style.transform = 'scale(1.02)';
     }}
@@ -223,13 +229,13 @@ export const HoverListItem = ({
       <div 
         className="relative z-10 flex gap-2 p-4 rounded-xl bg-[#121316]/80 border border-white/5 
           backdrop-blur-sm transition-all duration-300 
-          group-hover:border-white/15 overflow-hidden"
+          group-hover:border-white/15"
         style={{
           transform: 'translateZ(10px)',
         }}
       >
-        <span className="text-[#5E6AD2] mt-0.5 flex-shrink-0 transition-all duration-300 group-hover:scale-125 group-hover:drop-shadow-[0_0_8px_rgba(94,106,210,0.6)]">•</span>
-        <span className="flex-1 text-[#D0D6E0] transition-colors duration-300 group-hover:text-white">{children}</span>
+        <span className="text-[#5E6AD2] mt-0.5 flex-shrink-0 transition-all duration-300 group-hover:scale-125 group-hover:drop-shadow-[0_0_8px_rgba(94,106,210,0.6)] select-none">•</span>
+        <span className="flex-1 text-[#D0D6E0] transition-colors duration-300 group-hover:text-white select-text cursor-text">{children}</span>
         
         {/* Noise Texture */}
         <div className="absolute inset-0 opacity-[0.02] pointer-events-none bg-[url('https://grainy-gradients.vercel.app/noise.svg')]" />

@@ -143,19 +143,19 @@ export const BuildWavesSection = React.forwardRef<HTMLDivElement, BuildWavesSect
     }
 
     return (
-      <section id="build-waves" ref={ref} className="w-full relative px-6">
-        <div className="max-w-6xl mx-auto space-y-8">
+      <section id="build-waves" ref={ref} className="w-full relative px-4 sm:px-6">
+        <div className="max-w-6xl mx-auto space-y-6 sm:space-y-8">
           {/* Section Header */}
           <AnimateOnScroll animation="fade-up">
-            <div className="flex flex-col gap-4 text-left">
-              <div className="flex items-center gap-3">
+            <div className="flex flex-col gap-3 sm:gap-4 text-left">
+              <div className="flex items-center gap-2 sm:gap-3">
                 <GlowDot color="#5E6AD2" />
-                <h2 className="text-4xl md:text-5xl font-bold">
+                <h2 className="text-2xl sm:text-4xl md:text-5xl font-bold">
                   <GradientText>{t.buildTitle}</GradientText>
                 </h2>
               </div>
-              <p className="text-lg text-[#D0D6E0] leading-relaxed max-w-2xl">{t.buildLead}</p>
-              <p className="text-sm text-[#8A8F98] max-w-2xl">
+              <p className="text-base sm:text-lg text-[#D0D6E0] leading-relaxed max-w-2xl hover-text">{t.buildLead}</p>
+              <p className="text-xs sm:text-sm text-[#8A8F98] max-w-2xl hover-text-subtle">
                 {lang === 'zh'
                   ? `你正在构建 ${waveformInfo.name} 波形，使用 N=${n} 个谐波；往下会看到它的公式和频谱。`
                   : `You're building a ${waveformInfo.name} with N=${n} harmonics—next you'll see its formula and spectrum.`}
@@ -164,12 +164,12 @@ export const BuildWavesSection = React.forwardRef<HTMLDivElement, BuildWavesSect
           </AnimateOnScroll>
 
           {/* Main Content Grid */}
-          <div className="grid grid-cols-1 lg:grid-cols-[1.2fr,0.8fr] gap-8 items-start">
+          <div className="grid grid-cols-1 lg:grid-cols-[1.2fr,0.8fr] gap-6 sm:gap-8 items-start">
             {/* Left: Canvas + Controls */}
             <AnimateOnScroll animation="scale" delay={100}>
-              <div className="flex flex-col gap-5">
+              <div className="flex flex-col gap-4 sm:gap-5">
                 {/* Canvas Container */}
-                <HudTiltContainer className="relative w-full h-[55vh] min-h-[400px]" glowColor="rgba(94, 106, 210, 0.5)">
+                <HudTiltContainer className="relative w-full h-[45vh] sm:h-[55vh] min-h-[300px] sm:min-h-[400px]" glowColor="rgba(94, 106, 210, 0.5)">
                   <FourierCanvas nVal={n} waveformType={waveformType} lang={lang} />
                   <InteractiveOverlay lang={lang} externalTooltip={externalTooltip} />
                 </HudTiltContainer>

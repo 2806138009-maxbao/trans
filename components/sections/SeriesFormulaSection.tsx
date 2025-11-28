@@ -33,7 +33,7 @@ export const SeriesFormulaSection: React.FC<SeriesFormulaSectionProps> = ({
           <TiltCard glowColor="rgba(94,106,210,0.4)">
             <div className="p-8 space-y-4 text-left">
               <div className="flex items-center gap-3"><GlowDot color="#5E6AD2" /><h2 className="text-4xl md:text-5xl font-bold"><GradientText>{t.seriesFormulaTitle}</GradientText></h2></div>
-              <p className="text-lg text-[#D0D6E0] leading-relaxed">{t.seriesFormulaLead}</p>
+              <p className="text-lg text-[#D0D6E0] leading-relaxed hover-text">{t.seriesFormulaLead}</p>
             </div>
           </TiltCard>
           <TiltCard className="glass-card" glowColor="rgba(71,156,255,0.35)">
@@ -60,10 +60,10 @@ export const SeriesFormulaSection: React.FC<SeriesFormulaSectionProps> = ({
                   <GradientText>{t.seriesFormulaTitle}</GradientText>
                 </h2>
               </div>
-              <p className="text-lg text-[#D0D6E0] leading-relaxed">{t.seriesFormulaLead}</p>
+              <p className="text-lg text-[#D0D6E0] leading-relaxed hover-text">{t.seriesFormulaLead}</p>
               <ul className="space-y-2 text-sm text-[#D0D6E0]">
                 {t.seriesFormulaPoints.map((line, idx) => (
-                  <li key={idx} className="flex gap-2">
+                  <li key={idx} className="flex gap-2 hover-text-subtle">
                     <span className="text-[#5E6AD2] mt-0.5">•</span>
                     <span className="flex-1">{line}</span>
                   </li>
@@ -94,14 +94,14 @@ export const SeriesFormulaSection: React.FC<SeriesFormulaSectionProps> = ({
                   </span>
                 ))}
               </div>
-              <div className="text-sm text-[#8A8F98] leading-relaxed opacity-80">
+              <div className="text-sm text-[#8A8F98] leading-relaxed opacity-80 hover-text-subtle">
                 {lang === 'en'
                   ? `Displaying the first ${harmonics.length} terms for the current ${waveformInfo.name}.`
                   : `当前波形 ${waveformInfo.name}，展示前 ${harmonics.length} 个系数。`}
               </div>
               <div className="text-xs text-[#C7CBD4] leading-relaxed border-t border-white/5 pt-4">
-                <span className="text-[#5E6AD2] font-medium">{waveformInfo.harmonics}</span>
-                <span className="block text-[#8A8F98] mt-1">{waveformInfo.note}</span>
+                <span className="text-[#5E6AD2] font-medium hover-text-subtle">{waveformInfo.harmonics}</span>
+                <span className="block text-[#8A8F98] mt-1 hover-text-subtle">{waveformInfo.note}</span>
               </div>
             </div>
           </TiltCard>

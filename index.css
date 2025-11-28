@@ -18,13 +18,109 @@ body {
   -webkit-font-smoothing: antialiased;
 }
 
-/* Custom text selection */
-::selection {
-  background: rgba(94, 106, 210, 0.45);
+/* 确保所有文本元素默认可选中 */
+p, span, h1, h2, h3, h4, h5, h6, li, td, th, label, div {
+  -webkit-user-select: text;
+  -moz-user-select: text;
+  -ms-user-select: text;
+  user-select: text;
+}
+
+/* 按钮和交互元素内的文字也可选中 */
+button span,
+button p,
+a span,
+a p {
+  -webkit-user-select: text;
+  -moz-user-select: text;
+  -ms-user-select: text;
+  user-select: text;
+  cursor: text;
+}
+
+/* 图标和装饰元素不可选中 */
+svg, img, .select-none, [aria-hidden="true"] {
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+  user-select: none;
+}
+
+/* ==========================================
+   文字悬停动效
+   ========================================== */
+
+/* 主要文字悬停效果 - 用于段落和描述 */
+.hover-text {
+  transition: all 0.3s cubic-bezier(0.25, 0.1, 0.25, 1);
+  cursor: default;
+}
+
+.hover-text:hover {
   color: #ffffff;
+  text-shadow: 0 0 20px rgba(255, 255, 255, 0.4);
+}
+
+/* 次要文字悬停效果 - 用于小字和提示 */
+.hover-text-subtle {
+  transition: all 0.3s cubic-bezier(0.25, 0.1, 0.25, 1);
+  cursor: default;
+}
+
+.hover-text-subtle:hover {
+  color: #D0D6E0;
+}
+
+/* 强调文字悬停效果 - 带轻微放大 */
+.hover-text-emphasis {
+  transition: all 0.3s cubic-bezier(0.25, 0.1, 0.25, 1);
+  cursor: default;
+  display: inline-block;
+}
+
+.hover-text-emphasis:hover {
+  color: #ffffff;
+  transform: scale(1.02);
+  text-shadow: 0 0 25px rgba(255, 255, 255, 0.5);
+}
+
+/* Custom text selection - 统一全站选中效果 */
+::selection {
+  background: rgba(94, 106, 210, 0.5);
+  color: #ffffff;
+  text-shadow: none;
 }
 ::-moz-selection {
-  background: rgba(94, 106, 210, 0.45);
+  background: rgba(94, 106, 210, 0.5);
+  color: #ffffff;
+  text-shadow: none;
+}
+
+/* 确保所有元素都继承选中样式 */
+*::selection {
+  background: rgba(94, 106, 210, 0.5);
+  color: #ffffff;
+  text-shadow: none;
+}
+*::-moz-selection {
+  background: rgba(94, 106, 210, 0.5);
+  color: #ffffff;
+  text-shadow: none;
+}
+
+/* 代码/等宽字体选中效果 - 稍微不同的颜色 */
+code::selection,
+pre::selection,
+.font-mono::selection,
+.value-mono::selection {
+  background: rgba(71, 156, 255, 0.5);
+  color: #ffffff;
+}
+code::-moz-selection,
+pre::-moz-selection,
+.font-mono::-moz-selection,
+.value-mono::-moz-selection {
+  background: rgba(71, 156, 255, 0.5);
   color: #ffffff;
 }
 

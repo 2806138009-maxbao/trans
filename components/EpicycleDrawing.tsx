@@ -120,20 +120,44 @@ const generateStarPath = (): Complex[] => {
   return examplePath;
 };
 
+// 检测移动端
+const useIsMobile = () => {
+  const [isMobile, setIsMobile] = useState(false);
+  useEffect(() => {
+    const checkMobile = () => {
+      const isNarrowScreen = window.innerWidth < 768;
+      const isMobileUA = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+      setIsMobile(isNarrowScreen || isMobileUA);
+    };
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
+  return isMobile;
+};
+
 export const EpicycleDrawing: React.FC<EpicycleDrawingProps> = ({ lang }) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const p5Instance = useRef<p5 | null>(null);
   const [uiState, setUiState] = useState<DrawMode>("IDLE");
   const [showExampleCTA, setShowExampleCTA] = useState(true);
   const [isLoading, setIsLoading] = useState(true);
+  const [drawingModeEnabled, setDrawingModeEnabled] = useState(false); // 移动端绘图模式
+  const isMobile = useIsMobile();
 
   const modeRef = useRef<DrawMode>("IDLE");
   const drawingPath = useRef<Complex[]>([]);
   const fourierX = useRef<FourierCoef[]>([]);
   const path = useRef<Complex[]>([]);
   const timeRef = useRef(0);
+  const drawingModeRef = useRef(false); // 用于 p5 sketch 内部访问
 
   const t = TRANSLATIONS[lang];
+  
+  // 同步 drawingModeEnabled 到 ref
+  useEffect(() => {
+    drawingModeRef.current = drawingModeEnabled;
+  }, [drawingModeEnabled]);
 
   const runDFT = useCallback((points: Complex[]) => {
     if (!points.length) return;
@@ -158,6 +182,21 @@ export const EpicycleDrawing: React.FC<EpicycleDrawingProps> = ({ lang }) => {
     timeRef.current = 0;
     setUiState("IDLE");
     setShowExampleCTA(true);
+    setDrawingModeEnabled(false); // 退出绘图模式
+  }, []);
+  
+  // 移动端：进入绘图模式
+  const enterDrawingMode = useCallback(() => {
+    setDrawingModeEnabled(true);
+    setShowExampleCTA(false);
+  }, []);
+  
+  // 移动端：退出绘图模式
+  const exitDrawingMode = useCallback(() => {
+    setDrawingModeEnabled(false);
+    if (modeRef.current === "IDLE") {
+      setShowExampleCTA(true);
+    }
   }, []);
 
   const loadExample = useCallback((type: 'heart' | 'star' = 'heart') => {
@@ -279,20 +318,55 @@ export const EpicycleDrawing: React.FC<EpicycleDrawingProps> = ({ lang }) => {
         endDrawingSession();
       };
 
-      // Mobile touch handling: 完全允许滚动，不拦截触摸事件
-      // 移动端用户可以通过点击 "播放示例" 按钮来体验功能
-      p.touchStarted = () => {
-        // 始终返回 true，让浏览器处理滚动
-        return true;
+      // Mobile touch handling: 只有在绘图模式下才拦截触摸事件
+      p.touchStarted = (event: TouchEvent) => {
+        // 如果不在绘图模式，允许滚动
+        if (!drawingModeRef.current) {
+          return true;
+        }
+        
+        const touch = event.touches?.[0] || (p.touches && p.touches[0]);
+        if (!touch) return true;
+        
+        // 如果正在动画或计算中，不开始新绘制
+        if (modeRef.current === "COMPUTING" || modeRef.current === "ANIMATING") {
+          return true;
+        }
+        
+        setPointerFromTouch(touch as Touch);
+        pointerActive = true;
+        startDrawingSession();
+        
+        if (p.canvas) {
+          (p.canvas as HTMLCanvasElement).style.touchAction = "none";
+        }
+        return false; // 阻止滚动，开始绘图
       };
 
-      p.touchMoved = () => {
-        // 始终返回 true，让浏览器处理滚动
+      p.touchMoved = (event: TouchEvent) => {
+        // 如果不在绘图模式，允许滚动
+        if (!drawingModeRef.current) {
+          return true;
+        }
+        
+        const touch = event.touches?.[0] || (p.touches && p.touches[0]);
+        if (!touch) return true;
+        
+        if (pointerActive && modeRef.current === "DRAWING") {
+          setPointerFromTouch(touch as Touch);
+          return false; // 绘图中，阻止滚动
+        }
         return true;
       };
 
       p.touchEnded = () => {
-        // 始终返回 true
+        if (pointerActive) {
+          endDrawingSession();
+        }
+        pointerActive = false;
+        if (p.canvas) {
+          (p.canvas as HTMLCanvasElement).style.touchAction = "pan-y pinch-zoom";
+        }
         return true;
       };
 
@@ -499,23 +573,30 @@ export const EpicycleDrawing: React.FC<EpicycleDrawingProps> = ({ lang }) => {
   }, []);
 
   return (
-    <div className="relative w-full h-full min-h-[70vh] bg-transparent" style={{ overflow: 'visible', touchAction: 'pan-y pinch-zoom' }}>
+    <div 
+      className="relative w-full h-full min-h-[50vh] sm:min-h-[60vh] md:min-h-[70vh] bg-transparent" 
+      style={{ 
+        overflow: 'visible', 
+        touchAction: drawingModeEnabled ? 'none' : 'pan-y pinch-zoom' 
+      }}
+    >
       {/* 加载动画 */}
       {isLoading && <EpicycleLoader lang={lang} />}
       
-      {/* Canvas 容器 - 移动端设为 pointer-events: none 以允许滚动穿透 */}
+      {/* Canvas 容器 */}
       <div
         ref={containerRef}
         className={`absolute inset-0 z-0 transition-opacity duration-500 ${
           isLoading ? 'opacity-0' : 'opacity-100'
-        }`}
-        style={{ touchAction: "pan-y pinch-zoom" }}
+        } ${drawingModeEnabled ? 'cursor-crosshair' : ''}`}
+        style={{ touchAction: drawingModeEnabled ? 'none' : 'pan-y pinch-zoom' }}
       />
 
       {/* IDLE State Overlay - Central CTA */}
-      {uiState === "IDLE" && !isLoading && (
+      {uiState === "IDLE" && !isLoading && !drawingModeEnabled && (
         <div className="absolute inset-0 z-10 flex items-center justify-center pointer-events-none">
           <div className="pointer-events-auto flex flex-col items-center gap-4 text-center px-4">
+            {/* 播放示例按钮 */}
             <button
               onClick={() => loadExample('heart')}
               className="group relative px-6 py-5 rounded-2xl bg-[#16171A]/90 backdrop-blur-xl border border-white/10 shadow-2xl shadow-black/50 flex flex-col items-center gap-3 transition-all duration-300 hover:-translate-y-0.5 active:scale-[0.98]"
@@ -527,20 +608,61 @@ export const EpicycleDrawing: React.FC<EpicycleDrawingProps> = ({ lang }) => {
                 <span className="text-lg font-semibold text-white">
                   {lang === 'zh' ? '点击播放示例' : 'Play the example'}
                 </span>
-                <span className="text-sm text-[#8A8F98]">
-                  {lang === 'zh' ? '或用手指在画布上绘制图形' : 'Or draw with your finger on the canvas'}
+                <span className="text-sm text-[#8A8F98] hidden md:block">
+                  {lang === 'zh' ? '或直接在画布上绘制图形' : 'Or draw directly on the canvas'}
                 </span>
               </div>
               <span className="absolute inset-0 rounded-2xl ring-1 ring-white/10 opacity-0 group-hover:opacity-100 transition-opacity duration-300" aria-hidden="true" />
             </button>
             
-            {/* 移动端提示 */}
-            <div className="md:hidden flex items-center gap-2 text-[#8A8F98] text-xs mt-2">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M12 22c5.523 0 10-4.477 10-10S17.523 2 12 2 2 6.477 2 12s4.477 10 10 10z"/>
-                <path d="M9 12l2 2 4-4"/>
-              </svg>
-              <span>{lang === 'zh' ? '点击上方按钮观看动画演示' : 'Tap the button above to watch the animation'}</span>
+            {/* 移动端：手动绘图按钮 */}
+            {isMobile && (
+              <button
+                onClick={enterDrawingMode}
+                className="group relative px-5 py-3 rounded-xl bg-[#479CFF]/10 backdrop-blur-xl border border-[#479CFF]/30 flex items-center gap-3 transition-all duration-300 active:scale-[0.98]"
+              >
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#479CFF" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M12 19l7-7 3 3-7 7-3-3z"/>
+                  <path d="M18 13l-1.5-7.5L2 2l3.5 14.5L13 18l5-5z"/>
+                  <path d="M2 2l7.586 7.586"/>
+                  <circle cx="11" cy="11" r="2"/>
+                </svg>
+                <span className="text-sm font-medium text-[#479CFF]">
+                  {lang === 'zh' ? '开始绘图' : 'Start Drawing'}
+                </span>
+              </button>
+            )}
+          </div>
+        </div>
+      )}
+      
+      {/* 移动端绘图模式提示 */}
+      {isMobile && drawingModeEnabled && uiState === "IDLE" && (
+        <div className="absolute inset-0 z-10 flex items-center justify-center pointer-events-none">
+          <div className="pointer-events-auto flex flex-col items-center gap-4 text-center px-4">
+            <div className="px-5 py-4 rounded-2xl bg-[#16171A]/90 backdrop-blur-xl border border-[#479CFF]/30 shadow-2xl">
+              <div className="flex flex-col items-center gap-3">
+                <div className="w-12 h-12 rounded-full bg-[#479CFF]/20 border border-[#479CFF]/30 flex items-center justify-center animate-pulse">
+                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#479CFF" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M12 19l7-7 3 3-7 7-3-3z"/>
+                    <path d="M18 13l-1.5-7.5L2 2l3.5 14.5L13 18l5-5z"/>
+                  </svg>
+                </div>
+                <div className="text-center">
+                  <p className="text-white font-medium mb-1">
+                    {lang === 'zh' ? '绘图模式已开启' : 'Drawing Mode Active'}
+                  </p>
+                  <p className="text-sm text-[#8A8F98]">
+                    {lang === 'zh' ? '用手指在画布上绘制图形' : 'Draw a shape with your finger'}
+                  </p>
+                </div>
+                <button
+                  onClick={exitDrawingMode}
+                  className="mt-2 px-4 py-2 rounded-lg bg-white/10 text-white text-sm font-medium transition-all active:scale-95"
+                >
+                  {lang === 'zh' ? '取消' : 'Cancel'}
+                </button>
+              </div>
             </div>
           </div>
         </div>

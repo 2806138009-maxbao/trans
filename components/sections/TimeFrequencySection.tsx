@@ -97,7 +97,7 @@ export const TimeFrequencySection: React.FC<TimeFrequencySectionProps> = ({
           <TiltCard glowColor="rgba(255,255,255,0.3)">
             <div className="p-8 space-y-4 text-left">
               <div className="flex items-center gap-3"><GlowDot color="#ffffff" /><h2 className="text-4xl md:text-5xl font-bold"><GradientText>{t.timeFreqTitle}</GradientText></h2></div>
-              <p className="text-lg text-[#D0D6E0] leading-relaxed">{t.timeFreqLead}</p>
+              <p className="text-lg text-[#D0D6E0] leading-relaxed hover-text">{t.timeFreqLead}</p>
             </div>
           </TiltCard>
           <TiltCard glowColor="rgba(71,156,255,0.4)">
@@ -120,10 +120,10 @@ export const TimeFrequencySection: React.FC<TimeFrequencySectionProps> = ({
                   <GradientText>{t.timeFreqTitle}</GradientText>
                 </h2>
               </div>
-              <p className="text-lg text-[#D0D6E0] leading-relaxed">{t.timeFreqLead}</p>
+              <p className="text-lg text-[#D0D6E0] leading-relaxed hover-text">{t.timeFreqLead}</p>
               <ul className="space-y-2 text-sm text-[#D0D6E0]">
                 {t.timeFreqBullets.map((line, idx) => (
-                  <li key={idx} className="flex gap-2">
+                  <li key={idx} className="flex gap-2 hover-text-subtle">
                     <span className="text-[#5E6AD2] mt-0.5">•</span>
                     <span className="flex-1">{line}</span>
                   </li>
@@ -147,11 +147,11 @@ export const TimeFrequencySection: React.FC<TimeFrequencySectionProps> = ({
               </div>
               <canvas ref={canvasRef} className="w-full rounded-xl bg-[#0B0C0E]" />
               <div className="space-y-2">
-                <div className="text-xs text-[#C7CBD4] leading-relaxed"><span className="text-[#5E6AD2] font-medium">{waveformInfo.harmonics}</span></div>
-                <div className="text-xs text-[#8A8F98] leading-relaxed">{waveformInfo.note}</div>
+                <div className="text-xs text-[#C7CBD4] leading-relaxed hover-text-subtle"><span className="text-[#5E6AD2] font-medium">{waveformInfo.harmonics}</span></div>
+                <div className="text-xs text-[#8A8F98] leading-relaxed hover-text-subtle">{waveformInfo.note}</div>
               </div>
               <div className="border-t border-white/5 pt-3">
-                <div className="text-xs text-[#8A8F98] leading-relaxed">{t.learningTakeawaySpectrum}</div>
+                <div className="text-xs text-[#8A8F98] leading-relaxed hover-text-subtle">{t.learningTakeawaySpectrum}</div>
               </div>
             </div>
           </TiltCard>

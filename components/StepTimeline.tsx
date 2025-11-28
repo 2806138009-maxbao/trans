@@ -86,7 +86,7 @@ const TiltStepCard: React.FC<TiltStepCardProps> = ({
       <div 
         className={`
           relative z-10 w-full h-full rounded-xl p-4 flex flex-col items-start gap-3
-          border transition-all duration-300 overflow-hidden
+          border transition-all duration-300
           ${isActive 
             ? 'bg-[#5E6AD2]/20 border-[#5E6AD2]/40 shadow-[0_0_20px_rgba(94,106,210,0.2)]' 
             : isCompleted
@@ -233,13 +233,13 @@ export const StepTimeline: React.FC<StepTimelineProps> = ({
               {/* Icon + Label */}
               <div className="flex items-center gap-2">
                 <div className={`
-                  transition-colors duration-300
+                  transition-colors duration-300 select-none
                   ${isActive ? 'text-[#5E6AD2]' : 'text-[#D0D6E0] group-hover:text-white'}
                 `}>
                   {step.icon}
                 </div>
                 <span className={`
-                  font-medium text-sm transition-colors duration-300
+                  font-medium text-sm transition-colors duration-300 select-text cursor-text
                   ${isActive ? 'text-white' : 'text-[#D0D6E0] group-hover:text-white'}
                 `}>
                   {step.label[lang]}
@@ -247,7 +247,7 @@ export const StepTimeline: React.FC<StepTimelineProps> = ({
               </div>
 
               {/* Description */}
-              <p className="text-xs text-[#8A8F98] leading-relaxed line-clamp-2">
+              <p className="text-xs text-[#8A8F98] leading-relaxed line-clamp-2 select-text cursor-text">
                 {step.description[lang]}
               </p>
 
