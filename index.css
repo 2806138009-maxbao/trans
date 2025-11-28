@@ -54,10 +54,12 @@ svg, img, .select-none, [aria-hidden="true"] {
 .hover-text {
   transition: all 0.3s cubic-bezier(0.25, 0.1, 0.25, 1);
   cursor: default;
+  -webkit-user-select: text;
+  user-select: text;
 }
 
 .hover-text:hover {
-  color: #ffffff;
+  color: #ffffff !important;
   text-shadow: 0 0 20px rgba(255, 255, 255, 0.4);
 }
 
@@ -65,10 +67,12 @@ svg, img, .select-none, [aria-hidden="true"] {
 .hover-text-subtle {
   transition: all 0.3s cubic-bezier(0.25, 0.1, 0.25, 1);
   cursor: default;
+  -webkit-user-select: text;
+  user-select: text;
 }
 
 .hover-text-subtle:hover {
-  color: #D0D6E0;
+  color: #D0D6E0 !important;
 }
 
 /* 强调文字悬停效果 - 带轻微放大 */
@@ -76,12 +80,19 @@ svg, img, .select-none, [aria-hidden="true"] {
   transition: all 0.3s cubic-bezier(0.25, 0.1, 0.25, 1);
   cursor: default;
   display: inline-block;
+  -webkit-user-select: text;
+  user-select: text;
 }
 
 .hover-text-emphasis:hover {
-  color: #ffffff;
+  color: #ffffff !important;
   transform: scale(1.02);
   text-shadow: 0 0 25px rgba(255, 255, 255, 0.5);
+}
+
+/* 文字发光效果 - 用于 group-hover */
+.group:hover .group-hover\:text-shadow-glow {
+  text-shadow: 0 0 20px rgba(255, 255, 255, 0.4);
 }
 
 /* Custom text selection - 统一全站选中效果 */
@@ -98,9 +109,22 @@ svg, img, .select-none, [aria-hidden="true"] {
 
 /* 确保所有元素都继承选中样式 */
 *::selection {
-  background: rgba(94, 106, 210, 0.5);
-  color: #ffffff;
-  text-shadow: none;
+  background: rgba(94, 106, 210, 0.5) !important;
+  color: #ffffff !important;
+  text-shadow: none !important;
+  -webkit-background-clip: initial !important;
+  background-clip: initial !important;
+}
+
+/* 3D 变换元素内的文字选中 */
+[style*="transform"] span::selection,
+[style*="transform"] p::selection,
+[style*="perspective"] span::selection,
+[style*="perspective"] p::selection,
+.group span::selection,
+.group p::selection {
+  background: rgba(94, 106, 210, 0.5) !important;
+  color: #ffffff !important;
 }
 *::-moz-selection {
   background: rgba(94, 106, 210, 0.5);

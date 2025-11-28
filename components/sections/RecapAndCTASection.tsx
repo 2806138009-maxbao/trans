@@ -55,7 +55,7 @@ export const RecapAndCTASection: React.FC<RecapAndCTASectionProps> = ({
         <AnimateOnScroll animation="scale" delay={100}>
           <TiltCard glowColor="rgba(94,106,210,0.4)">
           <div className="p-8">
-            <div className="text-sm uppercase tracking-[0.2em] text-[#8A8F98] mb-4">
+            <div className="text-sm uppercase tracking-[0.2em] text-[#8A8F98] mb-4 hover-text-subtle">
               {lang === "en" ? "Core Ideas" : "核心要点"}
             </div>
             <ul className="grid grid-cols-1 md:grid-cols-2 gap-3">
@@ -67,7 +67,7 @@ export const RecapAndCTASection: React.FC<RecapAndCTASectionProps> = ({
                   <span className="flex-shrink-0 w-6 h-6 rounded-full bg-[#5E6AD2]/10 text-[#5E6AD2] text-xs font-medium flex items-center justify-center">
                     {idx + 1}
                   </span>
-                  <span className="flex-1 text-[#D0D6E0] text-sm leading-relaxed hover-text-subtle">{line}</span>
+                  <span className="flex-1 text-[#D0D6E0] text-sm leading-relaxed hover-text-subtle select-text selection:bg-[#5E6AD2]/50 selection:text-white">{line}</span>
                 </li>
               ))}
             </ul>
@@ -89,12 +89,12 @@ export const RecapAndCTASection: React.FC<RecapAndCTASectionProps> = ({
                 </span>
                 <h3 className="text-lg font-semibold text-white">{t.recapStudentsTitle}</h3>
               </div>
-              <p className="text-sm text-[#C7CBD4] leading-relaxed hover-text">{t.recapStudentsLead}</p>
+              <p className="text-sm text-[#C7CBD4] leading-relaxed hover-text select-text selection:bg-[#5E6AD2]/50 selection:text-white">{t.recapStudentsLead}</p>
               <ul className="space-y-2">
                 {t.recapStudentsBullets.slice(0, 3).map((line, idx) => (
                   <li key={idx} className="flex gap-2 text-sm text-[#D0D6E0] hover-text-subtle">
                     <span className="text-[#479CFF] flex-shrink-0">{idx + 1}.</span>
-                    <span className="leading-relaxed">{line}</span>
+                    <span className="leading-relaxed select-text selection:bg-[#5E6AD2]/50 selection:text-white">{line}</span>
                   </li>
                 ))}
               </ul>
@@ -114,12 +114,12 @@ export const RecapAndCTASection: React.FC<RecapAndCTASectionProps> = ({
                 </span>
                 <h3 className="text-lg font-semibold text-white">{t.recapTeachersTitle}</h3>
               </div>
-              <p className="text-sm text-[#C7CBD4] leading-relaxed hover-text">{t.recapTeachersLead}</p>
+              <p className="text-sm text-[#C7CBD4] leading-relaxed hover-text select-text selection:bg-[#5E6AD2]/50 selection:text-white">{t.recapTeachersLead}</p>
               <ul className="space-y-2">
                 {t.recapTeachersBullets.slice(0, 3).map((line, idx) => (
                   <li key={idx} className="flex gap-2 text-sm text-[#D0D6E0] hover-text-subtle">
                     <span className="text-[#5E6AD2] flex-shrink-0">{idx + 1}.</span>
-                    <span className="leading-relaxed">{line}</span>
+                    <span className="leading-relaxed select-text selection:bg-[#5E6AD2]/50 selection:text-white">{line}</span>
                   </li>
                 ))}
               </ul>
@@ -173,7 +173,7 @@ export const RecapAndCTASection: React.FC<RecapAndCTASectionProps> = ({
               )}
 
               <div className="pt-4 border-t border-white/5">
-                <p className="text-xs text-[#8A8F98]">
+                <p className="text-xs text-[#8A8F98] hover-text-subtle">
                   {lang === "en" 
                     ? "Want to collaborate or request a custom explorable? "
                     : "想合作或定制交互式页面？"}

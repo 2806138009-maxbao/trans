@@ -65,7 +65,7 @@ export const SeriesFormulaSection: React.FC<SeriesFormulaSectionProps> = ({
                 {t.seriesFormulaPoints.map((line, idx) => (
                   <li key={idx} className="flex gap-2 hover-text-subtle">
                     <span className="text-[#5E6AD2] mt-0.5">•</span>
-                    <span className="flex-1">{line}</span>
+                    <span className="flex-1 select-text selection:bg-[#5E6AD2]/50 selection:text-white">{line}</span>
                   </li>
                 ))}
               </ul>
@@ -76,7 +76,7 @@ export const SeriesFormulaSection: React.FC<SeriesFormulaSectionProps> = ({
         <AnimateOnScroll animation="slide-right" delay={150}>
           <TiltCard className="glass-card" glowColor="rgba(71,156,255,0.35)">
             <div className="p-8 space-y-6">
-              <div className="label-style">{t.harmonics}</div>
+              <div className="label-style hover-text-subtle">{t.harmonics}</div>
               <div className="text-3xl md:text-4xl font-medium text-white flex items-center gap-3 tracking-tight h2-style">
                 <span className="opacity-50 font-serif italic">f(x)</span>
                 <span className="opacity-50">≈</span>
@@ -86,7 +86,7 @@ export const SeriesFormulaSection: React.FC<SeriesFormulaSectionProps> = ({
                 {harmonics.map((term, idx) => (
                   <span
                     key={term.order}
-                    className={`value-mono px-3 py-2 rounded-lg border border-white/10 bg-white/5 ${
+                    className={`value-mono px-3 py-2 rounded-lg border border-white/10 bg-white/5 hover-text-subtle ${
                       idx === 0 ? 'shadow-[0_0_12px_rgba(94,106,210,0.4)] border-white/20' : ''
                     }`}
                   >
@@ -94,12 +94,12 @@ export const SeriesFormulaSection: React.FC<SeriesFormulaSectionProps> = ({
                   </span>
                 ))}
               </div>
-              <div className="text-sm text-[#8A8F98] leading-relaxed opacity-80 hover-text-subtle">
+              <div className="text-sm text-[#8A8F98] leading-relaxed opacity-80 hover-text-subtle select-text selection:bg-[#5E6AD2]/50 selection:text-white">
                 {lang === 'en'
                   ? `Displaying the first ${harmonics.length} terms for the current ${waveformInfo.name}.`
                   : `当前波形 ${waveformInfo.name}，展示前 ${harmonics.length} 个系数。`}
               </div>
-              <div className="text-xs text-[#C7CBD4] leading-relaxed border-t border-white/5 pt-4">
+              <div className="text-xs text-[#C7CBD4] leading-relaxed border-t border-white/5 pt-4 select-text selection:bg-[#5E6AD2]/50 selection:text-white">
                 <span className="text-[#5E6AD2] font-medium hover-text-subtle">{waveformInfo.harmonics}</span>
                 <span className="block text-[#8A8F98] mt-1 hover-text-subtle">{waveformInfo.note}</span>
               </div>

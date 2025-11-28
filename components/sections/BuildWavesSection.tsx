@@ -107,7 +107,7 @@ export const BuildWavesSection = React.forwardRef<HTMLDivElement, BuildWavesSect
           <div className="max-w-6xl mx-auto space-y-8">
             <div className="flex flex-col gap-4 text-left">
               <div className="flex items-center gap-3"><GlowDot color="#5E6AD2" /><h2 className="text-4xl md:text-5xl font-bold"><GradientText>{t.buildTitle}</GradientText></h2></div>
-              <p className="text-lg text-[#D0D6E0] leading-relaxed max-w-2xl">{t.buildLead}</p>
+              <p className="text-lg text-[#D0D6E0] leading-relaxed max-w-2xl hover-text">{t.buildLead}</p>
             </div>
             <div className="grid grid-cols-1 lg:grid-cols-[1.2fr,0.8fr] gap-8 items-start">
               <div className="flex flex-col gap-5">
@@ -132,8 +132,8 @@ export const BuildWavesSection = React.forwardRef<HTMLDivElement, BuildWavesSect
               <TiltCard glowColor="rgba(71,156,255,0.5)">
                 <div className="p-6 md:p-8 space-y-5">
                   <div className="flex items-center justify-between"><h3 className="text-xl md:text-2xl font-semibold text-white">{t.howToTitle}</h3></div>
-                  <div className="space-y-3">{dynamicHints.map((hint, idx) => (<div key={idx} className={`flex gap-2.5 leading-relaxed text-sm ${hint.highlight ? 'p-3 rounded-lg bg-[#5E6AD2]/10 border border-[#5E6AD2]/20' : ''}`}><span className={hint.highlight ? 'text-[#5E6AD2] mt-0.5 flex-shrink-0' : 'text-[#5E6AD2] mt-1 flex-shrink-0'}>{hint.highlight ? <Info size={14} /> : '•'}</span><span className={hint.highlight ? 'text-[#D0D6E0] font-medium' : 'text-[#D0D6E0]'}>{hint.text}</span></div>))}</div>
-                  <div className="text-xs text-[#8A8F98] border-t border-white/5 pt-4 leading-relaxed">{t.learningTakeawayBuild}</div>
+                  <div className="space-y-3">{dynamicHints.map((hint, idx) => (<div key={idx} className={`flex gap-2.5 leading-relaxed text-sm hover-text-subtle ${hint.highlight ? 'p-3 rounded-lg bg-[#5E6AD2]/10 border border-[#5E6AD2]/20' : ''}`}><span className={hint.highlight ? 'text-[#5E6AD2] mt-0.5 flex-shrink-0' : 'text-[#5E6AD2] mt-1 flex-shrink-0'}>{hint.highlight ? <Info size={14} /> : '•'}</span><span className={`select-text selection:bg-[#5E6AD2]/50 selection:text-white ${hint.highlight ? 'text-[#D0D6E0] font-medium' : 'text-[#D0D6E0]'}`}>{hint.text}</span></div>))}</div>
+                  <div className="text-xs text-[#8A8F98] border-t border-white/5 pt-4 leading-relaxed hover-text-subtle select-text selection:bg-[#5E6AD2]/50 selection:text-white">{t.learningTakeawayBuild}</div>
                 </div>
               </TiltCard>
             </div>
@@ -230,7 +230,7 @@ export const BuildWavesSection = React.forwardRef<HTMLDivElement, BuildWavesSect
                     {dynamicHints.map((hint, idx) => (
                       <div 
                         key={idx}
-                        className={`flex gap-2.5 leading-relaxed text-sm ${
+                        className={`flex gap-2.5 leading-relaxed text-sm hover-text-subtle ${
                           hint.highlight 
                             ? 'p-3 rounded-lg bg-[#5E6AD2]/10 border border-[#5E6AD2]/20' 
                             : ''
@@ -241,7 +241,7 @@ export const BuildWavesSection = React.forwardRef<HTMLDivElement, BuildWavesSect
                         ) : (
                           <span className="text-[#5E6AD2] mt-1 flex-shrink-0">•</span>
                         )}
-                        <span className={hint.highlight ? 'text-[#D0D6E0] font-medium' : 'text-[#D0D6E0]'}>
+                        <span className={`select-text selection:bg-[#5E6AD2]/50 selection:text-white ${hint.highlight ? 'text-[#D0D6E0] font-medium' : 'text-[#D0D6E0]'}`}>
                           {hint.text}
                         </span>
                       </div>
@@ -249,7 +249,7 @@ export const BuildWavesSection = React.forwardRef<HTMLDivElement, BuildWavesSect
                   </div>
 
                   {/* Takeaway */}
-                  <div className="text-xs text-[#8A8F98] border-t border-white/5 pt-4 leading-relaxed">
+                  <div className="text-xs text-[#8A8F98] border-t border-white/5 pt-4 leading-relaxed hover-text-subtle select-text selection:bg-[#5E6AD2]/50 selection:text-white">
                     {t.learningTakeawayBuild}
                   </div>
                 </div>

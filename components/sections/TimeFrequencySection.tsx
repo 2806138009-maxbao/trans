@@ -125,7 +125,7 @@ export const TimeFrequencySection: React.FC<TimeFrequencySectionProps> = ({
                 {t.timeFreqBullets.map((line, idx) => (
                   <li key={idx} className="flex gap-2 hover-text-subtle">
                     <span className="text-[#5E6AD2] mt-0.5">•</span>
-                    <span className="flex-1">{line}</span>
+                    <span className="flex-1 select-text selection:bg-[#5E6AD2]/50 selection:text-white">{line}</span>
                   </li>
                 ))}
               </ul>
@@ -137,7 +137,7 @@ export const TimeFrequencySection: React.FC<TimeFrequencySectionProps> = ({
           <TiltCard glowColor="rgba(71,156,255,0.4)">
             <div className="p-6 space-y-4">
               <div className="flex items-center justify-between">
-                <div className="text-xs uppercase tracking-[0.2em] text-[#8A8F98]">
+                <div className="text-xs uppercase tracking-[0.2em] text-[#8A8F98] hover-text-subtle">
                   {lang === 'en' ? 'Spectrum Preview' : '频谱预览'}
                 </div>
                 <div className="flex items-center gap-2 px-2 py-1 rounded bg-[#5E6AD2]/10 border border-[#5E6AD2]/20">
@@ -147,11 +147,11 @@ export const TimeFrequencySection: React.FC<TimeFrequencySectionProps> = ({
               </div>
               <canvas ref={canvasRef} className="w-full rounded-xl bg-[#0B0C0E]" />
               <div className="space-y-2">
-                <div className="text-xs text-[#C7CBD4] leading-relaxed hover-text-subtle"><span className="text-[#5E6AD2] font-medium">{waveformInfo.harmonics}</span></div>
-                <div className="text-xs text-[#8A8F98] leading-relaxed hover-text-subtle">{waveformInfo.note}</div>
+                <div className="text-xs text-[#C7CBD4] leading-relaxed hover-text-subtle select-text selection:bg-[#5E6AD2]/50 selection:text-white"><span className="text-[#5E6AD2] font-medium">{waveformInfo.harmonics}</span></div>
+                <div className="text-xs text-[#8A8F98] leading-relaxed hover-text-subtle select-text selection:bg-[#5E6AD2]/50 selection:text-white">{waveformInfo.note}</div>
               </div>
               <div className="border-t border-white/5 pt-3">
-                <div className="text-xs text-[#8A8F98] leading-relaxed hover-text-subtle">{t.learningTakeawaySpectrum}</div>
+                <div className="text-xs text-[#8A8F98] leading-relaxed hover-text-subtle select-text selection:bg-[#5E6AD2]/50 selection:text-white">{t.learningTakeawaySpectrum}</div>
               </div>
             </div>
           </TiltCard>

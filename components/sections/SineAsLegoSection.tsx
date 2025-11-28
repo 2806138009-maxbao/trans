@@ -111,11 +111,11 @@ export const SineAsLegoSection: React.FC<SineAsLegoSectionProps> = ({ lang, redu
               <canvas ref={canvasRef} className="w-full rounded-xl bg-[#0B0C0E]" style={{ touchAction: 'pan-y pinch-zoom' }} />
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
                 <div className="flex flex-col gap-2">
-                  <label className="text-[10px] sm:text-xs uppercase tracking-widest text-[#8A8F98]">{t.sineLegoAmp}</label>
+                  <label className="text-[10px] sm:text-xs uppercase tracking-widest text-[#8A8F98] hover-text-subtle">{t.sineLegoAmp}</label>
                   <input type="range" min={0.2} max={2} step={0.1} value={amp} onChange={(e) => setAmp(parseFloat(e.target.value))} className="w-full" />
                 </div>
                 <div className="flex flex-col gap-2">
-                  <label className="text-[10px] sm:text-xs uppercase tracking-widest text-[#8A8F98]">{t.sineLegoFreq}</label>
+                  <label className="text-[10px] sm:text-xs uppercase tracking-widest text-[#8A8F98] hover-text-subtle">{t.sineLegoFreq}</label>
                   <input type="range" min={0.5} max={8} step={0.5} value={freq} onChange={(e) => setFreq(parseFloat(e.target.value))} className="w-full" />
                 </div>
               </div>
@@ -151,13 +151,13 @@ export const SineAsLegoSection: React.FC<SineAsLegoSectionProps> = ({ lang, redu
               <canvas ref={canvasRef} className="w-full rounded-xl bg-[#0B0C0E]" style={{ touchAction: 'pan-y pinch-zoom' }} />
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
                 <div className="flex flex-col gap-2">
-                  <label className="text-[10px] sm:text-xs uppercase tracking-widest text-[#8A8F98] transition-all duration-300 hover:text-white hover:scale-105 cursor-default inline-block origin-left">
+                  <label className="text-[10px] sm:text-xs uppercase tracking-widest text-[#8A8F98] hover-text-subtle inline-block origin-left">
                     {t.sineLegoAmp}
                   </label>
                   <input type="range" min={0.2} max={2} step={0.1} value={amp} onChange={(e) => setAmp(parseFloat(e.target.value))} className="w-full" />
                 </div>
                 <div className="flex flex-col gap-2">
-                  <label className="text-[10px] sm:text-xs uppercase tracking-widest text-[#8A8F98] transition-all duration-300 hover:text-white hover:scale-105 cursor-default inline-block origin-left">
+                  <label className="text-[10px] sm:text-xs uppercase tracking-widest text-[#8A8F98] hover-text-subtle inline-block origin-left">
                     {t.sineLegoFreq}
                   </label>
                   <input type="range" min={0.5} max={8} step={0.5} value={freq} onChange={(e) => setFreq(parseFloat(e.target.value))} className="w-full" />

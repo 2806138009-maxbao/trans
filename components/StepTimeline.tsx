@@ -182,14 +182,14 @@ export const StepTimeline: React.FC<StepTimelineProps> = ({
       <div className="text-center mb-8">
         <div className="inline-flex items-center gap-2 mb-3 px-3 py-1.5 rounded-full bg-[#5E6AD2]/10 border border-[#5E6AD2]/20">
           <span className="w-1.5 h-1.5 rounded-full bg-[#5E6AD2] shadow-[0_0_6px_#5E6AD2]" />
-          <span className="text-[10px] uppercase tracking-[0.15em] text-[#5E6AD2] font-medium">
+          <span className="text-[10px] uppercase tracking-[0.15em] text-[#5E6AD2] font-medium hover-text-subtle">
             {lang === 'zh' ? '实验路线图' : 'Experiment Roadmap'}
           </span>
         </div>
-        <h3 className="text-xl md:text-2xl font-semibold text-white mb-2">
+        <h3 className="text-xl md:text-2xl font-semibold text-white mb-2 hover-text">
           {lang === 'zh' ? '接下来的 6 步实验' : 'Your 6-Step Experiment Path'}
         </h3>
-        <p className="text-sm text-[#8A8F98] max-w-lg mx-auto">
+        <p className="text-sm text-[#8A8F98] max-w-lg mx-auto hover-text-subtle">
           {lang === 'zh' 
             ? '按顺序完成每一步，或点击跳转到感兴趣的部分' 
             : 'Follow each step in order, or click to jump to any section'}
@@ -239,7 +239,7 @@ export const StepTimeline: React.FC<StepTimelineProps> = ({
                   {step.icon}
                 </div>
                 <span className={`
-                  font-medium text-sm transition-colors duration-300 select-text cursor-text
+                  font-medium text-sm transition-colors duration-300 select-text cursor-text hover-text
                   ${isActive ? 'text-white' : 'text-[#D0D6E0] group-hover:text-white'}
                 `}>
                   {step.label[lang]}
@@ -247,7 +247,7 @@ export const StepTimeline: React.FC<StepTimelineProps> = ({
               </div>
 
               {/* Description */}
-              <p className="text-xs text-[#8A8F98] leading-relaxed line-clamp-2 select-text cursor-text">
+              <p className="text-xs text-[#8A8F98] leading-relaxed line-clamp-2 select-text cursor-text hover-text-subtle">
                 {step.description[lang]}
               </p>
 

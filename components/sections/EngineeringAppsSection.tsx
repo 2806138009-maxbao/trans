@@ -23,13 +23,13 @@ export const EngineeringAppsSection = React.forwardRef<HTMLDivElement, Engineeri
               <GradientText>{t.engineeringTitle}</GradientText>
             </h2>
           </div>
-          <p className="text-lg text-[#D0D6E0] leading-relaxed max-w-3xl">{t.engineeringLead}</p>
+          <p className="text-lg text-[#D0D6E0] leading-relaxed max-w-3xl hover-text">{t.engineeringLead}</p>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             {t.engineeringItems.map((item, idx) => (
               <TiltCard key={idx} glowColor="rgba(94,106,210,0.4)">
                 <div className="p-6 space-y-2 group">
-                  <div className="text-sm uppercase tracking-[0.2em] text-[#8A8F98]">{item.title}</div>
-                  <p className="text-[#D0D6E0] text-sm leading-relaxed">{item.desc}</p>
+                  <div className="text-sm uppercase tracking-[0.2em] text-[#8A8F98] hover-text-subtle">{item.title}</div>
+                  <p className="text-[#D0D6E0] text-sm leading-relaxed hover-text">{item.desc}</p>
                 </div>
               </TiltCard>
             ))}

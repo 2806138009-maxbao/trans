@@ -86,7 +86,7 @@ export const IntroNarrativeSection: React.FC<IntroNarrativeSectionProps> = ({
           <ul className="space-y-3">
             {seriesVsTransformPoints.map((point, idx) => (
               <HoverListItem key={idx}>
-                <span className="text-[#D0D6E0] text-sm leading-relaxed whitespace-normal">{point}</span>
+                <span className="text-[#D0D6E0] text-sm leading-relaxed whitespace-normal select-text selection:bg-[#5E6AD2]/50 selection:text-white">{point}</span>
               </HoverListItem>
             ))}
           </ul>
@@ -190,7 +190,7 @@ export const IntroNarrativeSection: React.FC<IntroNarrativeSectionProps> = ({
           {seriesVsTransformPoints.map((point, idx) => (
             <AnimateOnScroll key={idx} animation="fade-up" delay={idx * 100}>
               <HoverListItem>
-                <span className="text-[#D0D6E0] text-sm leading-relaxed whitespace-normal">{point}</span>
+                <span className="text-[#D0D6E0] text-sm leading-relaxed whitespace-normal select-text selection:bg-[#5E6AD2]/50 selection:text-white">{point}</span>
               </HoverListItem>
             </AnimateOnScroll>
           ))}
