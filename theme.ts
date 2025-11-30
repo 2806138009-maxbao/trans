@@ -1,30 +1,29 @@
 /**
- * THEME SYSTEM - "Luminous OS" Edition
+ * THEME SYSTEM - "Warm Charcoal" Edition
  * 
- * Design Philosophy (Silicon Valley Standard):
- * 1. Deep Dark Mode - NOT pure black (#050505)
- * 2. Reactive Glow - Light follows cursor
- * 3. Physics-based Motion - Spring, not ease-in-out
- * 4. Tabular Numbers - Prevent layout jitter
+ * Design Philosophy:
+ * 1. Banish Pure Grey → Use Colored Greys (warm undertone)
+ * 2. Hierarchy via Weight & Contrast
+ * 3. Let it Breathe → Generous spacing
  * 
- * "Built with AI, Directed by Human."
+ * "The interface should feel like high-end avionics equipment."
  */
 
 export const THEME = {
   colors: {
     // ========================================
-    // BACKGROUNDS - Deep Dark (NOT Pure Black)
-    // Pure black feels "dead", #050505 feels "alive"
+    // BACKGROUNDS - Warm Charcoal (Not Pure Black)
+    // 关键: 提高亮度让区别更明显
     // ========================================
     
-    /** Main page background - Deep Dark (Luminous OS) */
-    background: "#050505",                // Deep Dark, NOT pure black
+    /** Main page background - Deep warm charcoal */
+    background: "#0A0A08",                // 微微偏暖的深黑
     
-    /** Card/Panel background - Slightly elevated */
-    surface: "#0A0A0A",                   // One step up
+    /** Card/Panel background - 明显更亮，带暖色调 */
+    surface: "#16140F",                   // 更亮的暖棕色
     
-    /** Elevated surface - Glass panels */
-    surfaceElevated: "#111111",           // Two steps up
+    /** Elevated surface - Glass panels, 更明显的对比 */
+    surfaceElevated: "#1E1B15",           // 明显更亮的暖灰
     
     // ========================================
     // ACCENT COLORS
@@ -109,36 +108,12 @@ export const THEME = {
   },
   
   // ========================================
-  // TYPOGRAPHY - Luminous OS Standard
-  // English/Numbers: Space Grotesk (Tracking -0.03em)
-  // Chinese: Noto Sans SC
-  // Numbers: ALWAYS tabular-nums
+  // TYPOGRAPHY
   // ========================================
   fonts: {
-    /** Technical/English - Tight tracking */
     tech: "'Space Grotesk', -apple-system, sans-serif",
-    /** Body/Chinese - Natural tracking */
     body: "'Noto Sans SC', -apple-system, sans-serif",
-    /** Monospace - Data display */
-    mono: "'Space Mono', 'SF Mono', 'Menlo', monospace",
-  },
-  
-  typography: {
-    /** Tracking values */
-    tracking: {
-      tight: '-0.03em',      // Headings, English
-      normal: '0',           // Chinese body
-      wide: '0.1em',         // Labels, badges
-      extraWide: '0.2em',    // Eyebrows
-    },
-    /** Font weights */
-    weight: {
-      light: 300,
-      normal: 400,
-      medium: 500,
-      semibold: 600,
-      bold: 700,
-    },
+    mono: "'Space Grotesk', 'SF Mono', monospace",
   },
   
   // ========================================
@@ -212,45 +187,31 @@ export const THEME = {
   },
   
   // ========================================
-  // ANIMATION - Physics-based Motion (CRITICAL)
-  // 
-  // NEVER use ease-in-out or linear!
-  // ALWAYS use Spring Physics
+  // ANIMATION - L3 Unified Physics Kernel
   // ========================================
   animation: {
     /** 
-     * Primary curve - Expo Out (Apple-like)
-     * Use for ALL UI transitions
+     * Snappy Apple curve - Expo Out
+     * The ONLY curve allowed for UI transitions
      */
     curve: "cubic-bezier(0.16, 1, 0.3, 1)",
     curveVar: "var(--ease-out-expo)",
     
     /**
-     * Alternative curves for specific cases
-     */
-    curveSnap: "cubic-bezier(0.34, 1.56, 0.64, 1)",  // Overshoot for snapping
-    curveSmooth: "cubic-bezier(0.25, 0.46, 0.45, 0.94)", // Subtle deceleration
-    
-    /**
-     * Physics-based springs (for react-spring or JS)
-     * These create "expensive-feeling" interactions
+     * Physics-based springs (JS use)
+     * stiffness, damping, mass
      */
     spring: {
-      /** Default - Responsive but smooth */
-      default: { stiffness: 170, damping: 26, mass: 1 },
-      /** Snappy - Quick response */
-      snappy: { stiffness: 300, damping: 30, mass: 0.8 },
-      /** Gentle - Slow, luxurious */
-      gentle: { stiffness: 120, damping: 20, mass: 1.2 },
-      /** Bouncy - Playful overshoot */
-      bouncy: { stiffness: 200, damping: 15, mass: 1 },
+      stiffness: 170,
+      damping: 26,
+      mass: 1
     },
 
     /** Durations - Unified Heartbeat */
-    fast: "0.15s",      // Micro-interactions
-    normal: "0.3s",     // Standard transitions
-    slow: "0.5s",       // Reveals, modals
-    slower: "0.8s",     // Page transitions
+    fast: "0.2s",
+    normal: "0.4s", 
+    slow: "0.6s",
+    slower: "0.8s",
   },
   
   // ========================================

@@ -397,3 +397,32 @@ const ModeCard: React.FC<ModeCardProps> = ({
 };
 
 export default EngineeringAppsSection;
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          {t.engineeringItems.map((item, idx) => (
+            <Wrapper key={idx} {...getWrapperProps('scale', 200 + idx * 100)}>
+              <TiltCard glowColor="rgba(255,199,0,0.3)">
+                <div className="p-6 space-y-3 group">
+                  <div className="flex items-center gap-3">
+                    <span 
+                      className="w-8 h-8 rounded-lg flex items-center justify-center text-sm font-bold"
+                      style={{ backgroundColor: `${THEME.colors.primary}20`, color: THEME.colors.primary }}
+                    >
+                      {idx + 1}
+                    </span>
+                    <div className="text-sm uppercase tracking-[0.2em] text-[var(--color-text-muted)] group-hover:text-white transition-colors duration-300">
+                      {item.title}
+                    </div>
+                  </div>
+                  <p className="text-[#D0D6E0] text-sm leading-relaxed group-hover:text-white transition-colors duration-300">
+                    {item.desc}
+                  </p>
+                </div>
+              </TiltCard>
+            </Wrapper>
+          ))}
+        </div>
+      </div>
+    </section>
+  );
+};

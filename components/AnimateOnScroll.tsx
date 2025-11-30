@@ -130,4 +130,3 @@ export const StaggeredList: React.FC<StaggeredListProps> = ({
     </div>
   );
 };
-

@@ -319,7 +319,7 @@ export const SmithChartCanvas: React.FC<SmithChartCanvasProps> = ({
 
       // Clear
       ctx.clearRect(0, 0, w, h);
-      
+
       // ========================================
       // BOOT SEQUENCE: Cinematic grid draw animation
       // ========================================
@@ -343,7 +343,7 @@ export const SmithChartCanvas: React.FC<SmithChartCanvasProps> = ({
         const ghost = ghostTraceRef.current;
         const ghostGamma = impedanceToGamma(ghost);
         const ghostScreen = gammaToScreen(ghostGamma, centerX, centerY, radius);
-        
+
         // Draw ghost point
         ctx.save();
         ctx.setLineDash([4, 4]);
@@ -546,7 +546,7 @@ export const SmithChartCanvas: React.FC<SmithChartCanvasProps> = ({
     // 更新悬停状态 (可供性意符)
     const nearPoint = isNearActivePoint(x, y);
     setIsHovering(nearPoint);
-    
+
     // HUD: 通知父组件鼠标在图上 (用于 pointerHover 事件)
     onHoverChange?.(true);
     
@@ -1076,7 +1076,7 @@ function drawSmithChartGrid(
   ctx.strokeStyle = 'rgba(255, 215, 0, 0.04)';
   ctx.lineWidth = 10;
   ctx.stroke();
-  
+
   // Inner glow
   ctx.beginPath();
   ctx.arc(cx, cy, r, -Math.PI / 2, -Math.PI / 2 + 2 * Math.PI * bootProgress);
@@ -1181,9 +1181,9 @@ function drawSmithChartGrid(
       drawReactanceArc(ctx, cx, cy, r, bVal, true, "rgba(100, 200, 150, 0.15)");
       drawReactanceArc(ctx, cx, cy, r, bVal, false, "rgba(100, 200, 150, 0.15)");
     });
-    
-    ctx.restore();
-  }
+
+  ctx.restore();
+}
 
   ctx.restore();
 
@@ -1353,7 +1353,7 @@ function drawActivePoint(
       const vswrRadius = gammaMag * radius;
       
       // Outer atmosphere
-      ctx.beginPath();
+    ctx.beginPath();
       ctx.arc(cx, cy, vswrRadius, 0, 2 * Math.PI);
       ctx.strokeStyle = 'rgba(255, 215, 0, 0.04)';
       ctx.lineWidth = 12;
@@ -1436,7 +1436,7 @@ function drawActivePoint(
     ctx.arc(pos.x, pos.y, baseCoreRadius * scale, 0, 2 * Math.PI);
     ctx.fill();
     ctx.shadowBlur = 0;
-    
+
     // --- White Center Dot ---
     ctx.fillStyle = `rgba(255, 255, 255, ${0.6 + 0.4 * matchBrightness})`;
     ctx.beginPath();
@@ -1454,7 +1454,719 @@ function drawActivePoint(
         ctx.beginPath();
         ctx.moveTo(pos.x + dx * arrowOffset * 0.5, pos.y + dy * arrowOffset * 0.5);
         ctx.lineTo(pos.x + dx * arrowOffset, pos.y + dy * arrowOffset);
-        ctx.stroke();
+    ctx.stroke();
+      });
+      ctx.lineWidth = 1;
+    }
+    
+    // --- 5. Draw Mini Data Labels near the point ---
+    // Tufte: 高分辨率视觉 - 精确到小数点后 4 位
+    const labelOffset = 20;
+    const labelX = pos.x + labelOffset;
+    const labelY = pos.y - labelOffset;
+    
+    // Only show if not too close to edges
+    if (labelX < w - 80 && labelY > 20) {
+      // Tufte: 数据墨水比 - 数据标签是最重要的，用最亮的颜色
+      ctx.font = "bold 10px 'Space Grotesk', monospace";
+      ctx.fillStyle = pointColor;  // 使用动态颜色
+      ctx.textAlign = "left";
+      
+      // Tufte: 高精度读数 - 小数点后 4 位
+      const zText = `z = ${impedance.r.toFixed(4)}${impedance.x >= 0 ? '+' : ''}j${impedance.x.toFixed(4)}`;
+      ctx.fillText(zText, labelX, labelY);
+      
+      // Gamma magnitude - 高精度
+      ctx.fillStyle = `rgba(255, 255, 255, ${0.3 + 0.4 * matchBrightness})`;
+      ctx.font = "9px 'Space Grotesk', monospace";
+      ctx.fillText(`|Γ| = ${gammaMag.toFixed(4)}`, labelX, labelY + 14);
+      
+      // VSWR - 高精度，颜色随匹配度变化
+      const vswrDisplay = vswr > 99 ? '∞' : vswr.toFixed(3);
+      ctx.fillStyle = pointColor;
+      ctx.fillText(`VSWR = ${vswrDisplay}:1`, labelX, labelY + 26);
+    }
+}
+
+  // Formula: Center at (1, 1/x), Radius = 1/|x|
+  const xValues = [0.2, 0.5, 1, 2, 5];
+  
+  // Clip to unit circle
+  ctx.save();
+  ctx.beginPath();
+  ctx.arc(cx, cy, r, 0, 2 * Math.PI);
+  ctx.clip();
+
+  xValues.forEach(xVal => {
+    // Positive reactance (inductive, top half)
+    drawReactanceArc(ctx, cx, cy, r, xVal, true);
+    // Negative reactance (capacitive, bottom half)
+    drawReactanceArc(ctx, cx, cy, r, xVal, false);
+  });
+  
+  // --- 4. REAL AXIS (x=0 line) ---
+  // CINEMATIC: Prime Axis - Higher visibility (0.25 opacity)
+  ctx.beginPath();
+  ctx.moveTo(cx - r, cy);
+  ctx.lineTo(cx + r, cy);
+  ctx.strokeStyle = GRID_WHITE_PRIME;
+  ctx.lineWidth = 1;
+  ctx.stroke();
+
+  // --- 5. ADMITTANCE CHART (Y = 1/Z, rotated 180°) ---
+  if (showAdmittance) {
+    ctx.save();
+    ctx.translate(cx, cy);
+    ctx.rotate(Math.PI);
+    ctx.translate(-cx, -cy);
+    
+    // Constant conductance circles (g)
+    const gValues = [0.2, 0.5, 1, 2];
+    gValues.forEach(gVal => {
+      const centerU = gVal / (gVal + 1);
+      const circleRadius = 1 / (gVal + 1);
+      const screenCenterX = cx + centerU * r;
+      ctx.beginPath();
+      ctx.arc(screenCenterX, cy, circleRadius * r, 0, 2 * Math.PI);
+      ctx.strokeStyle = "rgba(100, 200, 150, 0.15)";
+      ctx.stroke();
+    });
+    
+    // Constant susceptance arcs (b)
+    xValues.forEach(bVal => {
+      drawReactanceArc(ctx, cx, cy, r, bVal, true, "rgba(100, 200, 150, 0.15)");
+      drawReactanceArc(ctx, cx, cy, r, bVal, false, "rgba(100, 200, 150, 0.15)");
+    });
+
+  ctx.restore();
+}
+
+  ctx.restore();
+
+  // --- 6. LABELS ---
+  // S-Tier: High legibility text with Space Grotesk
+  ctx.textAlign = "center";
+  ctx.textBaseline = "middle";
+
+  // Short Circuit (Γ = -1, z = 0)
+  ctx.font = `600 10px ${fontTech}`;
+  ctx.fillStyle = TEXT_MED;
+  ctx.fillText("SHORT", cx - r - 32, cy);
+  ctx.font = `400 8px ${fontTech}`;
+  ctx.fillStyle = TEXT_LOW;
+  ctx.fillText("z=0", cx - r - 32, cy + 12);
+  
+  // Open Circuit (Γ = +1, z = ∞)
+  ctx.font = `600 10px ${fontTech}`;
+  ctx.fillStyle = TEXT_MED;
+  ctx.fillText("OPEN", cx + r + 30, cy);
+  ctx.font = `400 8px ${fontTech}`;
+  ctx.fillStyle = TEXT_LOW;
+  ctx.fillText("z=∞", cx + r + 30, cy + 12);
+  
+  // Match Point (Γ = 0, z = 1) - Amber Gold accent
+  ctx.font = `700 10px ${fontTech}`;
+  ctx.fillStyle = '#FFD700';
+  ctx.fillText("MATCH", cx, cy - 22);
+  ctx.font = `400 8px ${fontTech}`;
+  ctx.fillStyle = 'rgba(255, 215, 0, 0.6)';
+  ctx.fillText("z=1, Γ=0", cx, cy - 11);
+  
+  // Inductive Region (+jX, top)
+  ctx.font = `600 10px ${fontTech}`;
+  ctx.fillStyle = TEXT_HIGH;
+  ctx.fillText("+jX", cx, cy - r - 14);
+  
+  // Capacitive Region (-jX, bottom)
+  ctx.fillText("−jX", cx, cy + r + 14);
+  
+  // --- 7. MATCH POINT MARKER with Neon Bloom ---
+  // CINEMATIC: Multi-layer glow effect
+  
+  // Layer 3: Outer atmosphere
+  ctx.beginPath();
+  ctx.arc(cx, cy, 16, 0, 2 * Math.PI);
+  ctx.fillStyle = 'rgba(255, 215, 0, 0.03)';
+  ctx.fill();
+  
+  // Layer 2: Inner glow ring
+  ctx.beginPath();
+  ctx.arc(cx, cy, 10, 0, 2 * Math.PI);
+  ctx.strokeStyle = 'rgba(255, 215, 0, 0.12)';
+  ctx.lineWidth = 3;
+  ctx.stroke();
+  
+  // Layer 1: Core ring
+  ctx.beginPath();
+  ctx.arc(cx, cy, 6, 0, 2 * Math.PI);
+  ctx.strokeStyle = 'rgba(255, 215, 0, 0.3)';
+  ctx.lineWidth = 1.5;
+  ctx.stroke();
+  
+  // Center dot - Amber Gold with bloom
+  ctx.beginPath();
+  ctx.arc(cx, cy, 3, 0, 2 * Math.PI);
+  ctx.fillStyle = '#FFD700';
+  ctx.shadowBlur = 15;
+  ctx.shadowColor = '#FFD700';
+  ctx.fill();
+  ctx.shadowBlur = 0;
+  
+  // Reset global alpha after boot sequence
+  ctx.globalAlpha = 1;
+}
+
+function drawReactanceArc(
+  ctx: CanvasRenderingContext2D, 
+  cx: number, 
+  cy: number, 
+  scale: number, 
+  xVal: number, 
+  isPositive: boolean, 
+  color?: string
+) {
+  // CINEMATIC: Tufte's Hierarchy - x=1 is Prime, others are Distant
+  const hairline = 0.5;
+  const GRID_WHITE_DISTANT = 'rgba(255, 255, 255, 0.08)';  // Distant
+  const GRID_GOLD_ACCENT = 'rgba(255, 215, 0, 0.25)';      // Prime
+  const TEXT_LOW = 'rgba(234, 234, 234, 0.25)';
+  
+  // Mathematical derivation for constant reactance arcs:
+  // Center at (1, 1/x) in Γ-plane, Radius = 1/|x|
+  const centerU = 1;
+  const centerV = isPositive ? (1 / xVal) : (-1 / xVal);
+  const arcRadius = 1 / xVal;
+
+  // Convert to screen coordinates
+  const screenCenterX = cx + centerU * scale;
+  const screenCenterY = cy - centerV * scale; // Invert Y
+  const screenRadius = arcRadius * scale;
+
+  ctx.beginPath();
+  ctx.arc(screenCenterX, screenCenterY, screenRadius, 0, 2 * Math.PI);
+  
+  // CINEMATIC: x=1 is Prime Axis, others are Distant
+  if (xVal === 1) {
+    ctx.strokeStyle = color || GRID_GOLD_ACCENT;
+    ctx.lineWidth = 0.8;
+  } else {
+    ctx.strokeStyle = color || GRID_WHITE_DISTANT;
+    ctx.lineWidth = hairline;
+  }
+  ctx.stroke();
+  
+  // S-Tier: Minimal labels
+  if (!color && xVal === 1) {
+    const fontTech = "'Space Grotesk', monospace";
+    ctx.font = `500 7px ${fontTech}`;
+    ctx.fillStyle = TEXT_LOW;
+    ctx.textAlign = "center";
+    
+    const angle = 2 * Math.atan(1 / xVal);
+    const labelX = cx + Math.cos(isPositive ? -angle : angle) * scale * 0.85;
+    const labelY = cy + Math.sin(isPositive ? -angle : angle) * scale * 0.85;
+    
+    ctx.fillText(`${isPositive ? '+' : '-'}j${xVal}`, labelX, labelY);
+  }
+}
+
+function drawActivePoint(
+    ctx: CanvasRenderingContext2D, 
+    cx: number, 
+    cy: number, 
+    radius: number, 
+    impedance: Impedance,
+    pos: { x: number; y: number },
+    isHovering: boolean = false,
+    isDragging: boolean = false,
+    currentScale: number = 1,
+    currentGlow: number = 0.1,
+    breathPhase: number = 0  // 0-1 for breathing animation
+) {
+    const dpr = window.devicePixelRatio || 1;
+    const w = ctx.canvas.width / dpr;
+    const h = ctx.canvas.height / dpr;
+    
+    // Calculate Gamma for this impedance
+    const gamma = impedanceToGamma(impedance);
+    const gammaMag = Complex.mag(gamma);
+    
+    // S-Tier Color: Amber Gold #FFD700
+    const AMBER_GOLD = { r: 255, g: 215, b: 0 };
+    
+    // --- CINEMATIC: Cursor Spotlight (Flashlight Effect) ---
+    // Illuminates the grid as you inspect it
+    drawCursorSpotlight(ctx, pos.x, pos.y, 150);
+    
+    // --- 1. Draw Vector from Center to Point (Γ vector) ---
+    // CINEMATIC: Use Neon Bloom rendering for the trace
+    drawGlowingLine(ctx, cx, cy, pos.x, pos.y, '#FFD700', isDragging ? 1.2 : 0.8);
+    ctx.lineWidth = 1;
+    
+    // --- 2. Draw |Γ| Circle (VSWR circle through this point) ---
+    // CINEMATIC: Neon Bloom for the VSWR circle
+    if (gammaMag > 0.01 && gammaMag < 0.99) {
+      const vswrRadius = gammaMag * radius;
+      
+      // Outer atmosphere
+    ctx.beginPath();
+      ctx.arc(cx, cy, vswrRadius, 0, 2 * Math.PI);
+      ctx.strokeStyle = 'rgba(255, 215, 0, 0.04)';
+      ctx.lineWidth = 12;
+      ctx.stroke();
+      
+      // Inner glow
+      ctx.beginPath();
+      ctx.arc(cx, cy, vswrRadius, 0, 2 * Math.PI);
+      ctx.strokeStyle = 'rgba(255, 215, 0, 0.1)';
+      ctx.lineWidth = 4;
+      ctx.setLineDash([6, 8]);
+      ctx.stroke();
+      ctx.setLineDash([]);
+      
+      // Core line
+      ctx.beginPath();
+      ctx.arc(cx, cy, vswrRadius, 0, 2 * Math.PI);
+      ctx.strokeStyle = 'rgba(255, 215, 0, 0.25)';
+      ctx.lineWidth = 1;
+      ctx.setLineDash([4, 6]);
+      ctx.stroke();
+      ctx.setLineDash([]);
+    }
+    
+    // --- 3. Crosshair is now handled by CustomCursor component ---
+    // (Removed from canvas to avoid duplication)
+    
+    // --- 4. Draw the Active Point with BREATHING GLOW ---
+    // S-Tier: Pulsing glow effect
+    
+    const baseOuterRadius = 14;
+    const baseMiddleRadius = 9;
+    const baseCoreRadius = 5;
+    const baseCenterRadius = 2;
+    
+    // Breathing effect: Subtle scale/glow pulse
+    const breathScale = 1 + Math.sin(breathPhase * Math.PI * 2) * 0.08;
+    const breathGlow = 0.3 + Math.sin(breathPhase * Math.PI * 2) * 0.15;
+    
+    // Apply current animation state
+    const scale = currentScale * breathScale;
+    const glowIntensity = Math.max(currentGlow, breathGlow);
+    
+    // S-Tier: Brightness based on match quality
+    // VSWR 1 = Perfect = Full brightness
+    // VSWR 5+ = Poor = Dimmed
+    const vswr = gammaMag < 0.999 ? (1 + gammaMag) / (1 - gammaMag) : 10;
+    const matchBrightness = Math.max(0.5, 1 - (vswr - 1) / 10);
+    
+    // Dynamic color: Amber Gold with brightness modulation
+    const r_color = Math.round(AMBER_GOLD.r * matchBrightness);
+    const g_color = Math.round(AMBER_GOLD.g * matchBrightness);
+    const b_color = 0;
+    const pointColor = `rgb(${r_color}, ${g_color}, ${b_color})`;
+    
+    // --- Outer Glow Layers (Breathing) ---
+    // Layer 1: Outermost soft glow
+    ctx.beginPath();
+    ctx.arc(pos.x, pos.y, baseOuterRadius * scale * 1.5, 0, 2 * Math.PI);
+    ctx.fillStyle = `rgba(${r_color}, ${g_color}, 0, ${glowIntensity * 0.15})`;
+    ctx.fill();
+    
+    // Layer 2: Middle glow
+    ctx.beginPath();
+    ctx.arc(pos.x, pos.y, baseOuterRadius * scale, 0, 2 * Math.PI);
+    ctx.fillStyle = `rgba(${r_color}, ${g_color}, 0, ${glowIntensity * 0.3})`;
+    ctx.fill();
+    
+    // Layer 3: Inner glow ring
+    ctx.beginPath();
+    ctx.arc(pos.x, pos.y, baseMiddleRadius * scale, 0, 2 * Math.PI);
+    ctx.fillStyle = `rgba(${r_color}, ${g_color}, 0, ${glowIntensity * 0.5})`;
+    ctx.fill();
+    
+    // --- Core Point with Shadow ---
+    ctx.shadowBlur = (isDragging ? 35 : (isHovering ? 28 : 20)) * matchBrightness;
+    ctx.shadowColor = `rgba(${AMBER_GOLD.r}, ${AMBER_GOLD.g}, 0, 0.8)`;
+    ctx.fillStyle = pointColor;
+    ctx.beginPath();
+    ctx.arc(pos.x, pos.y, baseCoreRadius * scale, 0, 2 * Math.PI);
+    ctx.fill();
+    ctx.shadowBlur = 0;
+
+    // --- White Center Dot ---
+    ctx.fillStyle = `rgba(255, 255, 255, ${0.6 + 0.4 * matchBrightness})`;
+    ctx.beginPath();
+    ctx.arc(pos.x, pos.y, baseCenterRadius * scale, 0, 2 * Math.PI);
+    ctx.fill();
+    
+    // --- Drag Indicator (4 directional lines) ---
+    if (isDragging) {
+      const arrowOffset = baseOuterRadius * scale * 2;
+      ctx.strokeStyle = 'rgba(255, 215, 0, 0.4)';
+      ctx.lineWidth = 1.5;
+      
+      const directions = [[0, -1], [0, 1], [-1, 0], [1, 0]];
+      directions.forEach(([dx, dy]) => {
+        ctx.beginPath();
+        ctx.moveTo(pos.x + dx * arrowOffset * 0.5, pos.y + dy * arrowOffset * 0.5);
+        ctx.lineTo(pos.x + dx * arrowOffset, pos.y + dy * arrowOffset);
+    ctx.stroke();
+      });
+      ctx.lineWidth = 1;
+    }
+    
+    // --- 5. Draw Mini Data Labels near the point ---
+    // Tufte: 高分辨率视觉 - 精确到小数点后 4 位
+    const labelOffset = 20;
+    const labelX = pos.x + labelOffset;
+    const labelY = pos.y - labelOffset;
+    
+    // Only show if not too close to edges
+    if (labelX < w - 80 && labelY > 20) {
+      // Tufte: 数据墨水比 - 数据标签是最重要的，用最亮的颜色
+      ctx.font = "bold 10px 'Space Grotesk', monospace";
+      ctx.fillStyle = pointColor;  // 使用动态颜色
+      ctx.textAlign = "left";
+      
+      // Tufte: 高精度读数 - 小数点后 4 位
+      const zText = `z = ${impedance.r.toFixed(4)}${impedance.x >= 0 ? '+' : ''}j${impedance.x.toFixed(4)}`;
+      ctx.fillText(zText, labelX, labelY);
+      
+      // Gamma magnitude - 高精度
+      ctx.fillStyle = `rgba(255, 255, 255, ${0.3 + 0.4 * matchBrightness})`;
+      ctx.font = "9px 'Space Grotesk', monospace";
+      ctx.fillText(`|Γ| = ${gammaMag.toFixed(4)}`, labelX, labelY + 14);
+      
+      // VSWR - 高精度，颜色随匹配度变化
+      const vswrDisplay = vswr > 99 ? '∞' : vswr.toFixed(3);
+      ctx.fillStyle = pointColor;
+      ctx.fillText(`VSWR = ${vswrDisplay}:1`, labelX, labelY + 26);
+    }
+}
+
+  // Formula: Center at (1, 1/x), Radius = 1/|x|
+  const xValues = [0.2, 0.5, 1, 2, 5];
+  
+  // Clip to unit circle
+  ctx.save();
+  ctx.beginPath();
+  ctx.arc(cx, cy, r, 0, 2 * Math.PI);
+  ctx.clip();
+
+  xValues.forEach(xVal => {
+    // Positive reactance (inductive, top half)
+    drawReactanceArc(ctx, cx, cy, r, xVal, true);
+    // Negative reactance (capacitive, bottom half)
+    drawReactanceArc(ctx, cx, cy, r, xVal, false);
+  });
+  
+  // --- 4. REAL AXIS (x=0 line) ---
+  // CINEMATIC: Prime Axis - Higher visibility (0.25 opacity)
+  ctx.beginPath();
+  ctx.moveTo(cx - r, cy);
+  ctx.lineTo(cx + r, cy);
+  ctx.strokeStyle = GRID_WHITE_PRIME;
+  ctx.lineWidth = 1;
+  ctx.stroke();
+
+  // --- 5. ADMITTANCE CHART (Y = 1/Z, rotated 180°) ---
+  if (showAdmittance) {
+    ctx.save();
+    ctx.translate(cx, cy);
+    ctx.rotate(Math.PI);
+    ctx.translate(-cx, -cy);
+    
+    // Constant conductance circles (g)
+    const gValues = [0.2, 0.5, 1, 2];
+    gValues.forEach(gVal => {
+      const centerU = gVal / (gVal + 1);
+      const circleRadius = 1 / (gVal + 1);
+      const screenCenterX = cx + centerU * r;
+      ctx.beginPath();
+      ctx.arc(screenCenterX, cy, circleRadius * r, 0, 2 * Math.PI);
+      ctx.strokeStyle = "rgba(100, 200, 150, 0.15)";
+      ctx.stroke();
+    });
+    
+    // Constant susceptance arcs (b)
+    xValues.forEach(bVal => {
+      drawReactanceArc(ctx, cx, cy, r, bVal, true, "rgba(100, 200, 150, 0.15)");
+      drawReactanceArc(ctx, cx, cy, r, bVal, false, "rgba(100, 200, 150, 0.15)");
+    });
+
+  ctx.restore();
+}
+
+  ctx.restore();
+
+  // --- 6. LABELS ---
+  // S-Tier: High legibility text with Space Grotesk
+  ctx.textAlign = "center";
+  ctx.textBaseline = "middle";
+
+  // Short Circuit (Γ = -1, z = 0)
+  ctx.font = `600 10px ${fontTech}`;
+  ctx.fillStyle = TEXT_MED;
+  ctx.fillText("SHORT", cx - r - 32, cy);
+  ctx.font = `400 8px ${fontTech}`;
+  ctx.fillStyle = TEXT_LOW;
+  ctx.fillText("z=0", cx - r - 32, cy + 12);
+  
+  // Open Circuit (Γ = +1, z = ∞)
+  ctx.font = `600 10px ${fontTech}`;
+  ctx.fillStyle = TEXT_MED;
+  ctx.fillText("OPEN", cx + r + 30, cy);
+  ctx.font = `400 8px ${fontTech}`;
+  ctx.fillStyle = TEXT_LOW;
+  ctx.fillText("z=∞", cx + r + 30, cy + 12);
+  
+  // Match Point (Γ = 0, z = 1) - Amber Gold accent
+  ctx.font = `700 10px ${fontTech}`;
+  ctx.fillStyle = '#FFD700';
+  ctx.fillText("MATCH", cx, cy - 22);
+  ctx.font = `400 8px ${fontTech}`;
+  ctx.fillStyle = 'rgba(255, 215, 0, 0.6)';
+  ctx.fillText("z=1, Γ=0", cx, cy - 11);
+  
+  // Inductive Region (+jX, top)
+  ctx.font = `600 10px ${fontTech}`;
+  ctx.fillStyle = TEXT_HIGH;
+  ctx.fillText("+jX", cx, cy - r - 14);
+  
+  // Capacitive Region (-jX, bottom)
+  ctx.fillText("−jX", cx, cy + r + 14);
+  
+  // --- 7. MATCH POINT MARKER with Neon Bloom ---
+  // CINEMATIC: Multi-layer glow effect
+  
+  // Layer 3: Outer atmosphere
+  ctx.beginPath();
+  ctx.arc(cx, cy, 16, 0, 2 * Math.PI);
+  ctx.fillStyle = 'rgba(255, 215, 0, 0.03)';
+  ctx.fill();
+  
+  // Layer 2: Inner glow ring
+  ctx.beginPath();
+  ctx.arc(cx, cy, 10, 0, 2 * Math.PI);
+  ctx.strokeStyle = 'rgba(255, 215, 0, 0.12)';
+  ctx.lineWidth = 3;
+  ctx.stroke();
+  
+  // Layer 1: Core ring
+  ctx.beginPath();
+  ctx.arc(cx, cy, 6, 0, 2 * Math.PI);
+  ctx.strokeStyle = 'rgba(255, 215, 0, 0.3)';
+  ctx.lineWidth = 1.5;
+  ctx.stroke();
+  
+  // Center dot - Amber Gold with bloom
+  ctx.beginPath();
+  ctx.arc(cx, cy, 3, 0, 2 * Math.PI);
+  ctx.fillStyle = '#FFD700';
+  ctx.shadowBlur = 15;
+  ctx.shadowColor = '#FFD700';
+  ctx.fill();
+  ctx.shadowBlur = 0;
+  
+  // Reset global alpha after boot sequence
+  ctx.globalAlpha = 1;
+}
+
+function drawReactanceArc(
+  ctx: CanvasRenderingContext2D, 
+  cx: number, 
+  cy: number, 
+  scale: number, 
+  xVal: number, 
+  isPositive: boolean, 
+  color?: string
+) {
+  // CINEMATIC: Tufte's Hierarchy - x=1 is Prime, others are Distant
+  const hairline = 0.5;
+  const GRID_WHITE_DISTANT = 'rgba(255, 255, 255, 0.08)';  // Distant
+  const GRID_GOLD_ACCENT = 'rgba(255, 215, 0, 0.25)';      // Prime
+  const TEXT_LOW = 'rgba(234, 234, 234, 0.25)';
+  
+  // Mathematical derivation for constant reactance arcs:
+  // Center at (1, 1/x) in Γ-plane, Radius = 1/|x|
+  const centerU = 1;
+  const centerV = isPositive ? (1 / xVal) : (-1 / xVal);
+  const arcRadius = 1 / xVal;
+
+  // Convert to screen coordinates
+  const screenCenterX = cx + centerU * scale;
+  const screenCenterY = cy - centerV * scale; // Invert Y
+  const screenRadius = arcRadius * scale;
+
+  ctx.beginPath();
+  ctx.arc(screenCenterX, screenCenterY, screenRadius, 0, 2 * Math.PI);
+  
+  // CINEMATIC: x=1 is Prime Axis, others are Distant
+  if (xVal === 1) {
+    ctx.strokeStyle = color || GRID_GOLD_ACCENT;
+    ctx.lineWidth = 0.8;
+  } else {
+    ctx.strokeStyle = color || GRID_WHITE_DISTANT;
+    ctx.lineWidth = hairline;
+  }
+  ctx.stroke();
+  
+  // S-Tier: Minimal labels
+  if (!color && xVal === 1) {
+    const fontTech = "'Space Grotesk', monospace";
+    ctx.font = `500 7px ${fontTech}`;
+    ctx.fillStyle = TEXT_LOW;
+    ctx.textAlign = "center";
+    
+    const angle = 2 * Math.atan(1 / xVal);
+    const labelX = cx + Math.cos(isPositive ? -angle : angle) * scale * 0.85;
+    const labelY = cy + Math.sin(isPositive ? -angle : angle) * scale * 0.85;
+    
+    ctx.fillText(`${isPositive ? '+' : '-'}j${xVal}`, labelX, labelY);
+  }
+}
+
+function drawActivePoint(
+    ctx: CanvasRenderingContext2D, 
+    cx: number, 
+    cy: number, 
+    radius: number, 
+    impedance: Impedance,
+    pos: { x: number; y: number },
+    isHovering: boolean = false,
+    isDragging: boolean = false,
+    currentScale: number = 1,
+    currentGlow: number = 0.1,
+    breathPhase: number = 0  // 0-1 for breathing animation
+) {
+    const dpr = window.devicePixelRatio || 1;
+    const w = ctx.canvas.width / dpr;
+    const h = ctx.canvas.height / dpr;
+    
+    // Calculate Gamma for this impedance
+    const gamma = impedanceToGamma(impedance);
+    const gammaMag = Complex.mag(gamma);
+    
+    // S-Tier Color: Amber Gold #FFD700
+    const AMBER_GOLD = { r: 255, g: 215, b: 0 };
+    
+    // --- CINEMATIC: Cursor Spotlight (Flashlight Effect) ---
+    // Illuminates the grid as you inspect it
+    drawCursorSpotlight(ctx, pos.x, pos.y, 150);
+    
+    // --- 1. Draw Vector from Center to Point (Γ vector) ---
+    // CINEMATIC: Use Neon Bloom rendering for the trace
+    drawGlowingLine(ctx, cx, cy, pos.x, pos.y, '#FFD700', isDragging ? 1.2 : 0.8);
+    ctx.lineWidth = 1;
+    
+    // --- 2. Draw |Γ| Circle (VSWR circle through this point) ---
+    // CINEMATIC: Neon Bloom for the VSWR circle
+    if (gammaMag > 0.01 && gammaMag < 0.99) {
+      const vswrRadius = gammaMag * radius;
+      
+      // Outer atmosphere
+    ctx.beginPath();
+      ctx.arc(cx, cy, vswrRadius, 0, 2 * Math.PI);
+      ctx.strokeStyle = 'rgba(255, 215, 0, 0.04)';
+      ctx.lineWidth = 12;
+      ctx.stroke();
+      
+      // Inner glow
+      ctx.beginPath();
+      ctx.arc(cx, cy, vswrRadius, 0, 2 * Math.PI);
+      ctx.strokeStyle = 'rgba(255, 215, 0, 0.1)';
+      ctx.lineWidth = 4;
+      ctx.setLineDash([6, 8]);
+      ctx.stroke();
+      ctx.setLineDash([]);
+      
+      // Core line
+      ctx.beginPath();
+      ctx.arc(cx, cy, vswrRadius, 0, 2 * Math.PI);
+      ctx.strokeStyle = 'rgba(255, 215, 0, 0.25)';
+      ctx.lineWidth = 1;
+      ctx.setLineDash([4, 6]);
+      ctx.stroke();
+      ctx.setLineDash([]);
+    }
+    
+    // --- 3. Crosshair is now handled by CustomCursor component ---
+    // (Removed from canvas to avoid duplication)
+    
+    // --- 4. Draw the Active Point with BREATHING GLOW ---
+    // S-Tier: Pulsing glow effect
+    
+    const baseOuterRadius = 14;
+    const baseMiddleRadius = 9;
+    const baseCoreRadius = 5;
+    const baseCenterRadius = 2;
+    
+    // Breathing effect: Subtle scale/glow pulse
+    const breathScale = 1 + Math.sin(breathPhase * Math.PI * 2) * 0.08;
+    const breathGlow = 0.3 + Math.sin(breathPhase * Math.PI * 2) * 0.15;
+    
+    // Apply current animation state
+    const scale = currentScale * breathScale;
+    const glowIntensity = Math.max(currentGlow, breathGlow);
+    
+    // S-Tier: Brightness based on match quality
+    // VSWR 1 = Perfect = Full brightness
+    // VSWR 5+ = Poor = Dimmed
+    const vswr = gammaMag < 0.999 ? (1 + gammaMag) / (1 - gammaMag) : 10;
+    const matchBrightness = Math.max(0.5, 1 - (vswr - 1) / 10);
+    
+    // Dynamic color: Amber Gold with brightness modulation
+    const r_color = Math.round(AMBER_GOLD.r * matchBrightness);
+    const g_color = Math.round(AMBER_GOLD.g * matchBrightness);
+    const b_color = 0;
+    const pointColor = `rgb(${r_color}, ${g_color}, ${b_color})`;
+    
+    // --- Outer Glow Layers (Breathing) ---
+    // Layer 1: Outermost soft glow
+    ctx.beginPath();
+    ctx.arc(pos.x, pos.y, baseOuterRadius * scale * 1.5, 0, 2 * Math.PI);
+    ctx.fillStyle = `rgba(${r_color}, ${g_color}, 0, ${glowIntensity * 0.15})`;
+    ctx.fill();
+    
+    // Layer 2: Middle glow
+    ctx.beginPath();
+    ctx.arc(pos.x, pos.y, baseOuterRadius * scale, 0, 2 * Math.PI);
+    ctx.fillStyle = `rgba(${r_color}, ${g_color}, 0, ${glowIntensity * 0.3})`;
+    ctx.fill();
+    
+    // Layer 3: Inner glow ring
+    ctx.beginPath();
+    ctx.arc(pos.x, pos.y, baseMiddleRadius * scale, 0, 2 * Math.PI);
+    ctx.fillStyle = `rgba(${r_color}, ${g_color}, 0, ${glowIntensity * 0.5})`;
+    ctx.fill();
+    
+    // --- Core Point with Shadow ---
+    ctx.shadowBlur = (isDragging ? 35 : (isHovering ? 28 : 20)) * matchBrightness;
+    ctx.shadowColor = `rgba(${AMBER_GOLD.r}, ${AMBER_GOLD.g}, 0, 0.8)`;
+    ctx.fillStyle = pointColor;
+    ctx.beginPath();
+    ctx.arc(pos.x, pos.y, baseCoreRadius * scale, 0, 2 * Math.PI);
+    ctx.fill();
+    ctx.shadowBlur = 0;
+
+    // --- White Center Dot ---
+    ctx.fillStyle = `rgba(255, 255, 255, ${0.6 + 0.4 * matchBrightness})`;
+    ctx.beginPath();
+    ctx.arc(pos.x, pos.y, baseCenterRadius * scale, 0, 2 * Math.PI);
+    ctx.fill();
+    
+    // --- Drag Indicator (4 directional lines) ---
+    if (isDragging) {
+      const arrowOffset = baseOuterRadius * scale * 2;
+      ctx.strokeStyle = 'rgba(255, 215, 0, 0.4)';
+      ctx.lineWidth = 1.5;
+      
+      const directions = [[0, -1], [0, 1], [-1, 0], [1, 0]];
+      directions.forEach(([dx, dy]) => {
+        ctx.beginPath();
+        ctx.moveTo(pos.x + dx * arrowOffset * 0.5, pos.y + dy * arrowOffset * 0.5);
+        ctx.lineTo(pos.x + dx * arrowOffset, pos.y + dy * arrowOffset);
+    ctx.stroke();
       });
       ctx.lineWidth = 1;
     }

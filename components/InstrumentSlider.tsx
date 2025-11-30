@@ -293,3 +293,65 @@ export const InstrumentSlider: React.FC<InstrumentSliderProps> = ({
     </div>
   );
 };
+
+
+            left: centered ? '50%' : 0,
+            transform: centered ? `translateX(-${(1 - value / max) * 100}%)` : 'none',
+            background: '#FFD700',
+            opacity: 0.6
+          }}
+        />
+        
+        {/* Center Mark (for centered sliders) */}
+        {centered && (
+          <div className="absolute left-1/2 w-[1px] h-2 bg-white/20 -translate-x-1/2" />
+        )}
+
+        {/* Thumb */}
+        <div 
+          className="absolute top-1/2 -translate-y-1/2 w-3 h-3 -ml-1.5 pointer-events-none transition-all duration-150"
+          style={{ 
+            left: `${percentage}%`,
+            transform: `translateY(-50%) ${isFocused ? 'scale(1.3)' : 'scale(1)'}`,
+          }}
+        >
+          <div 
+            className="w-full h-full rounded-full"
+            style={{ 
+              backgroundColor: '#FFD700',
+              boxShadow: isFocused 
+                ? '0 0 0 3px rgba(255, 215, 0, 0.15), 0 0 16px rgba(255, 215, 0, 0.5)' 
+                : '0 2px 6px rgba(255, 215, 0, 0.3)',
+            }}
+          />
+        </div>
+        
+        {/* Hidden Range Input */}
+        <input 
+          type="range" 
+          min={min}
+          max={max}
+          step={step}
+          value={value} 
+          onChange={(e) => onChange(parseFloat(e.target.value))}
+          onFocus={() => setIsFocused(true)}
+          onBlur={() => setIsFocused(false)}
+          onMouseDown={() => { setIsFocused(true); onDragStart?.(); }}
+          onMouseUp={() => { setIsFocused(false); onDragEnd?.(); }}
+          onTouchStart={() => { setIsFocused(true); onDragStart?.(); }}
+          onTouchEnd={() => { setIsFocused(false); onDragEnd?.(); }}
+          className="absolute inset-0 w-full opacity-0 cursor-pointer z-20"
+        />
+      </div>
+      
+      {/* Min/Max Labels */}
+      <div className="flex justify-between mt-1 text-[8px] font-mono tabular-nums transition-opacity duration-200" style={{ opacity: isFocused ? 0.4 : 0.2, color: '#EAEAEA' }}>
+        <span>{centered ? `-${max}` : min}</span>
+        {highlightValue !== undefined && (
+          <span style={{ color: '#FFD700', opacity: 0.6 }}>{highlightValue}</span>
+        )}
+        <span>{centered ? `+${max}` : max}</span>
+      </div>
+    </div>
+  );
+};

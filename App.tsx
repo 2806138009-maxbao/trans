@@ -91,7 +91,7 @@ const App: React.FC = () => {
             const ease = t === 1 ? 1 : 1 - Math.pow(2, -10 * t);
             
             const run = ease * distance + startPosition;
-            
+
             // Force 'auto' behavior to avoid conflict with CSS scroll-behavior: smooth
             window.scrollTo({ top: run, behavior: 'auto' });
             
@@ -155,11 +155,11 @@ const App: React.FC = () => {
       {tier !== 'low' && <NoiseOverlay />}
 
       {/* Vignette - Warm undertone */}
-      <div 
-        className="fixed inset-0 pointer-events-none z-[3]" 
-        style={{ 
+      <div
+        className="fixed inset-0 pointer-events-none z-[3]"
+        style={{
           background: `radial-gradient(ellipse at center, transparent 0%, ${THEME.colors.overlay.vignette} 100%)` 
-        }} 
+        }}
       />
 
       {/* Language Toggle - Warm surface */}
@@ -213,12 +213,12 @@ const App: React.FC = () => {
           <div id="experiment" ref={experimentRef} className="w-full max-w-7xl mx-auto px-4 md:px-8 py-16 space-y-12">
             <Wrapper {...(reducedMotion ? {} : { animation: 'fade-up' as const })}>
               <div className="text-center max-w-2xl mx-auto">
-                <h2 className="text-3xl md:text-4xl font-bold mb-4 text-white">
+            <h2 className="text-3xl md:text-4xl font-bold mb-4 text-white">
                   {t.experimentTitle}
-                </h2>
+            </h2>
                 <p className="text-lg" style={{ color: THEME.colors.text.muted }}>
                   {t.experimentLead}
-                </p>
+            </p>
               </div>
             </Wrapper>
 
@@ -257,17 +257,17 @@ const App: React.FC = () => {
                   </span>
                 </summary>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6 w-full animate-fade-in-up">
-                  <InfoCard 
+            <InfoCard 
                     title={t.powerTitle}
                     value={t.powerValue}
                     desc={t.powerDesc}
-                  />
-                  <InfoCard 
+            />
+            <InfoCard 
                     title={t.qFactorTitle}
                     value={t.qFactorValue}
                     desc={t.qFactorDesc}
-                  />
-                  <InfoCard 
+            />
+            <InfoCard 
                     title={t.lineTitle}
                     value={t.lineValue}
                     desc={t.lineDesc}
@@ -329,7 +329,7 @@ const App: React.FC = () => {
           >
             {t.footerBrand}
           </span>
-        </div>
+          </div>
         <p 
           className="text-sm"
           style={{ color: THEME.colors.text.disabled }}
@@ -374,6 +374,122 @@ const MatchingStepsSection: React.FC<{lang: Language, reducedMotion?: boolean}> 
         onStepChange={setActiveStep}
         reducedMotion={reducedMotion}
         lang={lang}
+        height={380}
+      />
+    </div>
+  );
+};
+
+/**
+ * InfoCard - Applies all 3 Design Tactics
+ * 
+ * 1. Warm Charcoal background (not pure grey)
+ * 2. Hierarchy via Weight & Contrast
+ * 3. Generous padding (Let it Breathe)
+ */
+const InfoCard: React.FC<{title: string, value: string, desc: string}> = ({title, value, desc}) => (
+  <div 
+    className="rounded-2xl transition-all duration-500 hover:scale-[1.02]"
+    style={{ 
+      backgroundColor: THEME.colors.surface,           // Warm surface
+      border: `1px solid ${THEME.colors.border.default}`,
+      padding: THEME.spacing.cardPaddingLg,            // Let it breathe
+      transitionTimingFunction: THEME.animation.curve,
+    }}
+  >
+    {/* Label: Small, uppercase, letter-spacing, LOW contrast */}
+    <h3 
+      className="font-mono text-[10px] uppercase mb-3"
+      style={{ 
+        color: THEME.colors.text.label,                // Gold-tinted label
+        letterSpacing: '0.1em',
+        fontWeight: 500,
+      }}
+    >
+      {title}
+    </h3>
+    
+    {/* Value: Large, HIGH contrast, Semi-bold */}
+    <div 
+      className="text-2xl font-mono mb-4"
+      style={{ 
+        color: THEME.colors.text.main,
+        fontWeight: 600,
+      }}
+    >
+      {value}
+    </div>
+    
+    {/* Description: Body text, warm muted */}
+    <p 
+      className="text-sm leading-relaxed"
+      style={{ color: THEME.colors.text.muted }}
+    >
+      {desc}
+    </p>
+  </div>
+);
+
+export default App;
+
+        height={380}
+      />
+    </div>
+  );
+};
+
+/**
+ * InfoCard - Applies all 3 Design Tactics
+ * 
+ * 1. Warm Charcoal background (not pure grey)
+ * 2. Hierarchy via Weight & Contrast
+ * 3. Generous padding (Let it Breathe)
+ */
+const InfoCard: React.FC<{title: string, value: string, desc: string}> = ({title, value, desc}) => (
+  <div 
+    className="rounded-2xl transition-all duration-500 hover:scale-[1.02]"
+    style={{ 
+      backgroundColor: THEME.colors.surface,           // Warm surface
+      border: `1px solid ${THEME.colors.border.default}`,
+      padding: THEME.spacing.cardPaddingLg,            // Let it breathe
+      transitionTimingFunction: THEME.animation.curve,
+    }}
+  >
+    {/* Label: Small, uppercase, letter-spacing, LOW contrast */}
+    <h3 
+      className="font-mono text-[10px] uppercase mb-3"
+      style={{ 
+        color: THEME.colors.text.label,                // Gold-tinted label
+        letterSpacing: '0.1em',
+        fontWeight: 500,
+      }}
+    >
+      {title}
+    </h3>
+    
+    {/* Value: Large, HIGH contrast, Semi-bold */}
+    <div 
+      className="text-2xl font-mono mb-4"
+      style={{ 
+        color: THEME.colors.text.main,
+        fontWeight: 600,
+      }}
+    >
+      {value}
+    </div>
+    
+    {/* Description: Body text, warm muted */}
+    <p 
+      className="text-sm leading-relaxed"
+      style={{ color: THEME.colors.text.muted }}
+    >
+      {desc}
+    </p>
+  </div>
+);
+
+export default App;
+
         height={380}
       />
     </div>

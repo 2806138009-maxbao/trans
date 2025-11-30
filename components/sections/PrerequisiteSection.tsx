@@ -268,4 +268,3 @@ export const PrerequisiteSection: React.FC<PrerequisiteSectionProps> = ({
     </section>
   );
 };
-

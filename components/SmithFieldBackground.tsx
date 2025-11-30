@@ -230,3 +230,77 @@ export const SmithFieldBackground: React.FC<SmithFieldBackgroundProps> = ({ tier
     />
   );
 };
+
+
+
+      }
+
+      // Radial Lines (subtle)
+      const rays = 12;
+      for (let i = 0; i < rays; i++) {
+        const angle = (i / rays) * Math.PI * 2;
+        ctx.beginPath();
+        ctx.moveTo(centerX, centerY);
+        ctx.lineTo(centerX + Math.cos(angle) * maxRadius, centerY + Math.sin(angle) * maxRadius);
+        ctx.strokeStyle = 'rgba(255, 255, 255, 0.015)';
+        ctx.lineWidth = 1;
+        ctx.stroke();
+      }
+
+      // Particles (Signal Pulses)
+      if (!reducedMotion) {
+        particles.forEach((p) => {
+          p.angle += p.speed * 0.01;
+          const x = centerX + Math.cos(p.angle) * p.radius;
+          const y = centerY + Math.sin(p.angle) * p.radius;
+
+          // Draw particle
+          ctx.beginPath();
+          ctx.arc(x, y, p.size, 0, Math.PI * 2);
+          ctx.fillStyle = `rgba(255, 199, 0, ${p.alpha})`;
+          ctx.fill();
+          
+          if (!mediumMotion) {
+            // Trail only on High Tier
+            ctx.beginPath();
+            ctx.arc(x, y, p.size * 2, 0, Math.PI * 2);
+            ctx.fillStyle = `rgba(255, 199, 0, ${p.alpha * 0.3})`;
+            ctx.fill();
+          }
+        });
+      }
+
+      // Center glow (subtle -> Electric Gold Boost)
+      // S-Tier Atmosphere: Stronger, warmer glow
+      const glowGradient = ctx.createRadialGradient(centerX, centerY, 0, centerX, centerY, 250);
+      glowGradient.addColorStop(0, 'rgba(255, 199, 0, 0.12)'); // Boosted from 0.03
+      glowGradient.addColorStop(0.4, 'rgba(255, 199, 0, 0.04)');
+      glowGradient.addColorStop(1, 'rgba(255, 199, 0, 0)');
+      ctx.fillStyle = glowGradient;
+      ctx.beginPath();
+      ctx.arc(centerX, centerY, 250, 0, Math.PI * 2);
+      ctx.fill();
+    };
+
+    const loop = () => {
+      time += 0.016;
+      drawGrid(time);
+      frameId = requestAnimationFrame(loop);
+    };
+
+    loop();
+
+    return () => {
+      window.removeEventListener('resize', resize);
+      cancelAnimationFrame(frameId);
+    };
+  }, [reducedMotion, mediumMotion]);
+
+  return (
+    <canvas
+      ref={canvasRef}
+      className="fixed inset-0 z-0 pointer-events-none w-full h-full"
+      style={{ background: THEME.colors.background }}
+    />
+  );
+};

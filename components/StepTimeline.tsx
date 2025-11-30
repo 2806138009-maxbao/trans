@@ -70,26 +70,26 @@ const TiltStepCard: React.FC<TiltStepCardProps> = ({
           transition: 'opacity 0.5s cubic-bezier(0.16, 1, 0.3, 1)'
         }}
       />
-      
+
       {/* Card content - Void Style */}
       <div 
         className="relative z-10 w-full h-full p-4 pl-5 flex flex-col items-start gap-3"
-        style={{ 
+        style={{
           transition: 'all 0.5s cubic-bezier(0.16, 1, 0.3, 1)'
         }}
       >
         {/* Left accent line */}
-        <div 
+      <div 
           className="absolute top-0 bottom-0 left-0 w-0.5 transition-all duration-300"
           style={{ 
             backgroundColor: isActive 
               ? THEME.colors.primary 
-              : isCompleted 
+            : isCompleted
                 ? 'rgba(255, 255, 255, 0.2)' 
                 : 'rgba(255, 255, 255, 0.08)',
             width: isActive ? '3px' : '2px',
             boxShadow: isActive ? `0 0 10px ${THEME.colors.primary}` : 'none',
-          }}
+        }}
         />
         {children}
       </div>
@@ -168,8 +168,8 @@ export const StepTimeline: React.FC<StepTimelineProps> = ({
                   />
                   <span className="text-xs uppercase tracking-[0.25em] font-bold" style={{ color: THEME.colors.primary }}>
                     {t.roadmapTitle}
-                  </span>
-                </div>
+          </span>
+        </div>
               </div>
               <div className="h-px w-16 md:w-24 bg-gradient-to-l from-transparent via-[#FFC700]/50 to-[#FFC700]" />
             </div>
@@ -189,7 +189,7 @@ export const StepTimeline: React.FC<StepTimelineProps> = ({
               <h2 
                 className="relative text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-black tracking-tight"
                 style={{ 
-                  fontFamily: "'Inter', 'SF Pro Display', -apple-system, BlinkMacSystemFont, sans-serif",
+                  fontFamily: "'Space Grotesk', 'Noto Sans SC', -apple-system, BlinkMacSystemFont, sans-serif",
                   background: 'linear-gradient(180deg, #FFFFFF 0%, #FFFFFF 40%, rgba(255,255,255,0.5) 100%)',
                   WebkitBackgroundClip: 'text',
                   WebkitTextFillColor: 'transparent',
@@ -255,19 +255,19 @@ export const StepTimeline: React.FC<StepTimelineProps> = ({
           return (
             <Wrapper key={step.id} {...getWrapperProps('fade-up', idx * 100)}>
               <div>
-                <TiltStepCard
-                  onClick={() => handleClick(step.id)}
-                  isActive={isActive}
-                  isCompleted={isCompleted}
+            <TiltStepCard
+              onClick={() => handleClick(step.id)}
+              isActive={isActive}
+              isCompleted={isCompleted}
                   ariaLabel={`${lang === 'zh' ? '步骤' : 'Step'} ${idx + 1}: ${step.label}`}
-                >
-                  {/* Step Number Badge */}
+            >
+              {/* Step Number Badge */}
                   <div className={`flex items-center gap-2 text-[10px] uppercase tracking-[0.15em] font-medium ${isActive ? 'text-[#FFC700]' : 'text-[var(--color-text-muted)]'}`}>
                     <span className={`w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold transition-all duration-300 ${
                       isActive 
                         ? 'bg-[#FFC700] text-black shadow-[0_0_10px_rgba(255,199,0,0.5)]' 
-                        : isCompleted
-                          ? 'bg-white/20 text-white'
+                    : isCompleted
+                      ? 'bg-white/20 text-white'
                           : 'bg-white/10 text-[var(--color-text-muted)] group-hover:bg-white/15'
                     }`}>
                       {isCompleted ? (
@@ -275,35 +275,35 @@ export const StepTimeline: React.FC<StepTimelineProps> = ({
                           <path d="M2 5 L4 7 L8 3" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
                         </svg>
                       ) : idx + 1}
-                    </span>
-                    <span>{lang === 'zh' ? `第 ${idx + 1} 步` : `Step ${idx + 1}`}</span>
-                  </div>
+                </span>
+                <span>{lang === 'zh' ? `第 ${idx + 1} 步` : `Step ${idx + 1}`}</span>
+              </div>
 
-                  {/* Icon + Label */}
-                  <div className="flex items-center gap-2">
+              {/* Icon + Label */}
+              <div className="flex items-center gap-2">
                     <div className={`transition-colors duration-300 ${isActive ? 'text-[#FFC700]' : 'text-[#D0D6E0] group-hover:text-white'}`}>
                       {STEP_ICONS[idx]}
-                    </div>
+                </div>
                     <span className={`font-medium text-sm transition-colors duration-300 ${isActive ? 'text-white' : 'text-[#D0D6E0] group-hover:text-white'}`}>
                       {step.label}
-                    </span>
-                  </div>
+                </span>
+              </div>
 
-                  {/* Description */}
+              {/* Description */}
                   <p className="text-xs text-[var(--color-text-muted)] leading-relaxed line-clamp-2">
                     {step.description}
-                  </p>
+              </p>
 
-                  {/* Hover Arrow */}
-                  <ArrowRight 
-                    size={14} 
+              {/* Hover Arrow */}
+              <ArrowRight 
+                size={14} 
                     className={`absolute bottom-4 right-4 transition-all duration-300 ${
                       isActive 
                         ? 'text-[#FFC700] opacity-100' 
                         : 'text-[#FFC700] opacity-0 translate-x-[-4px] group-hover:opacity-100 group-hover:translate-x-0'
                     }`}
-                  />
-                </TiltStepCard>
+              />
+            </TiltStepCard>
               </div>
             </Wrapper>
           );
@@ -313,7 +313,7 @@ export const StepTimeline: React.FC<StepTimelineProps> = ({
       {/* Start CTA */}
       <div className="mt-8 text-center">
         <Wrapper {...getWrapperProps('fade-up', 600)}>
-          <button
+        <button
             onClick={() => handleClick('experiment')}
             className="inline-flex items-center gap-2 px-6 py-3 rounded-full font-medium text-sm shadow-[0_0_20px_rgba(255,199,0,0.3)] hover:shadow-[0_0_40px_rgba(255,199,0,0.5)] hover:scale-[1.02] active:scale-[0.98] focus:outline-none focus:ring-2 focus:ring-[#FFC700]/50"
             style={{ 
@@ -324,7 +324,18 @@ export const StepTimeline: React.FC<StepTimelineProps> = ({
           >
             {t.startStep}
             <ArrowRight size={16} className="group-hover:translate-x-0.5" style={{ transition: 'transform 0.3s cubic-bezier(0.16, 1, 0.3, 1)' }} />
-          </button>
+        </button>
+        </Wrapper>
+      </div>
+    </div>
+  );
+};
+
+            }}
+          >
+            {t.startStep}
+            <ArrowRight size={16} className="group-hover:translate-x-0.5" style={{ transition: 'transform 0.3s cubic-bezier(0.16, 1, 0.3, 1)' }} />
+        </button>
         </Wrapper>
       </div>
     </div>

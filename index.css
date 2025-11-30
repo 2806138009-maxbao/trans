@@ -829,3 +829,147 @@ code, pre, .font-mono {
   color: #FFFFFF;
   -webkit-text-fill-color: #FFFFFF;
 }
+
+   GLOBAL NOISE TEXTURE - Prevents "Plastic" Feel
+   ======================================== */
+
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  z-index: 9998;
+  pointer-events: none;
+  opacity: 0.035;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E");
+  background-repeat: repeat;
+  mix-blend-mode: overlay;
+}
+
+/* ========================================
+   REACTIVE GLOW - Spotlight Effect Base
+   ======================================== */
+
+.spotlight-container {
+  position: relative;
+  overflow: hidden;
+}
+
+.spotlight-container::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  transition: opacity 0.3s var(--ease-out-expo);
+  pointer-events: none;
+  background: radial-gradient(
+    600px circle at var(--mouse-x, 50%) var(--mouse-y, 50%),
+    rgba(255, 199, 0, 0.06),
+    transparent 40%
+  );
+}
+
+.spotlight-container:hover::before {
+  opacity: 1;
+}
+
+/* Spotlight Border Shine */
+.spotlight-border {
+  position: relative;
+}
+
+.spotlight-border::after {
+  content: '';
+  position: absolute;
+  inset: -1px;
+  border-radius: inherit;
+  opacity: 0;
+  transition: opacity 0.3s var(--ease-out-expo);
+  pointer-events: none;
+  background: radial-gradient(
+    400px circle at var(--mouse-x, 50%) var(--mouse-y, 50%),
+    rgba(255, 199, 0, 0.15),
+    transparent 40%
+  );
+}
+
+.spotlight-border:hover::after {
+  opacity: 1;
+}
+
+/* ========================================
+   BODY & LAYOUT
+   ======================================== */
+
+/* Ensure body is locked initially */
+body.intro-active {
+  overflow: hidden;
+}
+
+/* Splash Screen Slide Up Class */
+.splash-slide-up {
+  transform: translateY(-100%);
+}
+
+/* ========================================
+   TEXT SELECTION - Premium Selection Effect
+   All text should be selectable with elegant feedback
+   ======================================== */
+
+/* Global selection color - Gold highlight */
+::selection {
+  background: rgba(255, 199, 0, 0.4);
+  color: #FFFFFF;
+  text-shadow: none;
+}
+
+::-moz-selection {
+  background: rgba(255, 199, 0, 0.4);
+  color: #FFFFFF;
+  text-shadow: none;
+}
+
+/* Ensure all text content is selectable by default */
+p, span, h1, h2, h3, h4, h5, h6, li, td, th, label, 
+div, article, section, main, aside, header, footer,
+.text-content, [data-selectable] {
+  user-select: text;
+  -webkit-user-select: text;
+}
+
+/* Text elements should have text cursor on hover */
+p, h1, h2, h3, h4, h5, h6, li, blockquote,
+.prose, .text-content {
+  cursor: text;
+}
+
+/* Interactive elements should not have text cursor */
+button, a, [role="button"], input, select, textarea,
+.cursor-pointer, [data-interactive], summary {
+  cursor: pointer;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+/* But text inside buttons/links should still be selectable on long press */
+button span, a span {
+  pointer-events: none;
+}
+
+/* Code and monospace text - select all on click */
+code, pre, .font-mono {
+  user-select: all;
+  -webkit-user-select: all;
+  cursor: text;
+}
+
+/* Decorative elements should not be selectable */
+[aria-hidden="true"], .decorative, .select-none {
+  user-select: none !important;
+  -webkit-user-select: none !important;
+}
+
+/* Focus visible for accessibility */
+:focus-visible {
+  outline: 2px solid rgba(255, 199, 0, 0.5);
+  outline-offset: 2px;
+}
