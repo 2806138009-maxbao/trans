@@ -4,17 +4,44 @@ interface HudTiltContainerProps {
   children: React.ReactNode;
   className?: string;
   glowColor?: string;
+  reducedMotion?: boolean;
+}
+
+// Inject breathing animation keyframes
+if (typeof document !== 'undefined') {
+  const styleId = 'hud-breathe-keyframes';
+  if (!document.getElementById(styleId)) {
+    const style = document.createElement('style');
+    style.id = styleId;
+    style.textContent = `
+      @keyframes hud-breathe {
+        0%, 100% { 
+          opacity: 0.3; 
+          border-color: rgba(255, 199, 0, 0.2);
+        }
+        50% { 
+          opacity: 0.7; 
+          border-color: rgba(255, 199, 0, 0.5);
+          box-shadow: 0 0 12px rgba(255, 199, 0, 0.15);
+        }
+      }
+    `;
+    document.head.appendChild(style);
+  }
 }
 
 /**
  * HUD 容器组件，带有 TiltCard 相同的 3D 倾斜和光晕效果
  * 用于包裹画布等大型交互区域
  * 移动端自动禁用 3D 效果以保证滚动流畅
+ * 
+ * 新增：角落支架"呼吸"动画 - 让系统看起来"在线"
  */
 export const HudTiltContainer: React.FC<HudTiltContainerProps> = ({
   children,
   className = '',
   glowColor = 'rgba(94, 106, 210, 0.4)',
+  reducedMotion = false,
 }) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const [rotation, setRotation] = useState({ x: 0, y: 0 });
@@ -79,11 +106,37 @@ export const HudTiltContainer: React.FC<HudTiltContainerProps> = ({
         >
           {children}
           <div className="absolute inset-0 opacity-[0.02] pointer-events-none bg-[url('https://grainy-gradients.vercel.app/noise.svg')]" />
-          {/* Corner accents */}
-          <div className="absolute top-3 left-3 w-6 h-6 border-t border-l border-white/10 rounded-tl-lg pointer-events-none" />
-          <div className="absolute top-3 right-3 w-6 h-6 border-t border-r border-white/10 rounded-tr-lg pointer-events-none" />
-          <div className="absolute bottom-3 left-3 w-6 h-6 border-b border-l border-white/10 rounded-bl-lg pointer-events-none" />
-          <div className="absolute bottom-3 right-3 w-6 h-6 border-b border-r border-white/10 rounded-br-lg pointer-events-none" />
+          {/* Corner accents - Breathing animation for "alive" feel */}
+          <div 
+            className="absolute top-3 left-3 w-6 h-6 border-t border-l rounded-tl-lg pointer-events-none"
+            style={{
+              borderColor: 'rgba(255, 199, 0, 0.3)',
+              animation: reducedMotion ? 'none' : 'hud-breathe 4s ease-in-out infinite',
+            }}
+          />
+          <div 
+            className="absolute top-3 right-3 w-6 h-6 border-t border-r rounded-tr-lg pointer-events-none"
+            style={{
+              borderColor: 'rgba(255, 199, 0, 0.3)',
+              animation: reducedMotion ? 'none' : 'hud-breathe 4s ease-in-out infinite',
+              animationDelay: '1s', // Offset for organic feel
+            }}
+          />
+          <div 
+            className="absolute bottom-3 left-3 w-6 h-6 border-b border-l rounded-bl-lg pointer-events-none"
+            style={{
+              borderColor: 'rgba(255, 199, 0, 0.3)',
+              animation: reducedMotion ? 'none' : 'hud-breathe 4s ease-in-out infinite',
+              animationDelay: '1s', // Same offset as top-right for diagonal symmetry
+            }}
+          />
+          <div 
+            className="absolute bottom-3 right-3 w-6 h-6 border-b border-r rounded-br-lg pointer-events-none"
+            style={{
+              borderColor: 'rgba(255, 199, 0, 0.3)',
+              animation: reducedMotion ? 'none' : 'hud-breathe 4s ease-in-out infinite',
+            }}
+          />
         </div>
       </div>
     );
@@ -136,11 +189,37 @@ export const HudTiltContainer: React.FC<HudTiltContainerProps> = ({
         {/* Noise Texture for physical feel */}
         <div className="absolute inset-0 opacity-[0.02] pointer-events-none bg-[url('https://grainy-gradients.vercel.app/noise.svg')]" />
 
-        {/* Corner accents */}
-        <div className="absolute top-3 left-3 w-6 h-6 border-t border-l border-white/10 rounded-tl-lg pointer-events-none transition-all duration-300 group-hover:border-white/20 group-hover:w-8 group-hover:h-8" />
-        <div className="absolute top-3 right-3 w-6 h-6 border-t border-r border-white/10 rounded-tr-lg pointer-events-none transition-all duration-300 group-hover:border-white/20 group-hover:w-8 group-hover:h-8" />
-        <div className="absolute bottom-3 left-3 w-6 h-6 border-b border-l border-white/10 rounded-bl-lg pointer-events-none transition-all duration-300 group-hover:border-white/20 group-hover:w-8 group-hover:h-8" />
-        <div className="absolute bottom-3 right-3 w-6 h-6 border-b border-r border-white/10 rounded-br-lg pointer-events-none transition-all duration-300 group-hover:border-white/20 group-hover:w-8 group-hover:h-8" />
+        {/* Corner accents - Breathing animation for "alive" feel + hover expansion */}
+        <div 
+          className="absolute top-3 left-3 w-6 h-6 border-t border-l rounded-tl-lg pointer-events-none transition-all duration-300 group-hover:w-8 group-hover:h-8"
+          style={{
+            borderColor: 'rgba(255, 199, 0, 0.3)',
+            animation: reducedMotion ? 'none' : 'hud-breathe 4s ease-in-out infinite',
+          }}
+        />
+        <div 
+          className="absolute top-3 right-3 w-6 h-6 border-t border-r rounded-tr-lg pointer-events-none transition-all duration-300 group-hover:w-8 group-hover:h-8"
+          style={{
+            borderColor: 'rgba(255, 199, 0, 0.3)',
+            animation: reducedMotion ? 'none' : 'hud-breathe 4s ease-in-out infinite',
+            animationDelay: '1s', // Offset for organic feel
+          }}
+        />
+        <div 
+          className="absolute bottom-3 left-3 w-6 h-6 border-b border-l rounded-bl-lg pointer-events-none transition-all duration-300 group-hover:w-8 group-hover:h-8"
+          style={{
+            borderColor: 'rgba(255, 199, 0, 0.3)',
+            animation: reducedMotion ? 'none' : 'hud-breathe 4s ease-in-out infinite',
+            animationDelay: '1s', // Same offset as top-right for diagonal symmetry
+          }}
+        />
+        <div 
+          className="absolute bottom-3 right-3 w-6 h-6 border-b border-r rounded-br-lg pointer-events-none transition-all duration-300 group-hover:w-8 group-hover:h-8"
+          style={{
+            borderColor: 'rgba(255, 199, 0, 0.3)',
+            animation: reducedMotion ? 'none' : 'hud-breathe 4s ease-in-out infinite',
+          }}
+        />
       </div>
     </div>
   );

@@ -1,36 +1,58 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="zh">
   <head>
     <meta charset="UTF-8" />
     <meta
       name="viewport"
       content="width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=yes, viewport-fit=cover"
     />
-    <title>Luminous Harmonics | Fourier Series</title>
-    <script src="https://cdn.tailwindcss.com"></script>
+    <title>史密斯圆图 | Impedance Lab</title>
+    
+    <!-- CRITICAL: Preconnect to font servers FIRST -->
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    
+    <!-- CRITICAL: Preload key font files to eliminate FOUT -->
+    <link 
+      rel="preload" 
+      href="https://fonts.gstatic.com/s/spacegrotesk/v16/V8mDoQDjQSkFtoMM3T6r8E7mPbF4Cw.woff2" 
+      as="font" 
+      type="font/woff2" 
+      crossorigin 
+    />
+    <link 
+      rel="preload" 
+      href="https://fonts.gstatic.com/s/notosanssc/v37/k3kCo84MPvpLmixcA63oeAL7Iqp5IZJF9bmaG9_EnYxNbPzS5HE.woff2" 
+      as="font" 
+      type="font/woff2" 
+      crossorigin 
+    />
+    
+    <!-- Load fonts with display=block to prevent FOUT during splash -->
     <link
-      href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap"
+      href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@300;400;500;700&family=Space+Grotesk:wght@300;400;500;600;700&family=Space+Mono:wght@400;700&display=swap"
       rel="stylesheet"
     />
+    
+    <script src="https://cdn.tailwindcss.com"></script>
     <style>
       :root {
         --apple-blue: #0a84ff;
-        --apple-bg: #000000;
+        --luminous-bg: #050505;  /* Luminous OS Deep Dark */
       }
       html {
         height: 100%;
         overflow-y: scroll !important;
         overflow-x: hidden;
         -webkit-overflow-scrolling: touch;
+        background-color: #050505;  /* Deep Dark - prevents white flash */
       }
       body {
         margin: 0;
         padding: 0;
         min-height: 100%;
-        background-color: var(--apple-bg);
-        font-family: -apple-system, BlinkMacSystemFont, "Inter", "Segoe UI",
+        background-color: #050505;  /* Luminous OS Deep Dark */
+        font-family: "Noto Sans SC", "Space Grotesk", -apple-system, BlinkMacSystemFont, "Inter", "Segoe UI",
           Roboto, Helvetica, Arial, sans-serif;
         overflow-x: hidden;
         overflow-y: visible !important;
@@ -73,7 +95,7 @@
       }
       .fade-up {
         opacity: 0;
-        animation: fadeUp 0.8s ease forwards;
+        animation: fadeUp 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards;
       }
       .fade-up.delay-1 {
         animation-delay: 0.12s;
@@ -99,17 +121,19 @@
       }
       input[type="range"]::-webkit-slider-thumb {
         -webkit-appearance: none;
-        height: 24px;
-        width: 24px;
+        height: 20px;
+        width: 20px;
         border-radius: 50%;
-        background: #ffffff;
-        box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
+        background: #FFC700;
+        box-shadow: 0 2px 8px rgba(255, 199, 0, 0.3);
         cursor: pointer;
-        margin-top: -10px;
-        transition: transform 0.2s cubic-bezier(0.25, 0.1, 0.25, 1);
+        margin-top: -8px;
+        transition: transform 0.15s cubic-bezier(0.16, 1, 0.3, 1),
+                    box-shadow 0.3s cubic-bezier(0.16, 1, 0.3, 1);
       }
       input[type="range"]::-webkit-slider-thumb:hover {
-        transform: scale(1.1);
+        transform: scale(1.15);
+        box-shadow: 0 4px 16px rgba(255, 199, 0, 0.5);
       }
       input[type="range"]::-webkit-slider-runnable-track {
         width: 100%;

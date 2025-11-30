@@ -21,11 +21,11 @@ export const SectionTransition: React.FC<{
     return (
       <div className="mt-8 text-center">
         {hint && (
-          <p className="text-sm text-[#8A8F98] mb-3">{hint}</p>
+          <p className="text-sm text-[var(--color-text-muted)] mb-3">{hint}</p>
         )}
         <button
           onClick={handleClick}
-          className="inline-flex items-center gap-2 text-sm font-medium text-[#5E6AD2] 
+          className="inline-flex items-center gap-2 text-sm font-medium text-[#FFC700] 
             hover:text-white transition-all duration-300 group"
         >
           <span>{nextLabel}</span>
@@ -45,7 +45,7 @@ export const SectionTransition: React.FC<{
       >
         <div className="flex flex-col items-start gap-1">
           {hint && (
-            <span className="text-[10px] uppercase tracking-[0.15em] text-[#8A8F98]">
+            <span className="text-[10px] uppercase tracking-[0.15em] text-[var(--color-text-muted)]">
               {hint}
             </span>
           )}
@@ -53,7 +53,7 @@ export const SectionTransition: React.FC<{
             {nextLabel}
           </span>
         </div>
-        <ArrowRight size={16} className="text-[#5E6AD2] transition-transform group-hover:translate-x-1" />
+        <ArrowRight size={16} className="text-[#FFC700] transition-transform group-hover:translate-x-1" />
       </button>
     </div>
   );
@@ -74,7 +74,7 @@ export const GradientText = ({
     className={`bg-gradient-to-b from-white to-white/60 bg-clip-text text-transparent 
       inline-block transition-all duration-300 ease-out select-text
       hover:from-white hover:to-white/80 hover:drop-shadow-[0_0_20px_rgba(255,255,255,0.3)]
-      selection:bg-[#5E6AD2]/50 selection:text-white
+      selection:bg-[#FFC700]/50 selection:text-white
       ${className}`}
     style={{ 
       transition: 'transform 0.3s ease-out, filter 0.3s',
@@ -96,7 +96,7 @@ export const GradientText = ({
  * 光点组件 - 只显示一个发光的小圆点
  */
 export const GlowDot = ({ 
-  color = '#5E6AD2' 
+  color = '#FFC700' 
 }: { 
   color?: string 
 }) => (
@@ -111,16 +111,19 @@ export const GlowDot = ({
 
 /**
  * 眉标组件 - 带 hover 效果（用于需要显示标签文字的地方）
+ * 支持 label 属性或 children
  */
 export const Eyebrow = ({ 
-  label, 
-  color = '#5E6AD2' 
+  label,
+  children,
+  color = '#FFC700' 
 }: { 
-  label: string; 
+  label?: string; 
+  children?: React.ReactNode;
   color?: string 
 }) => (
-  <div 
-    className="flex items-center gap-2 text-[11px] uppercase tracking-[0.2em] text-[#8A8F98]
+  <span 
+    className="text-[11px] uppercase tracking-[0.2em] text-[var(--color-text-muted)]
       transition-all duration-300 ease-out cursor-default
       hover:text-white hover:tracking-[0.25em]"
     style={{ transition: 'transform 0.3s ease-out, color 0.3s, letter-spacing 0.3s' }}
@@ -131,9 +134,8 @@ export const Eyebrow = ({
       (e.currentTarget as HTMLElement).style.transform = 'scale(1)';
     }}
   >
-    <GlowDot color={color} />
-    <span>{label}</span>
-  </div>
+    {label || children}
+  </span>
 );
 
 /**
@@ -211,7 +213,7 @@ export const HoverListItem = ({
       <div 
         className="absolute inset-[-1px] rounded-xl z-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500"
         style={{
-          background: `radial-gradient(circle at ${spotlight.x}% ${spotlight.y}%, rgba(94, 106, 210, 0.5), transparent 60%)`
+          background: `radial-gradient(circle at ${spotlight.x}% ${spotlight.y}%, rgba(255, 199, 0, 0.5), transparent 60%)`
         }}
       />
 
@@ -234,7 +236,7 @@ export const HoverListItem = ({
           transform: 'translateZ(10px)',
         }}
       >
-        <span className="text-[#5E6AD2] mt-0.5 flex-shrink-0 transition-all duration-300 group-hover:scale-125 group-hover:drop-shadow-[0_0_8px_rgba(94,106,210,0.6)] select-none">•</span>
+        <span className="text-[#FFC700] mt-0.5 flex-shrink-0 transition-all duration-300 group-hover:scale-125 group-hover:drop-shadow-[0_0_8px_rgba(255,199,0,0.6)] select-none">•</span>
         <span className="flex-1 text-[#D0D6E0] transition-all duration-300 group-hover:text-white group-hover:text-shadow-glow select-text cursor-text">{children}</span>
         
         {/* Noise Texture */}

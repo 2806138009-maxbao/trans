@@ -1,8 +1,10 @@
 import React from 'react';
 import { Language, TRANSLATIONS } from '../../types';
 import { TiltCard } from '../TiltCard';
-import { Eyebrow, GlowDot, GradientText } from './SectionHelpers';
+import { Eyebrow, GlowDot } from './SectionHelpers';
 import { AnimateOnScroll } from '../AnimateOnScroll';
+import { THEME } from '../../theme';
+import { HackerText } from '../HackerText';
 
 interface HeroSectionProps {
   lang: Language;
@@ -11,106 +13,148 @@ interface HeroSectionProps {
   reducedMotion?: boolean;
 }
 
-// 按钮文字悬停放大效果
+/**
+ * HoverButton - CTA button with S-Tier glass/gold effect
+ */
 const HoverButton: React.FC<{
   children: React.ReactNode;
   onClick: () => void;
   variant?: 'primary' | 'secondary';
-}> = ({ children, onClick, variant = 'primary' }) => (
-  <button
-    onClick={onClick}
-    className={`px-6 py-3 rounded-lg transition-all text-sm font-semibold tracking-wide
-      group overflow-hidden relative
-      ${variant === 'primary' 
-        ? 'bg-white/10 border border-white/10 hover:bg-white/15 hover:border-white/30' 
-        : 'bg-transparent border border-white/10 hover:border-white/30 hover:bg-white/5'
-      }`}
-  >
-    <span className="inline-block transition-transform duration-300 group-hover:scale-110">
-      {children}
-    </span>
-  </button>
-);
-
-export const HeroSection: React.FC<HeroSectionProps> = ({ lang, onStart, onWhy, reducedMotion }) => {
-  const t = TRANSLATIONS[lang];
-
-  if (reducedMotion) {
+}> = ({ children, onClick, variant = 'primary' }) => {
+  if (variant === 'primary') {
     return (
-      <section id="hero" className="w-full min-h-screen relative flex flex-col justify-center items-center gap-6 sm:gap-10 px-4 sm:px-6 py-12 sm:py-0">
-        <div className="absolute top-10 left-1/2 -translate-x-1/2 w-[300px] sm:w-[600px] md:w-[900px] h-[200px] sm:h-[300px] md:h-[380px] bg-[#5E6AD2]/20 blur-[100px] md:blur-[140px] rounded-full -z-10" />
-        <div className="max-w-6xl w-full text-center space-y-6 sm:space-y-8">
-          <div className="flex justify-center"><Eyebrow label={t.heroBadge} /></div>
-          <h1 className="text-3xl sm:text-5xl md:text-7xl lg:text-8xl font-bold tracking-tight leading-[1.15]">
-            <GradientText>{lang === 'zh' ? <>光之谐波<br /><span className="text-[0.65em] sm:text-[0.75em]">傅里叶级数实验室</span></> : <>Luminous Harmonics<br /><span className="text-[0.65em] sm:text-[0.75em]">Fourier Series Lab</span></>}</GradientText>
-          </h1>
-          <p className="text-base sm:text-lg md:text-xl text-[#C7CBD4] max-w-3xl mx-auto leading-relaxed px-2">{t.heroSubheading}</p>
-          <div className="flex flex-col sm:flex-row justify-center gap-3 sm:gap-6">
-            <HoverButton onClick={onStart} variant="primary">{t.heroStart}</HoverButton>
-            <HoverButton onClick={onWhy} variant="secondary">{t.heroWhy}</HoverButton>
-          </div>
-        </div>
-        <div className="w-full max-w-4xl px-2">
-          <TiltCard glowColor="rgba(71,156,255,0.4)">
-            <div className="p-4 sm:p-6 md:p-8 text-left space-y-3 sm:space-y-4">
-              <div className="flex items-center gap-2"><GlowDot color="#479CFF" /><span className="text-[10px] sm:text-[11px] uppercase tracking-[0.2em] text-[#8A8F98]">{t.description}</span></div>
-              <p className="text-sm sm:text-base md:text-lg text-[#D0D6E0] leading-relaxed">{t.heroSubtitle}</p>
-            </div>
-          </TiltCard>
-        </div>
-      </section>
+      <button
+        onClick={onClick}
+        className="
+          px-8 py-4 rounded-lg text-base font-semibold tracking-wide
+          border border-[rgba(255,215,0,1)] bg-[rgba(255,215,0,0.1)] text-[rgba(255,215,0,1)]
+          shadow-[0_0_15px_rgba(255,215,0,0.2)]
+          transition-all duration-300
+          hover:-translate-y-[2px] hover:brightness-125 active:scale-[0.98]
+        "
+        style={{ transitionTimingFunction: THEME.animation.curve }}
+      >
+        {children}
+      </button>
     );
   }
 
   return (
-    <section id="hero" className="w-full min-h-screen relative flex flex-col justify-center items-center gap-6 sm:gap-10 px-4 sm:px-6 py-12 sm:py-0">
-      <div className="absolute top-10 left-1/2 -translate-x-1/2 w-[300px] sm:w-[600px] md:w-[900px] h-[200px] sm:h-[300px] md:h-[380px] bg-[#5E6AD2]/20 blur-[100px] md:blur-[140px] rounded-full -z-10" />
-      
-      <div className="max-w-6xl w-full text-center space-y-6 sm:space-y-8">
-        <AnimateOnScroll animation="blur" delay={0}>
-          <div className="flex justify-center">
-            <Eyebrow label={t.heroBadge} />
+    <button
+      onClick={onClick}
+      className="
+        px-8 py-4 rounded-lg text-base font-medium tracking-wide
+        border border-white/20 bg-transparent text-[#AAA]
+        transition-all duration-300
+        hover:-translate-y-[2px] hover:text-white hover:border-white/40 active:scale-[0.98]
+      "
+      style={{ transitionTimingFunction: THEME.animation.curve }}
+    >
+      {children}
+    </button>
+  );
+};
+
+/**
+ * HeroSection - Main landing section
+ * Refactored for "Cinematic/Industrial" hierarchy
+ */
+export const HeroSection: React.FC<HeroSectionProps> = ({ 
+  lang, 
+  onStart, 
+  onWhy, 
+  reducedMotion = false 
+}) => {
+  const t = TRANSLATIONS[lang];
+  const Wrapper = reducedMotion ? React.Fragment : AnimateOnScroll;
+  
+  return (
+    <section className="relative min-h-[90vh] flex flex-col items-center justify-center px-4 overflow-hidden">
+      <div className="relative z-10 max-w-5xl mx-auto text-center">
+        
+        {/* Badge */}
+        <Wrapper animation="fade-up">
+          <div className="flex justify-center mb-8">
+            <div className="inline-flex items-center gap-2 px-3 py-1.5">
+              <GlowDot color={THEME.colors.primary} />
+              <Eyebrow>{t.heroBadge}</Eyebrow>
+            </div>
           </div>
-        </AnimateOnScroll>
-        
-        <AnimateOnScroll animation="fade-up" delay={100}>
-          <h1 className="text-3xl sm:text-5xl md:text-7xl lg:text-8xl font-bold tracking-tight leading-[1.15]">
-            <GradientText>
-              {lang === 'zh' ? (
-                <>
-                  光之谐波
-                  <br />
-                  <span className="text-[0.65em] sm:text-[0.75em]">傅里叶级数实验室</span>
-                </>
-              ) : (
-                <>
-                  Luminous Harmonics
-                  <br />
-                  <span className="text-[0.65em] sm:text-[0.75em]">Fourier Series Lab</span>
-                </>
-              )}
-            </GradientText>
-          </h1>
-        </AnimateOnScroll>
-        
-        <AnimateOnScroll animation="fade-up" delay={200}>
-          <p 
-            className="text-base sm:text-lg md:text-xl text-[#C7CBD4] max-w-3xl mx-auto leading-relaxed font-normal px-2
-              transition-all duration-300 hover:text-white cursor-default"
-            style={{ transition: 'transform 0.3s ease-out, color 0.3s' }}
-            onMouseEnter={(e) => {
-              (e.target as HTMLElement).style.transform = 'scale(1.02)';
-            }}
-            onMouseLeave={(e) => {
-              (e.target as HTMLElement).style.transform = 'scale(1)';
-            }}
+        </Wrapper>
+
+        {/* Title Stack */}
+        <Wrapper animation="fade-up" delay={100}>
+          <div className="flex flex-col items-center">
+            {/* Primary Line: Big/Tight/White + Dark Halo for readability */}
+            {/* HACKER TEXT EFFECT: Matrix-style scramble on load/hover */}
+            <h1 
+              className="text-6xl md:text-8xl lg:text-9xl font-extrabold tracking-tighter text-white leading-none select-text relative z-10"
+              style={{ 
+                letterSpacing: '-0.04em',
+                // Layered shadow: Tight dark shadow for edge definition + Wide soft shadow for atmosphere
+                textShadow: `
+                  0 0 10px rgba(0, 0, 0, 0.9),
+                  0 0 30px rgba(0, 0, 0, 0.7),
+                  0 0 60px rgba(0, 0, 0, 0.5)
+                `,
+              }}
+            >
+              <HackerText 
+                text={t.heroHeading} 
+                duration={600}
+                triggerOnHover={false}
+              />
+            </h1>
+            
+            {/* Secondary Line: Small/Wide/Gold + Subtle Halo */}
+            <div 
+              className="text-xl md:text-3xl font-light tracking-[0.2em] mt-4 md:mt-6 select-text relative z-10"
+              style={{ 
+                color: 'rgba(255, 215, 0, 0.8)',
+                textShadow: `
+                  0 0 8px rgba(0, 0, 0, 0.8),
+                  0 0 20px rgba(0, 0, 0, 0.6)
+                `,
+              }}
+            >
+              {t.heroTitleSecondary || "RF IMPEDANCE LAB"}
+            </div>
+
+            {/* Description */}
+            <p 
+              className="text-lg md:text-2xl font-light max-w-2xl mx-auto select-text"
+              style={{ 
+                color: THEME.colors.text.muted,
+                marginTop: '32px' // Task: 32px gap
+              }}
+            >
+              {t.heroSubheading}
+            </p>
+          </div>
+        </Wrapper>
+
+        {/* TiltCard - Kept as subtle detail */}
+        <Wrapper animation="scale-in" delay={200}>
+          <div className="max-w-md mx-auto mt-8">
+            <TiltCard>
+              <div className="p-6 text-center space-y-2">
+                <p 
+                  className="text-sm md:text-base font-light select-text"
+                  style={{ color: '#B8BCC6' }}
+                >
+                  {t.heroSubtitle}
+                </p>
+              </div>
+            </TiltCard>
+          </div>
+        </Wrapper>
+
+        {/* CTA Buttons */}
+        <Wrapper animation="fade-up" delay={300}>
+          <div 
+            className="flex flex-col sm:flex-row items-center justify-center gap-6"
+            style={{ marginTop: '48px' }} // Task: 48px gap from content above
           >
-            {t.heroSubheading}
-          </p>
-        </AnimateOnScroll>
-        
-        <AnimateOnScroll animation="scale" delay={300}>
-          <div className="flex flex-col sm:flex-row justify-center gap-3 sm:gap-6">
             <HoverButton onClick={onStart} variant="primary">
               {t.heroStart}
             </HoverButton>
@@ -118,33 +162,8 @@ export const HeroSection: React.FC<HeroSectionProps> = ({ lang, onStart, onWhy, 
               {t.heroWhy}
             </HoverButton>
           </div>
-        </AnimateOnScroll>
+        </Wrapper>
       </div>
-
-      <AnimateOnScroll animation="slide-right" delay={400}>
-        <div className="w-full max-w-4xl px-2">
-          <TiltCard glowColor="rgba(71,156,255,0.4)">
-            <div className="p-4 sm:p-6 md:p-8 text-left space-y-3 sm:space-y-4">
-              <div className="flex items-center gap-2">
-                <GlowDot color="#479CFF" />
-                <span className="text-[10px] sm:text-[11px] uppercase tracking-[0.2em] text-[#8A8F98]">{t.description}</span>
-              </div>
-              <p 
-                className="text-sm sm:text-base md:text-lg text-[#D0D6E0] leading-relaxed transition-all duration-300 hover:text-white cursor-default"
-                style={{ transition: 'transform 0.3s ease-out, color 0.3s' }}
-                onMouseEnter={(e) => {
-                  (e.target as HTMLElement).style.transform = 'scale(1.01)';
-                }}
-                onMouseLeave={(e) => {
-                  (e.target as HTMLElement).style.transform = 'scale(1)';
-                }}
-              >
-                {t.heroSubtitle}
-              </p>
-            </div>
-          </TiltCard>
-        </div>
-      </AnimateOnScroll>
     </section>
   );
 };

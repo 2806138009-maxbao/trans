@@ -76,7 +76,8 @@ export const AnimateOnScroll: React.FC<AnimateOnScrollProps> = ({
     };
   }, [threshold, triggerOnce]);
 
-  const { initial, visible } = animationClasses[animation];
+  const animClass = animationClasses[animation] || animationClasses['fade-up'];
+  const { initial, visible } = animClass;
   const transitionStyle = {
     transitionProperty: 'opacity, transform, filter',
     transitionDuration: `${duration}ms`,

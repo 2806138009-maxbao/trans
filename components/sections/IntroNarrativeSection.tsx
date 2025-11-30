@@ -1,8 +1,11 @@
 import React from 'react';
 import { Language, TRANSLATIONS } from '../../types';
-import { GradientText, HoverText, HoverListItem } from './SectionHelpers';
-import { StepTimeline } from '../StepTimeline';
 import { AnimateOnScroll } from '../AnimateOnScroll';
+import { THEME } from '../../theme';
+import { ComplexFoldSim } from '../ComplexFoldSim';
+import { InteractiveRecap } from '../InteractiveRecap';
+import { GridIcon } from '../Icons';
+import { Zap, History } from 'lucide-react';
 
 interface IntroNarrativeSectionProps {
   lang: Language;
@@ -10,198 +13,175 @@ interface IntroNarrativeSectionProps {
   id?: string;
 }
 
-/**
- * 长文式叙事区：合并 Context/Signal/Lego 的核心内容
- * 保持背景动画可见，统一交互动效
- */
+// Reusable Components
+const GlowDot: React.FC<{ color: string }> = ({ color }) => (
+  <span 
+    className="w-2 h-2 rounded-full"
+    style={{ backgroundColor: color, boxShadow: `0 0 8px ${color}` }}
+  />
+);
+
+const GradientText: React.FC<{ children: React.ReactNode }> = ({ children }) => (
+  <span 
+    className="bg-gradient-to-b from-white to-white/70 bg-clip-text text-transparent select-text"
+    style={{ WebkitBackgroundClip: 'text' }}
+  >
+    {children}
+  </span>
+);
+
 export const IntroNarrativeSection: React.FC<IntroNarrativeSectionProps> = ({ 
   lang, 
   reducedMotion,
   id
 }) => {
   const t = TRANSLATIONS[lang];
-  const motionClass = reducedMotion ? '' : 'fade-up';
 
-  // 三个核心概念块
+  // ...
+
   const narrativeBlocks = [
     {
       id: 'definition',
       eyebrow: lang === 'zh' ? '核心概念' : 'Core Concept',
       title: t.definitionTitle,
       body: t.definitionBody,
-      accent: '#5E6AD2',
+      accent: THEME.colors.primary,
+      Icon: GridIcon,
     },
     {
       id: 'history',
       eyebrow: t.historyTitle,
       title: t.historyTitle,
       body: t.historyBody,
-      accent: '#479CFF',
+      accent: THEME.colors.secondary,
+      Icon: History,
     },
     {
       id: 'role',
       eyebrow: t.roleTitleShort,
       title: t.roleTitleShort,
       body: t.roleBodyShort,
-      accent: '#8A8F98',
+      accent: 'var(--color-text-muted)',
+      Icon: Zap,
     },
   ];
 
-  // Series vs Transform 的要点
-  const seriesVsTransformPoints = t.seriesVsTransformPoints || [];
-
-  // Skip animations if reduced motion is preferred
-  if (reducedMotion) {
-    return (
-      <section id={id} className="w-full relative px-6 py-16">
-        <div className="relative max-w-3xl mx-auto">
-          {/* 章节标题 */}
-          <div className="mb-12 text-center">
-            <div className="inline-flex items-center gap-2 mb-4 px-4 py-2 rounded-full bg-white/5 border border-white/10 backdrop-blur-sm">
-              <span className="w-1.5 h-1.5 rounded-full bg-[#5E6AD2] shadow-[0_0_8px_#5E6AD2]" />
-              <span className="text-[11px] uppercase tracking-[0.2em] text-[#8A8F98]">
-                {lang === 'zh' ? '第一章 · 直觉' : 'Chapter 1 · Intuition'}
-              </span>
-            </div>
-            <h2 className="text-3xl md:text-4xl font-semibold mb-4">
-              <GradientText>{lang === 'zh' ? '理解傅里叶级数' : 'Understanding Fourier Series'}</GradientText>
-            </h2>
-            <p className="text-[#8A8F98] text-base leading-relaxed max-w-xl mx-auto">{t.seriesVsTransformLead}</p>
-          </div>
-          <div className="space-y-10">
-            {narrativeBlocks.map((block) => (
-              <article key={block.id} className="group relative pl-6 border-l-2" style={{ borderColor: `${block.accent}40` }}>
-                <div className="absolute -left-[7px] top-1 w-3 h-3 rounded-full border-2 bg-[#0B0C0E]" style={{ borderColor: block.accent }} />
-                <div className="text-[11px] uppercase tracking-[0.15em] mb-2 font-medium" style={{ color: block.accent }}>{block.eyebrow}</div>
-                <h3 className="text-xl md:text-2xl font-semibold text-white mb-3"><GradientText>{block.title}</GradientText></h3>
-                <p className="text-[#C7CBD4] text-base leading-[1.8] font-normal">{block.body}</p>
-              </article>
-            ))}
-          </div>
-          <div className="my-12 flex items-center gap-4">
-            <div className="flex-1 h-px bg-gradient-to-r from-transparent via-white/10 to-transparent" />
-            <span className="text-[10px] uppercase tracking-[0.2em] text-[#5E6AD2]">{t.seriesVsTransformTitle}</span>
-            <div className="flex-1 h-px bg-gradient-to-r from-transparent via-white/10 to-transparent" />
-          </div>
-          <ul className="space-y-3">
-            {seriesVsTransformPoints.map((point, idx) => (
-              <HoverListItem key={idx}>
-                <span className="text-[#D0D6E0] text-sm leading-relaxed whitespace-normal select-text selection:bg-[#5E6AD2]/50 selection:text-white">{point}</span>
-              </HoverListItem>
-            ))}
-          </ul>
-          <div className="mt-20 pt-12 border-t border-white/5">
-            <StepTimeline lang={lang} />
-          </div>
-        </div>
-      </section>
-    );
-  }
+  const Wrapper = reducedMotion ? React.Fragment : AnimateOnScroll;
+  const getWrapperProps = (animation: string, delay: number = 0) => 
+    reducedMotion ? {} : { animation: animation as any, delay };
 
   return (
-    <section id={id} className="w-full relative px-4 sm:px-6 py-10 sm:py-16">
+    <section id={id} className="w-full relative px-4 sm:px-6 py-16">
       <div className="relative max-w-3xl mx-auto">
-        {/* 章节标题 */}
-        <AnimateOnScroll animation="fade-up">
+        {/* Chapter Badge */}
+        <Wrapper {...getWrapperProps('fade-up')}>
           <div className="mb-8 sm:mb-12 text-center">
-            <div 
-              className="inline-flex items-center gap-2 mb-3 sm:mb-4 px-3 sm:px-4 py-1.5 sm:py-2 rounded-full 
-                bg-white/5 border border-white/10 backdrop-blur-sm
-                transition-all duration-300 hover:bg-white/10 hover:border-white/20"
-            >
-              <span className="w-1.5 h-1.5 rounded-full bg-[#5E6AD2] shadow-[0_0_8px_#5E6AD2]" />
-              <span className="text-[10px] sm:text-[11px] uppercase tracking-[0.15em] sm:tracking-[0.2em] text-[#8A8F98]">
-                {lang === 'zh' ? '第一章 · 直觉' : 'Chapter 1 · Intuition'}
+            <div className="inline-flex items-center gap-2 mb-4 px-4 py-2 rounded-full hover:bg-white/5 transition-all duration-300">
+              <GlowDot color={THEME.colors.primary} />
+              <span className="text-[11px] uppercase tracking-[0.2em] text-[var(--color-text-muted)]">
+                {t.chapterTitle}
               </span>
             </div>
-            <h2 className="text-2xl sm:text-3xl md:text-4xl font-semibold mb-3 sm:mb-4">
-              <GradientText>
-                {lang === 'zh' ? '理解傅里叶级数' : 'Understanding Fourier Series'}
-              </GradientText>
+            <h2 className="text-2xl sm:text-3xl md:text-4xl font-semibold mb-4">
+              <GradientText>{t.introTitle}</GradientText>
             </h2>
-            <HoverText as="p" className="text-[#8A8F98] text-sm sm:text-base leading-relaxed max-w-xl mx-auto px-2">
-              {t.seriesVsTransformLead}
-            </HoverText>
+            <p className="text-[var(--color-text-muted)] text-sm sm:text-base leading-relaxed max-w-xl mx-auto">
+              {t.introLead}
+            </p>
           </div>
-        </AnimateOnScroll>
+        </Wrapper>
 
-        {/* 叙事块 - 带交互效果和出场动画 */}
-        <div className="space-y-6 sm:space-y-10">
+        {/* Narrative Blocks - Void Style (De-boxed) */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
           {narrativeBlocks.map((block, idx) => (
-            <AnimateOnScroll key={block.id} animation="slide-left" delay={idx * 150}>
+            <Wrapper key={block.id} {...getWrapperProps('fade-up', idx * 150)}>
               <article 
-                className="group relative pl-4 sm:pl-6 border-l-2 transition-all duration-300 hover:pl-5 sm:hover:pl-8"
-                style={{ borderColor: `${block.accent}40` }}
+                className="group relative flex flex-col h-full pl-5 py-4 transition-all duration-500"
               >
-              {/* 时间线节点 */}
-              <div 
-                className="absolute -left-[6px] sm:-left-[7px] top-1 w-2.5 sm:w-3 h-2.5 sm:h-3 rounded-full border-2 bg-[#0B0C0E] 
-                  transition-all duration-300 group-hover:scale-125 group-hover:shadow-lg"
-                style={{ 
-                  borderColor: block.accent,
-                  boxShadow: `0 0 0 0 ${block.accent}`,
-                }}
-                onMouseEnter={(e) => {
-                  (e.target as HTMLElement).style.boxShadow = `0 0 12px ${block.accent}`;
-                }}
-                onMouseLeave={(e) => {
-                  (e.target as HTMLElement).style.boxShadow = `0 0 0 0 ${block.accent}`;
-                }}
-              />
-              
-              {/* Eyebrow */}
-              <div 
-                className="text-[10px] sm:text-[11px] uppercase tracking-[0.12em] sm:tracking-[0.15em] mb-1.5 sm:mb-2 font-medium 
-                  transition-all duration-300 group-hover:tracking-[0.2em]"
-                style={{ color: block.accent }}
-              >
-                {block.eyebrow}
-              </div>
-              
-              {/* Title */}
-              <h3 className="text-lg sm:text-xl md:text-2xl font-semibold text-white mb-2 sm:mb-3 
-                transition-all duration-300 group-hover:translate-x-1">
-                <GradientText>{block.title}</GradientText>
-              </h3>
-              
-              {/* Body */}
-              <HoverText as="p" className="text-[#C7CBD4] text-sm sm:text-base leading-[1.7] sm:leading-[1.8] font-normal">
-                {block.body}
-              </HoverText>
-            </article>
-          </AnimateOnScroll>
+                {/* Left Accent Line - Swiss Style */}
+                <div 
+                  className="absolute top-0 bottom-0 left-0 w-0.5 transition-all duration-300 group-hover:w-1"
+                  style={{ backgroundColor: block.accent }}
+                />
+
+                {/* Icon + Eyebrow Row */}
+                <div className="flex items-center gap-3 mb-4">
+                  <div 
+                    className="w-8 h-8 rounded-lg flex items-center justify-center transition-all duration-300 group-hover:scale-110"
+                    style={{ 
+                      backgroundColor: `${block.accent}15`,
+                      color: block.accent 
+                    }}
+                  >
+                    <block.Icon size={16} />
+                  </div>
+                  
+                  <span 
+                    className="text-[10px] uppercase tracking-[0.15em] font-medium"
+                    style={{ color: block.accent, opacity: 0.8 }}
+                  >
+                    {block.eyebrow}
+                  </span>
+                </div>
+                
+                {/* Title */}
+                <h3 className="text-lg font-semibold text-white mb-3 transition-colors duration-300 group-hover:text-[#FFC700]">
+                  {block.title}
+                </h3>
+                
+                {/* Body */}
+                <p className="text-[#888] text-sm leading-relaxed font-normal flex-1">
+                  {block.body}
+                </p>
+              </article>
+            </Wrapper>
           ))}
         </div>
 
-        {/* 分隔线 */}
-        <AnimateOnScroll animation="scale" delay={200}>
+        {/* ★ Complex Fold Simulation - The Core Visual */}
+        <Wrapper {...getWrapperProps('fade-up', 400)}>
+          <div className="mt-12 mb-8">
+            <div className="mb-6 text-center">
+              <h3 className="text-lg font-semibold text-white mb-2">
+                <GradientText>
+                  {lang === 'zh' ? '亲眼看「折叠」' : 'Watch the "Fold"'}
+                </GradientText>
+              </h3>
+              <p className="text-sm text-white/50">
+                {lang === 'zh' 
+                  ? '无限的复阻抗平面 → 有限的单位圆' 
+                  : 'Infinite complex impedance plane → Finite unit circle'
+                }
+              </p>
+            </div>
+            <ComplexFoldSim 
+              reducedMotion={reducedMotion} 
+              lang={lang}
+              height={300}
+            />
+          </div>
+        </Wrapper>
+
+        {/* Divider */}
+        <Wrapper {...getWrapperProps('scale', 200)}>
           <div className="my-12 flex items-center gap-4">
             <div className="flex-1 h-px bg-gradient-to-r from-transparent via-white/10 to-transparent" />
-            <span className="text-[10px] uppercase tracking-[0.2em] text-[#5E6AD2] 
-              transition-all duration-300 hover:text-white hover:tracking-[0.25em]">
+            <span className="text-[10px] uppercase tracking-[0.2em] text-[#FFC700] hover:text-white transition-colors duration-300">
               {t.seriesVsTransformTitle}
             </span>
             <div className="flex-1 h-px bg-gradient-to-r from-transparent via-white/10 to-transparent" />
           </div>
-        </AnimateOnScroll>
+        </Wrapper>
 
-        {/* Series vs Transform 要点列表 */}
-        <ul className="space-y-3">
-          {seriesVsTransformPoints.map((point, idx) => (
-            <AnimateOnScroll key={idx} animation="fade-up" delay={idx * 100}>
-              <HoverListItem>
-                <span className="text-[#D0D6E0] text-sm leading-relaxed whitespace-normal select-text selection:bg-[#5E6AD2]/50 selection:text-white">{point}</span>
-              </HoverListItem>
-            </AnimateOnScroll>
-          ))}
-        </ul>
-
-        {/* 实验路线图 - Step Timeline */}
-        <AnimateOnScroll animation="fade-up" delay={300}>
-          <div className="mt-20 pt-12 border-t border-white/5">
-            <StepTimeline lang={lang} />
+        {/* Key Points - Interactive */}
+        <Wrapper {...getWrapperProps('fade-up', 300)}>
+          <div className="mt-8">
+            <InteractiveRecap 
+              bullets={t.seriesVsTransformPoints} 
+              conceptMap={['seriesL', 'shuntC', 'center', 'symmetry']} 
+            />
           </div>
-        </AnimateOnScroll>
+        </Wrapper>
       </div>
     </section>
   );

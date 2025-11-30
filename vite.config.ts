@@ -5,6 +5,9 @@ import react from '@vitejs/plugin-react';
 export default defineConfig(({ mode }) => {
     const env = loadEnv(mode, '.', '');
     return {
+      // Use relative base so the built site works when served from a sub-path
+      // (e.g. GitHub Pages) and when opening dist/index.html directly.
+      base: './',
       server: {
         port: 3000,
         host: '0.0.0.0',

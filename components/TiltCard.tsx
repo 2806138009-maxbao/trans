@@ -1,4 +1,5 @@
 import React, { useRef, useState, MouseEvent, TouchEvent, useEffect } from 'react';
+import { THEME } from '../theme';
 
 interface TiltCardProps {
   children: React.ReactNode;
@@ -17,14 +18,12 @@ export const TiltCard: React.FC<TiltCardProps> = ({
   const [rotation, setRotation] = useState({ x: 0, y: 0 });
   const [spotlight, setSpotlight] = useState({ x: 50, y: 50, opacity: 0 });
   const [isMobile, setIsMobile] = useState(false);
-  const [isTouched, setIsTouched] = useState(false); // 移动端触摸状态
+  const [isTouched, setIsTouched] = useState(false);
 
-  // 检测移动端 - 只在窄屏幕时禁用，不再检测触屏（因为很多桌面也有触屏）
+  // Detect Mobile
   useEffect(() => {
     const checkMobile = () => {
-      // 只根据屏幕宽度判断，768px 以下视为移动端
       const isNarrowScreen = window.innerWidth < 768;
-      // 或者检测是否是真正的移动设备 UA
       const isMobileUA = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
       setIsMobile(isNarrowScreen || isMobileUA);
     };
@@ -35,12 +34,11 @@ export const TiltCard: React.FC<TiltCardProps> = ({
 
   const shouldDisable = disabled || isMobile;
 
-  // 移动端触摸反馈
+  // Mobile Touch Feedback
   const handleTouchStart = (e: TouchEvent<HTMLDivElement>) => {
     if (!isMobile) return;
     setIsTouched(true);
     
-    // 可选：根据触摸位置显示高光
     if (cardRef.current) {
       const rect = cardRef.current.getBoundingClientRect();
       const touch = e.touches[0];
@@ -83,7 +81,9 @@ export const TiltCard: React.FC<TiltCardProps> = ({
     setSpotlight(prev => ({ ...prev, opacity: 0 }));
   };
 
-  // 移动端简化版本 - 带触摸反馈
+  const noiseBg = `url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)' opacity='1'/%3E%3C/svg%3E")`;
+
+  // Mobile Render
   if (shouldDisable) {
     return (
       <div 
@@ -95,7 +95,6 @@ export const TiltCard: React.FC<TiltCardProps> = ({
           isTouched ? 'scale-[0.98] brightness-110' : ''
         }`}
       >
-        {/* 触摸时的高光效果 */}
         <div 
           className="absolute inset-0 rounded-2xl z-20 pointer-events-none transition-opacity duration-200"
           style={{
@@ -103,14 +102,25 @@ export const TiltCard: React.FC<TiltCardProps> = ({
             opacity: spotlight.opacity,
           }}
         />
-        <div className="relative z-10 w-full h-full rounded-2xl bg-[#121316]/80 backdrop-blur-xl border border-white/5 shadow-2xl">
+        {/* Mobile - Void Style */}
+        <div 
+            className="relative z-10 w-full h-full rounded-2xl overflow-hidden"
+            style={{ 
+                backgroundColor: 'transparent',
+                boxShadow: 'none',
+            }}
+        >
           {children}
-          <div className="absolute inset-0 rounded-2xl opacity-[0.03] pointer-events-none bg-[url('https://grainy-gradients.vercel.app/noise.svg')]" />
+          <div 
+            className="absolute inset-0 rounded-2xl opacity-[0.03] pointer-events-none" 
+            style={{ backgroundImage: noiseBg }}
+          />
         </div>
       </div>
     );
   }
 
+  // Desktop Render
   return (
     <div
       ref={cardRef}
@@ -135,19 +145,31 @@ export const TiltCard: React.FC<TiltCardProps> = ({
       <div 
         className="absolute inset-0 rounded-2xl z-10 pointer-events-none"
         style={{
-          background: `radial-gradient(800px circle at ${spotlight.x}% ${spotlight.y}%, rgba(255,255,255,0.06), transparent 40%)`,
+          background: `radial-gradient(800px circle at ${spotlight.x}% ${spotlight.y}%, rgba(255,255,255,0.08), transparent 40%)`,
           opacity: spotlight.opacity,
           transition: 'opacity 0.5s ease'
         }}
       />
 
-      {/* Content Container */}
+      {/* Content Container - Void Style (De-boxed)
+          Removes glass/border/shadow to let content float.
+      */}
       <div 
-        className="relative z-10 w-full h-full rounded-2xl bg-[#121316]/80 backdrop-blur-xl border border-white/5 shadow-2xl"
-        style={{ transform: 'translateZ(20px)' }}
+        className="relative z-10 w-full h-full rounded-2xl overflow-hidden"
+        style={{ 
+            transform: 'translateZ(20px)',
+            backgroundColor: 'transparent',
+            // Minimal interaction feedback, no heavy box
+            boxShadow: 'none',
+        }}
       >
         {children}
-        <div className="absolute inset-0 rounded-2xl opacity-[0.03] pointer-events-none bg-[url('https://grainy-gradients.vercel.app/noise.svg')]" />
+        
+        {/* 噪点纹理 (Optional, maybe keep for texture?) */}
+        <div 
+            className="absolute inset-0 rounded-2xl opacity-[0.03] pointer-events-none" 
+            style={{ backgroundImage: noiseBg }}
+        />
       </div>
     </div>
   );
