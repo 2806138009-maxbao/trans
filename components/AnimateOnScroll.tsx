@@ -9,7 +9,7 @@ interface AnimateOnScrollProps {
   duration?: number; // duration in ms
   className?: string;
   threshold?: number;
-  as?: keyof JSX.IntrinsicElements;
+  as?: React.ElementType;
   triggerOnce?: boolean; // 是否只触发一次，默认 false（每次进入视口都触发）
 }
 

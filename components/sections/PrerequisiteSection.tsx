@@ -205,7 +205,7 @@ export const PrerequisiteSection: React.FC<PrerequisiteSectionProps> = ({
                         mode={matchMode}
                         onModeChange={setMatchMode}
                         reducedMotion={reducedMotion}
-                        height={90}
+                        height={140}
                         showTabs={true}
                       />
                     </div>
@@ -214,7 +214,7 @@ export const PrerequisiteSection: React.FC<PrerequisiteSectionProps> = ({
                       <ReflectionPointSim 
                         reflectionRatio={matchMode === 'mismatched' ? 0.5 : 0.05}
                         reducedMotion={reducedMotion}
-                        height={100}
+                        height={220}
                       />
                     </div>
                   )}

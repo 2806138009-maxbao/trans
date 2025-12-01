@@ -37,8 +37,6 @@ export const IntroNarrativeSection: React.FC<IntroNarrativeSectionProps> = ({
 }) => {
   const t = TRANSLATIONS[lang];
 
-  // ...
-
   const narrativeBlocks = [
     {
       id: 'definition',
@@ -108,7 +106,7 @@ export const IntroNarrativeSection: React.FC<IntroNarrativeSectionProps> = ({
                 <div className="flex items-center gap-3 mb-4">
                   <div 
                     className="w-8 h-8 rounded-lg flex items-center justify-center transition-all duration-300 group-hover:scale-110"
-                style={{ 
+                    style={{ 
                       backgroundColor: `${block.accent}15`,
                       color: block.accent 
                     }}
@@ -119,21 +117,21 @@ export const IntroNarrativeSection: React.FC<IntroNarrativeSectionProps> = ({
                   <span 
                     className="text-[10px] uppercase tracking-[0.15em] font-medium"
                     style={{ color: block.accent, opacity: 0.8 }}
-              >
-                {block.eyebrow}
+                  >
+                    {block.eyebrow}
                   </span>
-              </div>
+                </div>
               
-              {/* Title */}
+                {/* Title */}
                 <h3 className="text-lg font-semibold text-white mb-3 transition-colors duration-300 group-hover:text-[#FFC700]">
                   {block.title}
-              </h3>
+                </h3>
               
-              {/* Body */}
+                {/* Body */}
                 <p className="text-[#888] text-sm leading-relaxed font-normal flex-1">
-                {block.body}
+                  {block.body}
                 </p>
-            </article>
+              </article>
             </Wrapper>
           ))}
         </div>
@@ -182,26 +180,6 @@ export const IntroNarrativeSection: React.FC<IntroNarrativeSectionProps> = ({
             />
           </div>
         </Wrapper>
-      </div>
-    </section>
-  );
-};
-
-        {/* Key Points List */}
-        <ul className="space-y-3">
-          {t.seriesVsTransformPoints.map((point, idx) => (
-            <Wrapper key={idx} {...getWrapperProps('fade-up', idx * 100)}>
-              <li className="flex gap-3 p-4 rounded-lg bg-white/[0.03] border border-white/5 transition-all duration-300 hover:border-[#FFC700]/30 hover:bg-white/[0.05]">
-                <span className="flex-shrink-0 w-6 h-6 rounded-full bg-[#FFC700]/10 text-[#FFC700] text-xs font-medium flex items-center justify-center">
-                  {idx + 1}
-                </span>
-                <span className="flex-1 text-[#D0D6E0] text-sm leading-relaxed">
-                  {point}
-                </span>
-              </li>
-            </Wrapper>
-          ))}
-        </ul>
       </div>
     </section>
   );

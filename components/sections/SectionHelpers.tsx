@@ -148,7 +148,7 @@ export const HoverText = ({
 }: { 
   children?: React.ReactNode; 
   className?: string;
-  as?: keyof JSX.IntrinsicElements;
+  as?: React.ElementType;
 }) => (
   <Component
     className={`inline-block transition-all duration-300 ease-out cursor-default

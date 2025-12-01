@@ -15,6 +15,11 @@ export interface HarmonicData {
  * 锯齿波 (sawtooth): 所有谐波，系数 = 2/(nπ) * (-1)^(n+1)
  */
 const COEFFICIENT_BUILDERS: Record<WaveformType, (k: number) => HarmonicData> = {
+  sine: (k) => {
+    const n = k + 1;
+    const coeff = k === 0 ? 1 : 0;
+    return { order: n, coefficient: coeff, amplitude: Math.abs(coeff) };
+  },
   square: (k) => {
     const n = k * 2 + 1; // 只有奇次: 1, 3, 5, 7...
     const coeff = 4 / (n * Math.PI);
@@ -66,6 +71,20 @@ export const computeHarmonicSeries = (
  */
 export const getWaveformDescription = (waveform: WaveformType, lang: 'zh' | 'en') => {
   const descriptions = {
+    sine: {
+      zh: {
+        name: '正弦波',
+        harmonics: '基波占主导，理论上没有谐波',
+        formula: 'f(t) = sin(ωt)',
+        note: '最纯净的波形，也是所有傅里叶级数的基底',
+      },
+      en: {
+        name: 'Sine Wave',
+        harmonics: 'Fundamental only, no harmonics ideally',
+        formula: 'f(t) = sin(ωt)',
+        note: 'The pure tone that forms the basis for Fourier series',
+      },
+    },
     square: {
       zh: {
         name: '方波',

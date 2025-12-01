@@ -1,4 +1,4 @@
-import React, { useRef, useState, useEffect, MouseEvent } from 'react';
+import React, { useRef, useState, useEffect, MouseEvent, useMemo } from 'react';
 
 interface HudTiltContainerProps {
   children: React.ReactNode;
@@ -7,7 +7,7 @@ interface HudTiltContainerProps {
   reducedMotion?: boolean;
 }
 
-// Inject breathing animation keyframes
+// Inject breathing animation keyframes once
 if (typeof document !== 'undefined') {
   const styleId = 'hud-breathe-keyframes';
   if (!document.getElementById(styleId)) {
@@ -20,9 +20,8 @@ if (typeof document !== 'undefined') {
           border-color: rgba(255, 199, 0, 0.2);
         }
         50% { 
-          opacity: 0.7; 
-          border-color: rgba(255, 199, 0, 0.5);
-          box-shadow: 0 0 12px rgba(255, 199, 0, 0.15);
+          opacity: 0.6; 
+          border-color: rgba(255, 199, 0, 0.4);
         }
       }
     `;
@@ -30,12 +29,36 @@ if (typeof document !== 'undefined') {
   }
 }
 
+// Corner bracket component to reduce repetition
+const CornerBracket: React.FC<{
+  position: 'tl' | 'tr' | 'bl' | 'br';
+  reducedMotion: boolean;
+  delay?: string;
+  hover?: boolean;
+}> = ({ position, reducedMotion, delay = '0s', hover = false }) => {
+  const positionClasses = {
+    tl: 'top-3 left-3 border-t border-l rounded-tl-lg',
+    tr: 'top-3 right-3 border-t border-r rounded-tr-lg',
+    bl: 'bottom-3 left-3 border-b border-l rounded-bl-lg',
+    br: 'bottom-3 right-3 border-b border-r rounded-br-lg',
+  };
+
+  return (
+    <div 
+      className={`absolute w-6 h-6 ${positionClasses[position]} pointer-events-none ${hover ? 'transition-[width,height] duration-300 group-hover:w-8 group-hover:h-8' : ''}`}
+      style={{
+        borderColor: 'rgba(255, 199, 0, 0.3)',
+        animation: reducedMotion ? 'none' : 'hud-breathe 5s ease-in-out infinite',
+        animationDelay: delay,
+      }}
+    />
+  );
+};
+
 /**
- * HUD 容器组件，带有 TiltCard 相同的 3D 倾斜和光晕效果
- * 用于包裹画布等大型交互区域
- * 移动端自动禁用 3D 效果以保证滚动流畅
- * 
- * 新增：角落支架"呼吸"动画 - 让系统看起来"在线"
+ * HUD Container with 3D tilt and glow effects
+ * Mobile auto-disables 3D for smooth scrolling
+ * Corner brackets have "breathing" animation for alive feel
  */
 export const HudTiltContainer: React.FC<HudTiltContainerProps> = ({
   children,
@@ -48,15 +71,12 @@ export const HudTiltContainer: React.FC<HudTiltContainerProps> = ({
   const [spotlight, setSpotlight] = useState({ x: 50, y: 50, opacity: 0 });
   const [isMobile, setIsMobile] = useState(false);
 
-  // 检测移动端
   useEffect(() => {
     const checkMobile = () => {
-      const isNarrowScreen = window.innerWidth < 768;
-      const isMobileUA = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
-      setIsMobile(isNarrowScreen || isMobileUA);
+      setIsMobile(window.innerWidth < 768 || 'ontouchstart' in window);
     };
     checkMobile();
-    window.addEventListener('resize', checkMobile);
+    window.addEventListener('resize', checkMobile, { passive: true });
     return () => window.removeEventListener('resize', checkMobile);
   }, []);
 
@@ -67,18 +87,16 @@ export const HudTiltContainer: React.FC<HudTiltContainerProps> = ({
     const x = e.clientX - rect.left;
     const y = e.clientY - rect.top;
 
-    // Calculate percentage for spotlight
     const perX = (x / rect.width) * 100;
     const perY = (y / rect.height) * 100;
 
-    // Calculate rotation (reduced for larger containers - max 5 degrees)
     const centerX = rect.width / 2;
     const centerY = rect.height / 2;
 
-    const rotateX = ((y - centerY) / centerY) * -4; // Gentler tilt for larger containers
-    const rotateY = ((x - centerX) / centerX) * 4;
-
-    setRotation({ x: rotateX, y: rotateY });
+    setRotation({
+      x: ((y - centerY) / centerY) * -3,
+      y: ((x - centerX) / centerX) * 3,
+    });
     setSpotlight({ x: perX, y: perY, opacity: 1 });
   };
 
@@ -88,55 +106,22 @@ export const HudTiltContainer: React.FC<HudTiltContainerProps> = ({
     setSpotlight((prev) => ({ ...prev, opacity: 0 }));
   };
 
-  // 移动端简化版本 - 无 3D 效果，保证滚动流畅
+  const containerStyle = useMemo(() => ({
+    background: 'radial-gradient(circle at 50% 50%, rgba(30, 30, 40, 0.12) 0%, transparent 80%)',
+    border: '1px solid rgba(255, 255, 255, 0.06)',
+    boxShadow: '0 0 0 1px rgba(255, 255, 255, 0.02), 0 16px 48px rgba(0, 0, 0, 0.35)',
+  }), []);
+
+  // Mobile simplified version
   if (isMobile) {
     return (
-      <div
-        ref={containerRef}
-        className={`relative rounded-3xl group ${className}`}
-      >
-        {/* Content Container (HUD Glass) - 简化版 */}
-        <div
-          className="relative z-10 w-full h-full rounded-3xl overflow-hidden"
-          style={{
-            background: 'radial-gradient(circle at 50% 50%, rgba(30, 30, 40, 0.15) 0%, rgba(0, 0, 0, 0) 80%)',
-            border: '1px solid rgba(255, 255, 255, 0.08)',
-            boxShadow: '0 0 0 1px rgba(255, 255, 255, 0.02), 0 20px 60px rgba(0, 0, 0, 0.4)',
-          }}
-        >
+      <div ref={containerRef} className={`relative rounded-3xl ${className}`}>
+        <div className="relative z-10 w-full h-full rounded-3xl overflow-hidden" style={containerStyle}>
           {children}
-          <div className="absolute inset-0 opacity-[0.02] pointer-events-none bg-[url('https://grainy-gradients.vercel.app/noise.svg')]" />
-          {/* Corner accents - Breathing animation for "alive" feel */}
-          <div 
-            className="absolute top-3 left-3 w-6 h-6 border-t border-l rounded-tl-lg pointer-events-none"
-            style={{
-              borderColor: 'rgba(255, 199, 0, 0.3)',
-              animation: reducedMotion ? 'none' : 'hud-breathe 4s ease-in-out infinite',
-            }}
-          />
-          <div 
-            className="absolute top-3 right-3 w-6 h-6 border-t border-r rounded-tr-lg pointer-events-none"
-            style={{
-              borderColor: 'rgba(255, 199, 0, 0.3)',
-              animation: reducedMotion ? 'none' : 'hud-breathe 4s ease-in-out infinite',
-              animationDelay: '1s', // Offset for organic feel
-            }}
-          />
-          <div 
-            className="absolute bottom-3 left-3 w-6 h-6 border-b border-l rounded-bl-lg pointer-events-none"
-            style={{
-              borderColor: 'rgba(255, 199, 0, 0.3)',
-              animation: reducedMotion ? 'none' : 'hud-breathe 4s ease-in-out infinite',
-              animationDelay: '1s', // Same offset as top-right for diagonal symmetry
-            }}
-          />
-          <div 
-            className="absolute bottom-3 right-3 w-6 h-6 border-b border-r rounded-br-lg pointer-events-none"
-            style={{
-              borderColor: 'rgba(255, 199, 0, 0.3)',
-              animation: reducedMotion ? 'none' : 'hud-breathe 4s ease-in-out infinite',
-            }}
-          />
+          <CornerBracket position="tl" reducedMotion={reducedMotion} />
+          <CornerBracket position="tr" reducedMotion={reducedMotion} delay="1.25s" />
+          <CornerBracket position="bl" reducedMotion={reducedMotion} delay="1.25s" />
+          <CornerBracket position="br" reducedMotion={reducedMotion} />
         </div>
       </div>
     );
@@ -147,158 +132,42 @@ export const HudTiltContainer: React.FC<HudTiltContainerProps> = ({
       ref={containerRef}
       onMouseMove={handleMouseMove}
       onMouseLeave={handleMouseLeave}
-      className={`relative rounded-3xl transition-transform duration-300 ease-out preserve-3d group ${className}`}
+      className={`relative rounded-3xl group ${className}`}
       style={{
-        transform: `perspective(1500px) rotateX(${rotation.x}deg) rotateY(${rotation.y}deg) scale3d(1, 1, 1)`,
-        transformStyle: 'preserve-3d',
+        transform: `perspective(1500px) rotateX(${rotation.x}deg) rotateY(${rotation.y}deg)`,
+        transition: 'transform 0.15s ease-out',
         willChange: 'transform',
       }}
     >
-      {/* 1. Dynamic Border Gradient (The "Light Edge") */}
+      {/* Dynamic Border Gradient */}
       <div
-        className="absolute inset-[-1px] rounded-3xl z-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500"
+        className="absolute inset-[-1px] rounded-3xl z-0 opacity-0 group-hover:opacity-100"
         style={{
           background: `radial-gradient(circle at ${spotlight.x}% ${spotlight.y}%, ${glowColor}, transparent 50%)`,
+          transition: 'opacity 0.3s ease-out',
         }}
       />
 
-      {/* 2. Glass Surface & Spotlight */}
+      {/* Glass Surface & Spotlight */}
       <div
         className="absolute inset-0 rounded-3xl z-10 pointer-events-none"
         style={{
-          background: `radial-gradient(1000px circle at ${spotlight.x}% ${spotlight.y}%, rgba(255,255,255,0.04), transparent 40%)`,
+          background: `radial-gradient(800px circle at ${spotlight.x}% ${spotlight.y}%, rgba(255,255,255,0.03), transparent 40%)`,
           opacity: spotlight.opacity,
-          transition: 'opacity 0.5s ease',
+          transition: 'opacity 0.3s ease-out',
         }}
       />
 
-      {/* 3. Content Container (HUD Glass) */}
+      {/* Content Container */}
       <div
         className="relative z-10 w-full h-full rounded-3xl overflow-hidden"
-        style={{
-          background:
-            'radial-gradient(circle at 50% 50%, rgba(30, 30, 40, 0.15) 0%, rgba(0, 0, 0, 0) 80%)',
-          border: '1px solid rgba(255, 255, 255, 0.08)',
-          boxShadow:
-            '0 0 0 1px rgba(255, 255, 255, 0.02), 0 20px 60px rgba(0, 0, 0, 0.4)',
-          transform: 'translateZ(10px)', // Parallax depth for content
-        }}
+        style={containerStyle}
       >
         {children}
-
-        {/* Noise Texture for physical feel */}
-        <div className="absolute inset-0 opacity-[0.02] pointer-events-none bg-[url('https://grainy-gradients.vercel.app/noise.svg')]" />
-
-        {/* Corner accents - Breathing animation for "alive" feel + hover expansion */}
-        <div 
-          className="absolute top-3 left-3 w-6 h-6 border-t border-l rounded-tl-lg pointer-events-none transition-all duration-300 group-hover:w-8 group-hover:h-8"
-          style={{
-            borderColor: 'rgba(255, 199, 0, 0.3)',
-            animation: reducedMotion ? 'none' : 'hud-breathe 4s ease-in-out infinite',
-          }}
-        />
-        <div 
-          className="absolute top-3 right-3 w-6 h-6 border-t border-r rounded-tr-lg pointer-events-none transition-all duration-300 group-hover:w-8 group-hover:h-8"
-          style={{
-            borderColor: 'rgba(255, 199, 0, 0.3)',
-            animation: reducedMotion ? 'none' : 'hud-breathe 4s ease-in-out infinite',
-            animationDelay: '1s', // Offset for organic feel
-          }}
-        />
-        <div 
-          className="absolute bottom-3 left-3 w-6 h-6 border-b border-l rounded-bl-lg pointer-events-none transition-all duration-300 group-hover:w-8 group-hover:h-8"
-          style={{
-            borderColor: 'rgba(255, 199, 0, 0.3)',
-            animation: reducedMotion ? 'none' : 'hud-breathe 4s ease-in-out infinite',
-            animationDelay: '1s', // Same offset as top-right for diagonal symmetry
-          }}
-        />
-        <div 
-          className="absolute bottom-3 right-3 w-6 h-6 border-b border-r rounded-br-lg pointer-events-none transition-all duration-300 group-hover:w-8 group-hover:h-8"
-          style={{
-            borderColor: 'rgba(255, 199, 0, 0.3)',
-            animation: reducedMotion ? 'none' : 'hud-breathe 4s ease-in-out infinite',
-          }}
-        />
-      </div>
-    </div>
-  );
-};
-
-
-      className={`relative rounded-3xl transition-transform duration-300 ease-out preserve-3d group ${className}`}
-      style={{
-        transform: `perspective(1500px) rotateX(${rotation.x}deg) rotateY(${rotation.y}deg) scale3d(1, 1, 1)`,
-        transformStyle: 'preserve-3d',
-        willChange: 'transform',
-      }}
-    >
-      {/* 1. Dynamic Border Gradient (The "Light Edge") */}
-      <div
-        className="absolute inset-[-1px] rounded-3xl z-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500"
-        style={{
-          background: `radial-gradient(circle at ${spotlight.x}% ${spotlight.y}%, ${glowColor}, transparent 50%)`,
-        }}
-      />
-
-      {/* 2. Glass Surface & Spotlight */}
-      <div
-        className="absolute inset-0 rounded-3xl z-10 pointer-events-none"
-        style={{
-          background: `radial-gradient(1000px circle at ${spotlight.x}% ${spotlight.y}%, rgba(255,255,255,0.04), transparent 40%)`,
-          opacity: spotlight.opacity,
-          transition: 'opacity 0.5s ease',
-        }}
-      />
-
-      {/* 3. Content Container (HUD Glass) */}
-      <div
-        className="relative z-10 w-full h-full rounded-3xl overflow-hidden"
-        style={{
-          background:
-            'radial-gradient(circle at 50% 50%, rgba(30, 30, 40, 0.15) 0%, rgba(0, 0, 0, 0) 80%)',
-          border: '1px solid rgba(255, 255, 255, 0.08)',
-          boxShadow:
-            '0 0 0 1px rgba(255, 255, 255, 0.02), 0 20px 60px rgba(0, 0, 0, 0.4)',
-          transform: 'translateZ(10px)', // Parallax depth for content
-        }}
-      >
-        {children}
-
-        {/* Noise Texture for physical feel */}
-        <div className="absolute inset-0 opacity-[0.02] pointer-events-none bg-[url('https://grainy-gradients.vercel.app/noise.svg')]" />
-
-        {/* Corner accents - Breathing animation for "alive" feel + hover expansion */}
-        <div 
-          className="absolute top-3 left-3 w-6 h-6 border-t border-l rounded-tl-lg pointer-events-none transition-all duration-300 group-hover:w-8 group-hover:h-8"
-          style={{
-            borderColor: 'rgba(255, 199, 0, 0.3)',
-            animation: reducedMotion ? 'none' : 'hud-breathe 4s ease-in-out infinite',
-          }}
-        />
-        <div 
-          className="absolute top-3 right-3 w-6 h-6 border-t border-r rounded-tr-lg pointer-events-none transition-all duration-300 group-hover:w-8 group-hover:h-8"
-          style={{
-            borderColor: 'rgba(255, 199, 0, 0.3)',
-            animation: reducedMotion ? 'none' : 'hud-breathe 4s ease-in-out infinite',
-            animationDelay: '1s', // Offset for organic feel
-          }}
-        />
-        <div 
-          className="absolute bottom-3 left-3 w-6 h-6 border-b border-l rounded-bl-lg pointer-events-none transition-all duration-300 group-hover:w-8 group-hover:h-8"
-          style={{
-            borderColor: 'rgba(255, 199, 0, 0.3)',
-            animation: reducedMotion ? 'none' : 'hud-breathe 4s ease-in-out infinite',
-            animationDelay: '1s', // Same offset as top-right for diagonal symmetry
-          }}
-        />
-        <div 
-          className="absolute bottom-3 right-3 w-6 h-6 border-b border-r rounded-br-lg pointer-events-none transition-all duration-300 group-hover:w-8 group-hover:h-8"
-          style={{
-            borderColor: 'rgba(255, 199, 0, 0.3)',
-            animation: reducedMotion ? 'none' : 'hud-breathe 4s ease-in-out infinite',
-          }}
-        />
+        <CornerBracket position="tl" reducedMotion={reducedMotion} hover />
+        <CornerBracket position="tr" reducedMotion={reducedMotion} delay="1.25s" hover />
+        <CornerBracket position="bl" reducedMotion={reducedMotion} delay="1.25s" hover />
+        <CornerBracket position="br" reducedMotion={reducedMotion} hover />
       </div>
     </div>
   );

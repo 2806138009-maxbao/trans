@@ -1,5 +1,5 @@
 import React, { useRef, useState, useCallback, useEffect } from "react";
-/* HMR Trigger: Force Refresh */
+/* HMR Trigger: Force Refresh - Fixed */
 import { SmithFieldBackground } from "./components/SmithFieldBackground";
 import { CustomCursor } from "./components/CustomCursor";
 import { SectionNavigation } from "./components/SectionNavigation";
@@ -56,55 +56,11 @@ const App: React.FC = () => {
 
   const scrollToRef = (ref: React.RefObject<HTMLDivElement>) => {
     if (ref.current) {
-        // If reduced motion, use native jump (respects system settings)
-        if (reducedMotion) {
-            ref.current.scrollIntoView({ behavior: 'auto' });
-            return;
-        }
-
-        const target = ref.current;
-        const targetPosition = target.getBoundingClientRect().top + window.scrollY;
-        const startPosition = window.scrollY;
-        const distance = targetPosition - startPosition;
-        const duration = 1000; // 1.0s duration
-        let startTime: number | null = null;
-        let animationFrameId: number;
-
-        // Allow user to interrupt the scroll animation
-        const abort = () => {
-            if (animationFrameId) cancelAnimationFrame(animationFrameId);
-            window.removeEventListener('wheel', abort);
-            window.removeEventListener('touchstart', abort);
-            window.removeEventListener('keydown', abort);
-        };
-
-        window.addEventListener('wheel', abort, { passive: true });
-        window.addEventListener('touchstart', abort, { passive: true });
-        window.addEventListener('keydown', abort, { passive: true });
-
-        function animation(currentTime: number) {
-            if (startTime === null) startTime = currentTime;
-            const timeElapsed = currentTime - startTime;
-            
-            // L3 Standard: Unified Physics Kernel - Expo Out
-            const t = Math.min(timeElapsed / duration, 1);
-            const ease = t === 1 ? 1 : 1 - Math.pow(2, -10 * t);
-            
-            const run = ease * distance + startPosition;
-
-            // Force 'auto' behavior to avoid conflict with CSS scroll-behavior: smooth
-            window.scrollTo({ top: run, behavior: 'auto' });
-            
-            if (timeElapsed < duration) {
-                animationFrameId = requestAnimationFrame(animation);
-            } else {
-                // Cleanup listeners when done
-                window.removeEventListener('wheel', abort);
-                window.removeEventListener('touchstart', abort);
-                window.removeEventListener('keydown', abort);
-            }
-        }
-        animationFrameId = requestAnimationFrame(animation);
+      // Use native smooth scrolling for better performance
+      ref.current.scrollIntoView({ 
+        behavior: reducedMotion ? 'auto' : 'smooth',
+        block: 'start'
+      });
     }
   };
 
@@ -374,122 +330,6 @@ const MatchingStepsSection: React.FC<{lang: Language, reducedMotion?: boolean}> 
         onStepChange={setActiveStep}
         reducedMotion={reducedMotion}
         lang={lang}
-        height={380}
-      />
-    </div>
-  );
-};
-
-/**
- * InfoCard - Applies all 3 Design Tactics
- * 
- * 1. Warm Charcoal background (not pure grey)
- * 2. Hierarchy via Weight & Contrast
- * 3. Generous padding (Let it Breathe)
- */
-const InfoCard: React.FC<{title: string, value: string, desc: string}> = ({title, value, desc}) => (
-  <div 
-    className="rounded-2xl transition-all duration-500 hover:scale-[1.02]"
-    style={{ 
-      backgroundColor: THEME.colors.surface,           // Warm surface
-      border: `1px solid ${THEME.colors.border.default}`,
-      padding: THEME.spacing.cardPaddingLg,            // Let it breathe
-      transitionTimingFunction: THEME.animation.curve,
-    }}
-  >
-    {/* Label: Small, uppercase, letter-spacing, LOW contrast */}
-    <h3 
-      className="font-mono text-[10px] uppercase mb-3"
-      style={{ 
-        color: THEME.colors.text.label,                // Gold-tinted label
-        letterSpacing: '0.1em',
-        fontWeight: 500,
-      }}
-    >
-      {title}
-    </h3>
-    
-    {/* Value: Large, HIGH contrast, Semi-bold */}
-    <div 
-      className="text-2xl font-mono mb-4"
-      style={{ 
-        color: THEME.colors.text.main,
-        fontWeight: 600,
-      }}
-    >
-      {value}
-    </div>
-    
-    {/* Description: Body text, warm muted */}
-    <p 
-      className="text-sm leading-relaxed"
-      style={{ color: THEME.colors.text.muted }}
-    >
-      {desc}
-    </p>
-  </div>
-);
-
-export default App;
-
-        height={380}
-      />
-    </div>
-  );
-};
-
-/**
- * InfoCard - Applies all 3 Design Tactics
- * 
- * 1. Warm Charcoal background (not pure grey)
- * 2. Hierarchy via Weight & Contrast
- * 3. Generous padding (Let it Breathe)
- */
-const InfoCard: React.FC<{title: string, value: string, desc: string}> = ({title, value, desc}) => (
-  <div 
-    className="rounded-2xl transition-all duration-500 hover:scale-[1.02]"
-    style={{ 
-      backgroundColor: THEME.colors.surface,           // Warm surface
-      border: `1px solid ${THEME.colors.border.default}`,
-      padding: THEME.spacing.cardPaddingLg,            // Let it breathe
-      transitionTimingFunction: THEME.animation.curve,
-    }}
-  >
-    {/* Label: Small, uppercase, letter-spacing, LOW contrast */}
-    <h3 
-      className="font-mono text-[10px] uppercase mb-3"
-      style={{ 
-        color: THEME.colors.text.label,                // Gold-tinted label
-        letterSpacing: '0.1em',
-        fontWeight: 500,
-      }}
-    >
-      {title}
-    </h3>
-    
-    {/* Value: Large, HIGH contrast, Semi-bold */}
-    <div 
-      className="text-2xl font-mono mb-4"
-      style={{ 
-        color: THEME.colors.text.main,
-        fontWeight: 600,
-      }}
-    >
-      {value}
-    </div>
-    
-    {/* Description: Body text, warm muted */}
-    <p 
-      className="text-sm leading-relaxed"
-      style={{ color: THEME.colors.text.muted }}
-    >
-      {desc}
-    </p>
-  </div>
-);
-
-export default App;
-
         height={380}
       />
     </div>

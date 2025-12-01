@@ -330,14 +330,3 @@ export const StepTimeline: React.FC<StepTimelineProps> = ({
     </div>
   );
 };
-
-            }}
-          >
-            {t.startStep}
-            <ArrowRight size={16} className="group-hover:translate-x-0.5" style={{ transition: 'transform 0.3s cubic-bezier(0.16, 1, 0.3, 1)' }} />
-        </button>
-        </Wrapper>
-      </div>
-    </div>
-  );
-};

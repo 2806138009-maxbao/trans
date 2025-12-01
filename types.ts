@@ -1,5 +1,7 @@
 export type Language = "en" | "zh";
 
+export type WaveformType = 'sine' | 'square' | 'triangle' | 'sawtooth';
+
 export interface TooltipContent {
   title: string;
   body: string;
