@@ -665,15 +665,16 @@ export const SmithChartCanvas: React.FC<SmithChartCanvasProps> = ({
     gridCacheValid: false,
   });
   
-  // HUD display state (only updated when needed for React render)
-  const hudStateRef = useRef({
-    impedance: null as Impedance | null,
-    rfParams: null as ReturnType<typeof calculateRFParams> | null,
-    needsUpdate: false,
-  });
+  // HUD Refs for direct DOM updates (No React Re-renders)
+  const hudContainerRef = useRef<HTMLDivElement>(null);
+  const hudRegionRef = useRef<HTMLSpanElement>(null);
+  const hudRegionDotRef = useRef<HTMLDivElement>(null);
+  const hudRRef = useRef<HTMLSpanElement>(null);
+  const hudXRef = useRef<HTMLSpanElement>(null);
+  const hudXSignRef = useRef<HTMLSpanElement>(null);
+  const hudVSWRBarRef = useRef<HTMLDivElement>(null);
+  const hudVSWRTextRef = useRef<HTMLSpanElement>(null);
   
-  // Force update for HUD (throttled)
-  const [hudUpdateTrigger, setHudUpdateTrigger] = React.useState(0);
   const lastHudUpdate = useRef(0);
   
   // Callbacks stored in refs to avoid recreation
@@ -953,13 +954,38 @@ export const SmithChartCanvas: React.FC<SmithChartCanvasProps> = ({
             state.isSnapped
           );
           
-          // Throttled HUD update (every 100ms max)
-          if (timestamp - lastHudUpdate.current > 100) {
+          // Throttled HUD update (Direct DOM Manipulation)
+          if (timestamp - lastHudUpdate.current > 60) {
             lastHudUpdate.current = timestamp;
-            hudStateRef.current.impedance = { ...state.impedance };
-            hudStateRef.current.rfParams = calculateRFParams(state.impedance);
-            hudStateRef.current.needsUpdate = true;
-            setHudUpdateTrigger(t => t + 1);
+            const rf = calculateRFParams(state.impedance);
+            
+            if (hudContainerRef.current) {
+              hudContainerRef.current.style.opacity = '1';
+              
+              // Update Region
+              if (hudRegionRef.current) hudRegionRef.current.textContent = getRegionLabel(rf.region, lang);
+              if (hudRegionDotRef.current) hudRegionDotRef.current.style.backgroundColor = getRegionColor(rf.region);
+              if (hudRegionRef.current) hudRegionRef.current.style.color = getRegionColor(rf.region);
+              
+              // Update Impedance
+              if (hudRRef.current) {
+                hudRRef.current.textContent = state.impedance.r.toFixed(2);
+                hudRRef.current.style.color = THEME.colors.primary;
+              }
+              if (hudXSignRef.current) hudXSignRef.current.textContent = state.impedance.x >= 0 ? '+' : '−';
+              if (hudXRef.current) hudXRef.current.textContent = `j${Math.abs(state.impedance.x).toFixed(2)}`;
+              
+              // Update VSWR
+              if (hudVSWRBarRef.current) {
+                const width = Math.max(5, Math.min(100, (1 - rf.gammaMag) * 100));
+                hudVSWRBarRef.current.style.width = `${width}%`;
+                hudVSWRBarRef.current.style.backgroundColor = getVSWRColor(rf.vswr);
+              }
+              if (hudVSWRTextRef.current) {
+                hudVSWRTextRef.current.textContent = getMatchQuality(rf.vswr, lang);
+                hudVSWRTextRef.current.style.color = getVSWRColor(rf.vswr);
+              }
+            }
           }
         }
       }
@@ -1236,8 +1262,7 @@ export const SmithChartCanvas: React.FC<SmithChartCanvasProps> = ({
     touchStartRef.current = null;
   }, []);
 
-  // Get HUD data from ref
-  const hudData = hudStateRef.current;
+
 
   return (
     <div className="relative w-full h-[500px] md:h-[600px] rounded-3xl overflow-hidden">
@@ -1283,39 +1308,42 @@ export const SmithChartCanvas: React.FC<SmithChartCanvasProps> = ({
         onTouchEnd={handleTouchEnd}
       />
       
-      {/* Simplified HUD - only updates when hudUpdateTrigger changes */}
-      {!overrideImpedance && hudData.impedance && hudData.rfParams && (
-        <div className="absolute top-4 left-4 pointer-events-none">
+      {/* Simplified HUD - Direct DOM Updates */}
+      {!overrideImpedance && (
+        <div 
+          ref={hudContainerRef}
+          className="absolute top-4 left-4 pointer-events-none transition-opacity duration-300"
+          style={{ opacity: 0 }}
+        >
           <div className="py-2">
             <div className="flex items-center gap-3 mb-2">
               <div 
+                ref={hudRegionDotRef}
                 className="w-2 h-2 rounded-full flex-shrink-0"
-                style={{ backgroundColor: getRegionColor(hudData.rfParams.region) }}
               />
-              <span className="text-[9px] uppercase tracking-[0.15em] font-semibold" style={{ color: getRegionColor(hudData.rfParams.region) }}>
-                {getRegionLabel(hudData.rfParams.region, lang)}
-              </span>
+              <span 
+                ref={hudRegionRef}
+                className="text-[9px] uppercase tracking-[0.15em] font-semibold"
+              />
             </div>
             
             <div className="font-mono text-xl text-white tracking-wide mb-2 tabular-nums">
-              <span style={{ color: THEME.colors.primary }}>{hudData.impedance.r.toFixed(2)}</span>
-              <span className="text-white/30 mx-0.5">{hudData.impedance.x >= 0 ? '+' : '−'}</span>
-              <span className="text-white/60">j{Math.abs(hudData.impedance.x).toFixed(2)}</span>
+              <span ref={hudRRef}></span>
+              <span ref={hudXSignRef} className="text-white/30 mx-0.5"></span>
+              <span ref={hudXRef} className="text-white/60"></span>
             </div>
             
             <div className="flex items-center gap-2">
               <div className="flex-1 h-1.5 bg-white/[0.05] rounded-full overflow-hidden">
                 <div 
-                  className="h-full rounded-full"
-                  style={{ 
-                    width: `${Math.max(5, Math.min(100, (1 - hudData.rfParams.gammaMag) * 100))}%`,
-                    backgroundColor: getVSWRColor(hudData.rfParams.vswr),
-                  }}
+                  ref={hudVSWRBarRef}
+                  className="h-full rounded-full transition-all duration-300"
                 />
               </div>
-              <span className="text-[9px] font-medium w-12 text-right" style={{ color: getVSWRColor(hudData.rfParams.vswr) }}>
-                {getMatchQuality(hudData.rfParams.vswr, lang)}
-              </span>
+              <span 
+                ref={hudVSWRTextRef}
+                className="text-[9px] font-medium w-12 text-right"
+              />
             </div>
           </div>
         </div>

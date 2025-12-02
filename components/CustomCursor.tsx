@@ -1,70 +1,85 @@
-import React, { useEffect, useRef, useState, useCallback } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 
 /**
  * CustomCursor - Optimized Magnetic Polar Crosshair
  * 
  * Performance optimizations:
  * - Throttled updates using requestAnimationFrame
- * - Minimal DOM updates
+ * - Minimal DOM updates via Refs (No React Renders on MouseMove)
  * - CSS transforms for hardware acceleration
  */
 
-interface CursorData {
-  r?: number;
-  x?: number;
-  isOnChart?: boolean;
-}
-
 export const CustomCursor: React.FC = () => {
   const crosshairRef = useRef<HTMLDivElement>(null);
-  const [isHovering, setIsHovering] = useState(false);
-  const [isClicking, setIsClicking] = useState(false);
-  const [cursorData, setCursorData] = useState<CursorData>({});
-  const [isNearSmithPoint, setIsNearSmithPoint] = useState(false);
-  const [isDragging, setIsDragging] = useState(false);
+  const cursorDotRef = useRef<HTMLDivElement>(null);
+  const labelRef = useRef<HTMLDivElement>(null);
+  const labelRRef = useRef<HTMLSpanElement>(null);
+  const labelXRef = useRef<HTMLSpanElement>(null);
   
-  const mousePos = useRef({ x: -100, y: -100 });
-  const smoothPos = useRef({ x: -100, y: -100 });
+  // Only keep low-frequency state
+  const [isMobile, setIsMobile] = useState(false);
+
+  // Mutable state for animation loop
+  const state = useRef({
+    mouse: { x: -100, y: -100 },
+    smooth: { x: -100, y: -100 },
+    isHovering: false,
+    isClicking: false,
+    isNearSmith: false,
+    isDragging: false,
+    isOnChart: false,
+    r: 0,
+    x: 0
+  });
+
   const rafId = useRef<number>(0);
 
   useEffect(() => {
     // Check for touch device - don't render cursor
     if (window.matchMedia('(pointer: coarse)').matches) {
+      setIsMobile(true);
       return;
     }
 
     const onMouseMove = (e: MouseEvent) => {
-      mousePos.current = { x: e.clientX, y: e.clientY };
+      state.current.mouse.x = e.clientX;
+      state.current.mouse.y = e.clientY;
       
       const target = e.target as HTMLElement;
       const canvas = target.closest('canvas');
+      
+      // Check Smith Chart interaction
       if (canvas?.classList.contains('smith-canvas')) {
         const r = canvas.dataset.cursorR;
         const x = canvas.dataset.cursorX;
         const isNear = canvas.dataset.cursorNear === 'true';
+        const isDragging = canvas.dataset.cursorDragging === 'true';
+        
         if (r && x) {
-          setCursorData({ r: parseFloat(r), x: parseFloat(x), isOnChart: true });
-          setIsNearSmithPoint(isNear || false);
+          state.current.isOnChart = true;
+          state.current.r = parseFloat(r);
+          state.current.x = parseFloat(x);
+          state.current.isNearSmith = isNear;
+          state.current.isDragging = isDragging;
         } else {
-          setIsNearSmithPoint(false);
+          state.current.isOnChart = false;
+          state.current.isNearSmith = false;
+          state.current.isDragging = false;
         }
       } else {
-        setCursorData(prev => prev.isOnChart ? { isOnChart: false } : prev);
-        setIsNearSmithPoint(false);
+        state.current.isOnChart = false;
+        state.current.isNearSmith = false;
+        state.current.isDragging = false;
       }
-      
-      // Check if dragging (canvas has data attribute)
-      const isDraggingState = canvas?.dataset.cursorDragging === 'true';
-      setIsDragging(isDraggingState || false);
     };
 
-    const onMouseDown = () => setIsClicking(true);
-    const onMouseUp = () => setIsClicking(false);
+    const onMouseDown = () => { state.current.isClicking = true; };
+    const onMouseUp = () => { state.current.isClicking = false; };
 
     const onMouseOver = (e: MouseEvent) => {
       const target = e.target;
       if (!(target instanceof HTMLElement)) {
-        setIsHovering(false);
+        state.current.isHovering = false;
         return;
       }
       const isInteractive = 
@@ -75,7 +90,7 @@ export const CustomCursor: React.FC = () => {
         target.closest('button') ||
         target.closest('a');
       
-      setIsHovering(!!isInteractive);
+      state.current.isHovering = !!isInteractive;
     };
 
     window.addEventListener('mousemove', onMouseMove, { passive: true });
@@ -84,14 +99,45 @@ export const CustomCursor: React.FC = () => {
     window.addEventListener('mouseover', onMouseOver, { passive: true });
 
     const loop = () => {
+      const s = state.current;
+      
       // Faster spring for responsiveness
-      const springFactor = 0.2;
-      smoothPos.current.x += (mousePos.current.x - smoothPos.current.x) * springFactor;
-      smoothPos.current.y += (mousePos.current.y - smoothPos.current.y) * springFactor;
+      const springFactor = 0.25;
+      s.smooth.x += (s.mouse.x - s.smooth.x) * springFactor;
+      s.smooth.y += (s.mouse.y - s.smooth.y) * springFactor;
 
+      // 1. Update Crosshair Position (CSS Variables)
       if (crosshairRef.current) {
-        crosshairRef.current.style.setProperty('--cursor-x', `${smoothPos.current.x}px`);
-        crosshairRef.current.style.setProperty('--cursor-y', `${smoothPos.current.y}px`);
+        crosshairRef.current.style.setProperty('--cursor-x', `${s.smooth.x}px`);
+        crosshairRef.current.style.setProperty('--cursor-y', `${s.smooth.y}px`);
+      }
+
+      // 2. Update Cursor Dot Classes
+      if (cursorDotRef.current) {
+        // Position
+        cursorDotRef.current.style.left = `${s.smooth.x}px`;
+        cursorDotRef.current.style.top = `${s.smooth.y}px`;
+        
+        // Classes
+        const classList = cursorDotRef.current.classList;
+        s.isHovering ? classList.add('hovering') : classList.remove('hovering');
+        s.isClicking ? classList.add('clicking') : classList.remove('clicking');
+        s.isNearSmith ? classList.add('near-smith') : classList.remove('near-smith');
+        s.isDragging ? classList.add('dragging') : classList.remove('dragging');
+      }
+
+      // 3. Update Label (Direct DOM text update)
+      if (labelRef.current) {
+        if (s.isOnChart && !s.isDragging) {
+          labelRef.current.style.display = 'block';
+          labelRef.current.style.left = `${s.smooth.x + 16}px`;
+          labelRef.current.style.top = `${s.smooth.y - 32}px`;
+          
+          if (labelRRef.current) labelRRef.current.textContent = `R:${s.r.toFixed(1)}`;
+          if (labelXRef.current) labelXRef.current.textContent = `X:${s.x.toFixed(1)}`;
+        } else {
+          labelRef.current.style.display = 'none';
+        }
       }
 
       rafId.current = requestAnimationFrame(loop);
@@ -107,6 +153,8 @@ export const CustomCursor: React.FC = () => {
       cancelAnimationFrame(rafId.current);
     };
   }, []);
+
+  if (isMobile) return null;
 
   return (
     <>
@@ -158,8 +206,7 @@ export const CustomCursor: React.FC = () => {
         /* L3: Physics-Aware Cursor - 4 States */
         .cursor-center-dot {
           position: fixed;
-          left: var(--cursor-x);
-          top: var(--cursor-y);
+          /* Position set via JS to avoid CSS var overhead for this element */
           width: 6px;
           height: 6px;
           background: transparent;
@@ -171,7 +218,7 @@ export const CustomCursor: React.FC = () => {
                       height 0.2s cubic-bezier(0.16, 1, 0.3, 1),
                       border-color 0.2s cubic-bezier(0.16, 1, 0.3, 1),
                       opacity 0.2s cubic-bezier(0.16, 1, 0.3, 1);
-          will-change: transform, width, height, border-color, opacity;
+          will-change: transform, width, height, border-color, opacity, left, top;
           pointer-events: none;
         }
         
@@ -223,30 +270,22 @@ export const CustomCursor: React.FC = () => {
       />
       
       <div 
-        className={`custom-cursor-element cursor-center-dot pointer-events-none z-[9999]
-          ${isHovering ? 'hovering' : ''}
-          ${isClicking ? 'clicking' : ''}
-          ${isNearSmithPoint ? 'near-smith' : ''}
-          ${isDragging ? 'dragging' : ''}
-        `}
+        ref={cursorDotRef}
+        className="custom-cursor-element cursor-center-dot pointer-events-none z-[9999]"
       />
       
-      {cursorData.isOnChart && cursorData.r !== undefined && (
-        <div 
-          className="custom-cursor-element fixed pointer-events-none z-[9999] 
-                     px-2 py-1 rounded-md 
-                     bg-black/60 backdrop-blur-sm border border-white/10
-                     font-mono text-[10px] tabular-nums"
-          style={{
-            left: `${smoothPos.current.x + 16}px`,
-            top: `${smoothPos.current.y - 32}px`,
-          }}
-        >
-          <span className="text-amber-400">R:{cursorData.r?.toFixed(1)}</span>
-          <span className="text-white/30 mx-1">|</span>
-          <span className="text-white/70">X:{cursorData.x?.toFixed(1)}</span>
-        </div>
-      )}
+      <div 
+        ref={labelRef}
+        className="custom-cursor-element fixed pointer-events-none z-[9999] 
+                   px-2 py-1 rounded-md 
+                   bg-black/60 backdrop-blur-sm border border-white/10
+                   font-mono text-[10px] tabular-nums"
+        style={{ display: 'none' }}
+      >
+        <span ref={labelRRef} className="text-amber-400"></span>
+        <span className="text-white/30 mx-1">|</span>
+        <span ref={labelXRef} className="text-white/70"></span>
+      </div>
     </>
   );
 };
