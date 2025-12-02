@@ -3,6 +3,7 @@ import { Language, TRANSLATIONS } from '../../types';
 import { AnimateOnScroll } from '../AnimateOnScroll';
 import { THEME } from '../../theme';
 import { ComplexFoldSim } from '../ComplexFoldSim';
+import { GenesisMapper } from '../GenesisMapper';
 import { InteractiveRecap } from '../InteractiveRecap';
 import { GridIcon } from '../Icons';
 import { Zap, History } from 'lucide-react';
@@ -136,26 +137,14 @@ export const IntroNarrativeSection: React.FC<IntroNarrativeSectionProps> = ({
           ))}
         </div>
 
-        {/* ★ Complex Fold Simulation - The Core Visual */}
+        {/* ★ Genesis Mapper - Interactive Transform Tutorial */}
         <Wrapper {...getWrapperProps('fade-up', 400)}>
           <div className="mt-12 mb-8">
-            <div className="mb-6 text-center">
-              <h3 className="text-lg font-semibold text-white mb-2">
-                <GradientText>
-                  {lang === 'zh' ? '亲眼看「折叠」' : 'Watch the "Fold"'}
-                </GradientText>
-              </h3>
-              <p className="text-sm text-white/50">
-                {lang === 'zh' 
-                  ? '无限的复阻抗平面 → 有限的单位圆' 
-                  : 'Infinite complex impedance plane → Finite unit circle'
-                }
-              </p>
-            </div>
-            <ComplexFoldSim 
-              reducedMotion={reducedMotion} 
+            <GenesisMapper 
               lang={lang}
-              height={300}
+              height={380}
+              showControls={true}
+              showLabels={true}
             />
           </div>
         </Wrapper>

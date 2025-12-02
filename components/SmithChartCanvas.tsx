@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useMemo, useCallback } from 'react';
 import { THEME } from '../theme';
+import { audio } from '../utils/audioEngine';
 
 interface SmithChartCanvasProps {
   reducedMotion?: boolean;
@@ -312,85 +313,184 @@ function drawSmithChartGrid(
   ctx.fill();
 }
 
-// Optimized active point drawing (removed expensive shadowBlur)
+// ========================================
+// RAUNO-TIER ACTIVE POINT RENDERER
+// "Light is not painted. Light is scattered."
+// ========================================
 function drawActivePoint(
   ctx: CanvasRenderingContext2D, 
   cx: number, cy: number, radius: number, 
   impedance: Impedance,
   posX: number, posY: number,
   isHovering: boolean,
-  isDragging: boolean
+  isDragging: boolean,
+  isSnapped: boolean = false
 ) {
   const gamma = impedanceToGamma(impedance);
   const gammaMag = Math.sqrt(gamma.re * gamma.re + gamma.im * gamma.im);
   
-  // Simplified spotlight (no radial gradient spam)
-  ctx.fillStyle = 'rgba(255, 215, 0, 0.03)';
+  // Calculate intensity based on match quality
+  const vswr = gammaMag < 0.999 ? (1 + gammaMag) / (1 - gammaMag) : 10;
+  const matchQuality = Math.max(0, 1 - gammaMag); // 1 = perfect match, 0 = total mismatch
+  const intensity = isSnapped ? 1.5 : (isDragging ? 1.2 : 1.0);
+  
+  // ========================================
+  // LAYER 0: Ambient Light Scatter
+  // The point illuminates nearby grid lines
+  // ========================================
+  const scatterRadius = 120 + (isDragging ? 30 : 0);
+  const scatterGradient = ctx.createRadialGradient(posX, posY, 0, posX, posY, scatterRadius);
+  scatterGradient.addColorStop(0, `rgba(255, 215, 0, ${0.06 * intensity})`);
+  scatterGradient.addColorStop(0.5, `rgba(255, 200, 50, ${0.02 * intensity})`);
+  scatterGradient.addColorStop(1, 'rgba(255, 215, 0, 0)');
+  ctx.fillStyle = scatterGradient;
   ctx.beginPath();
-  ctx.arc(posX, posY, 100, 0, TWO_PI);
+  ctx.arc(posX, posY, scatterRadius, 0, TWO_PI);
   ctx.fill();
   
-  // Vector line (simplified - single layer)
-  ctx.beginPath();
-  ctx.moveTo(cx, cy);
-  ctx.lineTo(posX, posY);
-  ctx.strokeStyle = 'rgba(255, 215, 0, 0.5)';
-  ctx.lineWidth = 1.5;
-  ctx.stroke();
+  // ========================================
+  // LAYER 1: Gamma Vector (Living Light)
+  // Three-layer rendering: Bloom → Glow → Core
+  // ========================================
+  drawLivingLight(ctx, cx, cy, posX, posY, intensity * 0.8);
   
-  // VSWR circle (simplified)
+  // ========================================
+  // LAYER 2: VSWR Circle (Pulsing if matched)
+  // ========================================
   if (gammaMag > 0.01 && gammaMag < 0.99) {
+    const vswrRadius = gammaMag * radius;
+    
+    // Outer bloom
     ctx.beginPath();
-    ctx.arc(cx, cy, gammaMag * radius, 0, TWO_PI);
-    ctx.strokeStyle = 'rgba(255, 215, 0, 0.15)';
+    ctx.arc(cx, cy, vswrRadius, 0, TWO_PI);
+    ctx.strokeStyle = `rgba(255, 215, 0, ${0.08 * intensity})`;
+    ctx.lineWidth = 6;
+    ctx.setLineDash([]);
+    ctx.stroke();
+    
+    // Core line
+    ctx.beginPath();
+    ctx.arc(cx, cy, vswrRadius, 0, TWO_PI);
+    ctx.strokeStyle = `rgba(255, 215, 0, ${0.25 * intensity})`;
     ctx.lineWidth = 1;
     ctx.setLineDash([4, 6]);
     ctx.stroke();
     ctx.setLineDash([]);
   }
   
-  // Active point (simplified glow layers - no shadowBlur)
-  const vswr = gammaMag < 0.999 ? (1 + gammaMag) / (1 - gammaMag) : 10;
-  const brightness = Math.max(0.5, 1 - (vswr - 1) / 10);
-  const r_color = Math.round(255 * brightness);
-  const g_color = Math.round(215 * brightness);
+  // ========================================
+  // LAYER 3: The Point (Living Ember)
+  // ========================================
+  const baseSize = isDragging ? 10 : (isHovering ? 8 : 6);
+  const pulseScale = isSnapped ? 1.3 : 1.0;
   
-  const baseSize = isDragging ? 8 : (isHovering ? 7 : 6);
-  
-  // Outer glow (single layer instead of 3)
+  // L3.1: Outer bloom (scattered light)
   ctx.beginPath();
-  ctx.arc(posX, posY, baseSize * 2, 0, TWO_PI);
-  ctx.fillStyle = `rgba(${r_color}, ${g_color}, 0, 0.15)`;
+  ctx.arc(posX, posY, baseSize * 3 * pulseScale, 0, TWO_PI);
+  const bloomGradient = ctx.createRadialGradient(
+    posX, posY, 0, 
+    posX, posY, baseSize * 3 * pulseScale
+  );
+  bloomGradient.addColorStop(0, `rgba(255, 215, 0, ${0.3 * intensity})`);
+  bloomGradient.addColorStop(0.5, `rgba(255, 200, 50, ${0.1 * intensity})`);
+  bloomGradient.addColorStop(1, 'rgba(255, 215, 0, 0)');
+  ctx.fillStyle = bloomGradient;
   ctx.fill();
   
-  // Core point
+  // L3.2: Mid glow (warm aura)
   ctx.beginPath();
-  ctx.arc(posX, posY, baseSize, 0, TWO_PI);
-  ctx.fillStyle = `rgb(${r_color}, ${g_color}, 0)`;
-  ctx.fill();
-
-  // Center dot
-  ctx.beginPath();
-  ctx.arc(posX, posY, 2, 0, TWO_PI);
-  ctx.fillStyle = 'rgba(255, 255, 255, 0.8)';
+  ctx.arc(posX, posY, baseSize * 1.5 * pulseScale, 0, TWO_PI);
+  ctx.fillStyle = `rgba(255, 200, 50, ${0.5 * intensity})`;
   ctx.fill();
   
-  // Data label (simplified)
-  const labelX = posX + 20;
-  const labelY = posY - 20;
+  // L3.3: Core (hot white center)
+  ctx.beginPath();
+  ctx.arc(posX, posY, baseSize * pulseScale, 0, TWO_PI);
+  const coreGradient = ctx.createRadialGradient(
+    posX - baseSize * 0.2, posY - baseSize * 0.2, 0,
+    posX, posY, baseSize * pulseScale
+  );
+  coreGradient.addColorStop(0, 'rgba(255, 255, 255, 1)');
+  coreGradient.addColorStop(0.4, 'rgba(255, 240, 200, 0.95)');
+  coreGradient.addColorStop(1, `rgba(255, 200, 50, ${0.8 * intensity})`);
+  ctx.fillStyle = coreGradient;
+  ctx.fill();
+  
+  // L3.4: Specular highlight (glass lens effect)
+  ctx.beginPath();
+  ctx.arc(posX - baseSize * 0.3, posY - baseSize * 0.3, baseSize * 0.3, 0, TWO_PI);
+  ctx.fillStyle = 'rgba(255, 255, 255, 0.6)';
+  ctx.fill();
+  
+  // ========================================
+  // LAYER 4: Snap Ring (when magnetically locked)
+  // ========================================
+  if (isSnapped) {
+    ctx.beginPath();
+    ctx.arc(posX, posY, baseSize * 2.5, 0, TWO_PI);
+    ctx.strokeStyle = 'rgba(255, 255, 255, 0.8)';
+    ctx.lineWidth = 2;
+    ctx.stroke();
+    
+    // Inner pulse ring
+    ctx.beginPath();
+    ctx.arc(posX, posY, baseSize * 2, 0, TWO_PI);
+    ctx.strokeStyle = 'rgba(255, 215, 0, 0.6)';
+    ctx.lineWidth = 1;
+    ctx.stroke();
+  }
+  
+  // ========================================
+  // LAYER 5: Data Label (Chromatic Aberration)
+  // ========================================
+  const labelX = posX + 24;
+  const labelY = posY - 24;
   const w = ctx.canvas.width / (window.devicePixelRatio || 1);
   
-  if (labelX < w - 80 && labelY > 20) {
-    ctx.font = "bold 10px 'Space Grotesk', monospace";
-    ctx.fillStyle = `rgb(${r_color}, ${g_color}, 0)`;
-    ctx.textAlign = "left";
-    ctx.fillText(`z = ${impedance.r.toFixed(2)}${impedance.x >= 0 ? '+' : ''}j${impedance.x.toFixed(2)}`, labelX, labelY);
+  if (labelX < w - 100 && labelY > 30) {
+    // Impedance value with chromatic aberration
+    const zText = `z = ${impedance.r.toFixed(2)}${impedance.x >= 0 ? '+' : ''}j${impedance.x.toFixed(2)}`;
+    drawChromaticText(
+      ctx, zText, labelX, labelY,
+      `rgba(255, 215, 0, ${0.9 * intensity})`,
+      "bold 11px 'Space Grotesk', monospace"
+    );
     
-    ctx.fillStyle = 'rgba(255, 255, 255, 0.5)';
+    // Gamma magnitude
     ctx.font = "9px 'Space Grotesk', monospace";
-    ctx.fillText(`|Γ| = ${gammaMag.toFixed(3)}`, labelX, labelY + 12);
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.5)';
+    ctx.fillText(`|Γ| = ${gammaMag.toFixed(3)}`, labelX, labelY + 14);
+    
+    // VSWR (if not perfect match)
+    if (vswr < 50) {
+      ctx.fillStyle = vswr < 1.5 ? 'rgba(100, 255, 150, 0.6)' : 'rgba(255, 255, 255, 0.4)';
+      ctx.fillText(`VSWR = ${vswr.toFixed(2)}`, labelX, labelY + 26);
+    }
   }
 }
+
+// ========================================
+// RAUNO-TIER PHYSICS ENGINE
+// "Pixels are not colors. They are mathematics."
+// ========================================
+
+// Magnetic Snap - The Event Horizon
+const MAGNETIC_SNAP_THRESHOLD = 0.08;
+const MAGNETIC_SNAP_FORCE = 0.25;
+
+// True Spring Physics (F = -kx - cv)
+// These are tuned for "mechanical precision" feel
+const SPRING_STIFFNESS = 0.12;   // k: Spring constant (higher = snappier)
+const SPRING_DAMPING = 0.75;     // c: Damping ratio (0.7-0.9 = critically damped)
+const SPRING_MASS = 1.0;         // m: Mass (affects momentum)
+
+// Input Prediction - Kalman-lite
+const PREDICTION_FACTOR = 0.15;  // How far ahead to predict (0 = none, 0.3 = aggressive)
+const VELOCITY_SMOOTHING = 0.3;  // Smooth velocity estimation
+
+// Chromatic Aberration
+const CHROMATIC_OFFSET = 0.5;    // RGB split in pixels (subtle)
+const CHROMATIC_OPACITY = 0.15;  // Opacity of color fringe
 
 // ========================================
 // SNAP POINTS (Pre-allocated)
@@ -402,6 +502,66 @@ const SNAP_POINTS: ReadonlyArray<{ z: Impedance; label: string }> = [
   { z: { r: 1, x: 1 }, label: '+jX' },
   { z: { r: 1, x: -1 }, label: '-jX' },
 ];
+
+// ========================================
+// LIVING LIGHT RENDERER
+// Three-layer rendering: Bloom → Glow → Hot Core
+// ========================================
+function drawLivingLight(
+  ctx: CanvasRenderingContext2D,
+  x1: number, y1: number,
+  x2: number, y2: number,
+  intensity: number = 1.0
+) {
+  // Layer 1: Bloom (wide, faint, scattered light)
+  ctx.beginPath();
+  ctx.moveTo(x1, y1);
+  ctx.lineTo(x2, y2);
+  ctx.strokeStyle = `rgba(255, 215, 0, ${0.08 * intensity})`;
+  ctx.lineWidth = 20;
+  ctx.lineCap = 'round';
+  ctx.stroke();
+
+  // Layer 2: Glow (medium, visible aura)
+  ctx.beginPath();
+  ctx.moveTo(x1, y1);
+  ctx.lineTo(x2, y2);
+  ctx.strokeStyle = `rgba(255, 200, 50, ${0.25 * intensity})`;
+  ctx.lineWidth = 8;
+  ctx.stroke();
+
+  // Layer 3: Hot Core (thin, bright white - true high temperature)
+  ctx.beginPath();
+  ctx.moveTo(x1, y1);
+  ctx.lineTo(x2, y2);
+  ctx.strokeStyle = `rgba(255, 255, 255, ${0.9 * intensity})`;
+  ctx.lineWidth = 2;
+  ctx.stroke();
+}
+
+// Chromatic aberration for text/edges
+function drawChromaticText(
+  ctx: CanvasRenderingContext2D,
+  text: string,
+  x: number, y: number,
+  baseColor: string,
+  font: string
+) {
+  ctx.font = font;
+  ctx.textAlign = 'left';
+  
+  // Red channel (offset left)
+  ctx.fillStyle = `rgba(255, 100, 100, ${CHROMATIC_OPACITY})`;
+  ctx.fillText(text, x - CHROMATIC_OFFSET, y);
+  
+  // Cyan channel (offset right)
+  ctx.fillStyle = `rgba(100, 255, 255, ${CHROMATIC_OPACITY})`;
+  ctx.fillText(text, x + CHROMATIC_OFFSET, y);
+  
+  // Main text
+  ctx.fillStyle = baseColor;
+  ctx.fillText(text, x, y);
+}
 
 // ========================================
 // MAIN COMPONENT - REF-BASED ANIMATION LOOP
@@ -423,6 +583,7 @@ export const SmithChartCanvas: React.FC<SmithChartCanvasProps> = ({
   
   // ========================================
   // ALL MUTABLE STATE IN REFS (NO useState for animation)
+  // Rauno-tier: True physics simulation state
   // ========================================
   const animationState = useRef({
     // Position state
@@ -431,6 +592,24 @@ export const SmithChartCanvas: React.FC<SmithChartCanvasProps> = ({
     currentX: 0,
     currentY: 0,
     hasPosition: false,
+    
+    // TRUE SPRING PHYSICS STATE
+    // F = -k(x - target) - c*v
+    velocityX: 0,
+    velocityY: 0,
+    
+    // INPUT PREDICTION STATE
+    // Kalman-lite: track mouse velocity for prediction
+    prevMouseX: 0,
+    prevMouseY: 0,
+    mouseVelocityX: 0,
+    mouseVelocityY: 0,
+    predictedX: 0,
+    predictedY: 0,
+    
+    // MAGNETIC SNAP STATE
+    isSnapped: false,
+    snapLockTime: 0,
     
     // Interaction state
     isDragging: false,
@@ -447,8 +626,9 @@ export const SmithChartCanvas: React.FC<SmithChartCanvasProps> = ({
     width: 0,
     height: 0,
     
-    // Frame timing
+    // Frame timing (Delta Time for frame independence)
     lastFrameTime: 0,
+    deltaTime: 16.67, // ms, default to 60fps
     
     // Grid cache validity
     gridCacheValid: false,
@@ -550,13 +730,16 @@ export const SmithChartCanvas: React.FC<SmithChartCanvasProps> = ({
     window.addEventListener('resize', resize);
 
     // Pure draw function - reads from refs only
+    // RAUNO-TIER: Frame-independent physics with true spring dynamics
     const draw = (timestamp: number) => {
-      // Throttle to ~60fps
-      const elapsed = timestamp - state.lastFrameTime;
-      if (elapsed < 16) {
-        animationFrameId = requestAnimationFrame(draw);
-        return;
-      }
+      // ========================================
+      // DELTA TIME CALCULATION (Frame Independence)
+      // ========================================
+      const rawDelta = timestamp - state.lastFrameTime;
+      // Clamp delta to prevent physics explosion on tab switch
+      const deltaMs = Math.min(rawDelta, 50); // Cap at 50ms (20fps minimum)
+      const dt = deltaMs / 16.67; // Normalize to 60fps baseline
+      state.deltaTime = deltaMs;
       state.lastFrameTime = timestamp;
 
       const { cx, cy, radius, width: w, height: h } = state;
@@ -565,7 +748,9 @@ export const SmithChartCanvas: React.FC<SmithChartCanvasProps> = ({
         return;
       }
 
-      // Update target position from override impedance
+      // ========================================
+      // TARGET POSITION UPDATE
+      // ========================================
       if (overrideImpedance) {
         const z = overrideImpedance;
         const denom = (z.r + 1) * (z.r + 1) + z.x * z.x;
@@ -576,11 +761,76 @@ export const SmithChartCanvas: React.FC<SmithChartCanvasProps> = ({
         state.hasPosition = true;
       }
 
-      // Physics lerp for position (smooth animation without React re-render)
+      // ========================================
+      // MAGNETIC SNAP DETECTION
+      // The Event Horizon: 50Ω has gravity
+      // ========================================
+      if (state.hasPosition && state.hasImpedance) {
+        const distR = Math.abs(state.impedance.r - 1);
+        const distX = Math.abs(state.impedance.x);
+        const distToMatch = Math.sqrt(distR * distR + distX * distX);
+        
+        if (distToMatch < MAGNETIC_SNAP_THRESHOLD && !state.isSnapped) {
+          // SNAP! Apply magnetic force
+          state.isSnapped = true;
+          state.snapLockTime = timestamp;
+          
+          // Force target to perfect match
+          const matchGamma = impedanceToGammaNew({ r: 1, x: 0 });
+          state.targetX = cx + matchGamma.re * radius;
+          state.targetY = cy - matchGamma.im * radius;
+          
+          // Trigger haptic audio feedback
+          audio.playSnap();
+          
+          // Add velocity boost toward center (magnetic pull)
+          const pullX = state.targetX - state.currentX;
+          const pullY = state.targetY - state.currentY;
+          state.velocityX += pullX * MAGNETIC_SNAP_FORCE;
+          state.velocityY += pullY * MAGNETIC_SNAP_FORCE;
+        } else if (distToMatch > MAGNETIC_SNAP_THRESHOLD * 1.5) {
+          state.isSnapped = false;
+        }
+      }
+
+      // ========================================
+      // TRUE SPRING PHYSICS (F = -kx - cv)
+      // Frame-independent with dt multiplier
+      // ========================================
       if (state.hasPosition) {
-        const lerpFactor = reducedMotion ? 1 : 0.18;
-        state.currentX += (state.targetX - state.currentX) * lerpFactor;
-        state.currentY += (state.targetY - state.currentY) * lerpFactor;
+        if (reducedMotion) {
+          // Instant positioning for reduced motion
+          state.currentX = state.targetX;
+          state.currentY = state.targetY;
+          state.velocityX = 0;
+          state.velocityY = 0;
+        } else {
+          // Calculate spring force
+          const dx = state.targetX - state.currentX;
+          const dy = state.targetY - state.currentY;
+          
+          // F = -k(x - target) - c*v
+          // Acceleration = F / mass
+          const forceX = SPRING_STIFFNESS * dx - SPRING_DAMPING * state.velocityX;
+          const forceY = SPRING_STIFFNESS * dy - SPRING_DAMPING * state.velocityY;
+          
+          // Integrate velocity (with dt for frame independence)
+          state.velocityX += (forceX / SPRING_MASS) * dt;
+          state.velocityY += (forceY / SPRING_MASS) * dt;
+          
+          // Integrate position
+          state.currentX += state.velocityX * dt;
+          state.currentY += state.velocityY * dt;
+          
+          // Tiny threshold to stop micro-oscillations
+          if (Math.abs(dx) < 0.1 && Math.abs(dy) < 0.1 && 
+              Math.abs(state.velocityX) < 0.1 && Math.abs(state.velocityY) < 0.1) {
+            state.currentX = state.targetX;
+            state.currentY = state.targetY;
+            state.velocityX = 0;
+            state.velocityY = 0;
+          }
+        }
       }
 
       // Clear with background color (faster than clearRect)
@@ -627,7 +877,8 @@ export const SmithChartCanvas: React.FC<SmithChartCanvasProps> = ({
             state.currentX,
             state.currentY,
             state.isHovering,
-            state.isDragging
+            state.isDragging,
+            state.isSnapped
           );
           
           // Throttled HUD update (every 100ms max)
@@ -704,18 +955,44 @@ export const SmithChartCanvas: React.FC<SmithChartCanvasProps> = ({
     if (!canvas) return;
 
     const rect = canvas.getBoundingClientRect();
-    const x = e.clientX - rect.left;
-    const y = e.clientY - rect.top;
+    const rawX = e.clientX - rect.left;
+    const rawY = e.clientY - rect.top;
     const state = animationState.current;
     
+    // ========================================
+    // INPUT PREDICTION (Kalman-lite)
+    // Don't render where the mouse IS. Render where it WILL BE.
+    // ========================================
+    const newVelX = rawX - state.prevMouseX;
+    const newVelY = rawY - state.prevMouseY;
+    
+    // Smooth velocity estimation (exponential moving average)
+    state.mouseVelocityX = state.mouseVelocityX * (1 - VELOCITY_SMOOTHING) + newVelX * VELOCITY_SMOOTHING;
+    state.mouseVelocityY = state.mouseVelocityY * (1 - VELOCITY_SMOOTHING) + newVelY * VELOCITY_SMOOTHING;
+    
+    // Predict future position
+    const predictedX = rawX + state.mouseVelocityX * PREDICTION_FACTOR;
+    const predictedY = rawY + state.mouseVelocityY * PREDICTION_FACTOR;
+    
+    // Store for next frame
+    state.prevMouseX = rawX;
+    state.prevMouseY = rawY;
+    state.predictedX = predictedX;
+    state.predictedY = predictedY;
+    
+    // Use predicted position for interaction
+    const x = predictedX;
+    const y = predictedY;
+    
     const wasHovering = state.isHovering;
-    state.isHovering = isNearActivePoint(x, y);
+    state.isHovering = isNearActivePoint(rawX, rawY); // Use raw for hover detection
     
     if (wasHovering !== state.isHovering) {
       callbacksRef.current.onHoverChange?.(true);
     }
     
     if (state.isDragging && allowDirectDrag) {
+      // When dragging, use predicted position for "mind control" feel
       state.targetX = x;
       state.targetY = y;
       state.hasPosition = true;

@@ -6,8 +6,7 @@ import { GridIcon, CircleIcon, RotateCcwIcon, CrosshairIcon, CableIcon } from '.
 import { InstrumentSlider } from './InstrumentSlider';
 import { MatchingNetworkCalculator } from './MatchingNetworkCalculator';
 import { TRANSLATIONS } from '../types';
-import { OperationGuideCard } from './OperationGuideCard';
-import { LiveFormulaCards } from './LiveFormulaCards';
+import { InteractiveTutorial } from './InteractiveTutorial';
 import { useExperimentHUD } from '../hooks/useExperimentHUD';
 import { useSmithModeOptional, SMITH_MODE_PRESETS } from '../state/smithModes';
 import { 
@@ -723,34 +722,10 @@ export const SmithChartExperiment: React.FC<SmithChartExperimentProps> = ({
         </div>
 
         {/* 
-          Live HUD - 操作指南变成实时状态灯
+          Interactive Tutorial - 滚动到此处时自动弹出教程演示
         */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mt-8">
-          {/* Left: Live Operation Guide HUD */}
-          <OperationGuideCard lang={lang} />
-
-          {/* Right: Live Formula Cards */}
-          <div>
-            <div className="flex items-center gap-2 mb-4">
-              <span 
-                className="w-2 h-2 rounded-full"
-                style={{ backgroundColor: THEME.colors.primary, boxShadow: `0 0 8px ${THEME.colors.primary}` }}
-              />
-              <h3 className="text-sm font-semibold text-white">
-                {lang === 'zh' ? '实时仪表' : 'Live Instruments'}
-              </h3>
-            </div>
-            <LiveFormulaCards 
-              values={{
-                r: rValue,
-                x: xValue,
-                gammaMag: derivedValues.gammaMag,
-                gammaPhase: derivedValues.gammaAngleDeg,
-                vswr: derivedValues.vswr,
-              }}
-              lang={lang}
-            />
-          </div>
+        <div className="mt-8">
+          <InteractiveTutorial lang={lang} />
         </div>
       </div>
     </>

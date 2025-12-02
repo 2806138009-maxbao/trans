@@ -208,13 +208,24 @@ export const SmithFieldBackground: React.FC<SmithFieldBackgroundProps> = ({ tier
       ctx.fill();
     };
 
-    const loop = () => {
-      time += 0.016;
-      drawGrid(time);
+    let lastTime = 0;
+    const targetFPS = 30; // Reduced from 60 for background
+    const frameInterval = 1000 / targetFPS;
+    
+    const loop = (timestamp: number) => {
+      const elapsed = timestamp - lastTime;
+      
+      // Throttle to 30fps for background animation
+      if (elapsed >= frameInterval) {
+        lastTime = timestamp - (elapsed % frameInterval);
+        time += 0.016;
+        drawGrid(time);
+      }
+      
       frameId = requestAnimationFrame(loop);
     };
 
-    loop();
+    frameId = requestAnimationFrame(loop);
 
     return () => {
       window.removeEventListener('resize', resize);

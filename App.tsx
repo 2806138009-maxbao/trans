@@ -5,8 +5,8 @@ import { CustomCursor } from "./components/CustomCursor";
 import { SectionNavigation } from "./components/SectionNavigation";
 import { Language, TRANSLATIONS } from "./types";
 import { HeroSection } from "./components/sections/HeroSection";
-import { StepTimeline } from "./components/StepTimeline";
-import { IntroNarrativeSection } from "./components/sections/IntroNarrativeSection";
+// StepTimeline removed - content covered in Odyssey
+// IntroNarrativeSection removed - content integrated into SmithOdyssey
 import { PrerequisiteSection } from "./components/sections/PrerequisiteSection";
 import { SmithChartExperiment } from "./components/SmithChartExperiment";
 import { EngineeringAppsSection } from "./components/sections/EngineeringAppsSection";
@@ -21,6 +21,9 @@ import { THEME } from "./theme";
 import { AnimateOnScroll } from "./components/AnimateOnScroll";
 import { MatchingStepsSim } from "./components/MatchingStepsSim";
 import { ExperimentHUDProvider } from "./hooks/useExperimentHUD";
+// GenesisExperience removed - replaced by unified intro flow
+import { SmithOdyssey } from "./components/SmithOdyssey";
+import { GenesisIntro } from "./components/GenesisIntro";
 
 const App: React.FC = () => {
   // L3 Audit: Physics Kernel & Brand System Active
@@ -28,6 +31,10 @@ const App: React.FC = () => {
   const [userMotionPref, setUserMotionPref] = useState<boolean | null>(null);
   const [introComplete, setIntroComplete] = useState(false);
   const [introDismissed, setIntroDismissed] = useState(false);
+  
+  // Intro Flow State
+  const [showGenesisIntro, setShowGenesisIntro] = useState(true);
+  const [showOdyssey, setShowOdyssey] = useState(false);
   
   const experimentRef = useRef<HTMLDivElement>(null);
   const engineeringRef = useRef<HTMLDivElement>(null);
@@ -89,7 +96,77 @@ const App: React.FC = () => {
     return () => { document.body.style.overflow = 'auto'; };
   }, []);
 
+
+  // Handle Genesis Intro completion → Go to Odyssey
+  const handleGenesisIntroComplete = useCallback(() => {
+    setShowGenesisIntro(false);
+    setShowOdyssey(true);
+  }, []);
+
+  // Handle Odyssey completion → Enter main app
+  const handleOdysseyComplete = useCallback(() => {
+    setShowOdyssey(false);
+    document.body.style.overflow = 'auto';
+    window.scrollTo({ top: 0, behavior: 'auto' });
+  }, []);
+
   const Wrapper = reducedMotion ? React.Fragment : AnimateOnScroll;
+
+  // ========================================
+  // STAGE 1: GENESIS INTRO (Conformal Mapping Animation)
+  // ========================================
+  if (showGenesisIntro) {
+    return (
+      <GenesisIntro 
+        lang={lang}
+        onComplete={handleGenesisIntroComplete}
+        reducedMotion={reducedMotion}
+      />
+    );
+  }
+
+  // ========================================
+  // STAGE 2: SMITH ODYSSEY (Interactive Guided Tour)
+  // ========================================
+  if (showOdyssey) {
+    return (
+      <div className="fixed inset-0 z-[10000]" style={{ backgroundColor: '#050505' }}>
+        <SmithOdyssey 
+          lang={lang}
+          onComplete={handleOdysseyComplete}
+          reducedMotion={reducedMotion}
+        />
+        
+        {/* Skip button */}
+        <button
+          onClick={handleOdysseyComplete}
+          className="fixed top-5 right-6 z-[100] text-[10px] font-mono uppercase tracking-widest px-4 py-2 rounded-lg transition-all hover:bg-white/10"
+          style={{ 
+            color: 'rgba(255, 255, 255, 0.4)',
+            border: '1px solid rgba(255, 255, 255, 0.1)',
+          }}
+        >
+          {lang === 'zh' ? '跳过' : 'Skip'}
+        </button>
+        
+        {/* Language Toggle */}
+        <button
+          onClick={toggleLang}
+          className="fixed top-5 right-24 z-[100] text-[10px] font-mono uppercase tracking-widest px-4 py-2 rounded-lg transition-all hover:bg-white/10"
+          style={{ 
+            color: 'rgba(255, 255, 255, 0.4)',
+            border: '1px solid rgba(255, 255, 255, 0.1)',
+          }}
+        >
+          {lang === "en" ? "CN" : "EN"}
+        </button>
+      </div>
+    );
+  }
+
+  // ========================================
+  // STAGE 3: MAIN APPLICATION
+  // ========================================
 
   return (
     <div 
@@ -97,14 +174,6 @@ const App: React.FC = () => {
       style={{ backgroundColor: THEME.colors.background }}
     >
       
-      {/* Splash Screen */}
-      <div 
-        className={`fixed inset-0 z-[9999] transition-transform duration-[1.5s] ${introDismissed ? '-translate-y-full' : 'translate-y-0'}`} 
-        style={{ transitionTimingFunction: THEME.animation.curve }}
-      >
-        <SplashScreen onComplete={handleIntroComplete} />
-      </div>
-
       {showCustomCursor && <CustomCursor />}
       <SmithFieldBackground tier={tier} />
       <SectionNavigation lang={lang} reducedMotion={reducedMotion} onToggleMotion={toggleMotion} />
@@ -118,8 +187,37 @@ const App: React.FC = () => {
         }}
       />
 
-      {/* Language Toggle - Warm surface */}
-      <div className="fixed top-5 right-6 z-[60]">
+      {/* Top Right Controls */}
+      <div className="fixed top-5 right-6 z-[60] flex items-center gap-2">
+        {/* Replay Odyssey Button */}
+        <button
+          onClick={() => setShowOdyssey(true)}
+          className="text-[11px] font-semibold tracking-wider px-4 py-2.5 md:px-3 md:py-1.5 rounded-lg hover:text-white hover:border-[#FFC700] transition-all cursor-none min-h-[44px] flex items-center justify-center gap-2 backdrop-blur-xl group"
+          style={{ 
+            color: THEME.colors.text.muted,
+            backgroundColor: THEME.colors.overlay.glass,
+            border: `1px solid ${THEME.colors.border.default}`,
+          }}
+          title={lang === 'zh' ? '重播教程' : 'Replay Tutorial'}
+        >
+          <svg 
+            width="14" 
+            height="14" 
+            viewBox="0 0 24 24" 
+            fill="none" 
+            stroke="currentColor" 
+            strokeWidth="2" 
+            strokeLinecap="round" 
+            strokeLinejoin="round"
+            className="group-hover:rotate-[-360deg] transition-transform duration-500"
+          >
+            <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" />
+            <path d="M3 3v5h5" />
+          </svg>
+          <span className="hidden md:inline">{lang === 'zh' ? '教程' : 'Tutorial'}</span>
+        </button>
+        
+        {/* Language Toggle */}
         <button
           onClick={toggleLang}
           className="text-[11px] font-semibold tracking-wider px-4 py-2.5 md:px-3 md:py-1.5 rounded-lg hover:text-white transition-all cursor-none min-w-[44px] min-h-[44px] flex items-center justify-center backdrop-blur-xl"
@@ -150,15 +248,6 @@ const App: React.FC = () => {
           onWhy={() => scrollToRef(engineeringRef)}
           reducedMotion={reducedMotion}
         />
-
-        {/* Experiment Roadmap - Right after Hero */}
-        <StepTimeline lang={lang} reducedMotion={reducedMotion} />
-
-        {/* Chapter 0: Prerequisites - 前置知识 (Bloom Level 1: Remember) */}
-        <PrerequisiteSection id="prerequisites" lang={lang} reducedMotion={reducedMotion} />
-
-        {/* Chapter 1: Intuition - 几何直觉 (Bloom Level 2: Understand) */}
-        <IntroNarrativeSection id="intuition" lang={lang} reducedMotion={reducedMotion} />
 
         {/* 
           SmithModeProvider wraps both Experiment and Engineering sections

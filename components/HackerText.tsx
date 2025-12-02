@@ -78,7 +78,7 @@ export const HackerText: React.FC<HackerTextProps> = ({
   return (
     <span
       className={className}
-      style={{ fontFamily: 'monospace', ...style }}
+      style={style}
       onMouseEnter={handleMouseEnter}
     >
       {displayText}

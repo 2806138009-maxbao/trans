@@ -10,6 +10,8 @@ interface HeroSectionProps {
   lang: Language;
   onStart: () => void;
   onWhy: () => void;
+  onGenesis?: () => void;
+  onOdyssey?: () => void;
   reducedMotion?: boolean;
 }
 
@@ -23,8 +25,8 @@ const HoverButton: React.FC<{
 }> = ({ children, onClick, variant = 'primary' }) => {
   if (variant === 'primary') {
     return (
-      <button
-        onClick={onClick}
+  <button
+    onClick={onClick}
         className="
           px-8 py-4 rounded-lg text-base font-semibold tracking-wide
           border border-[rgba(255,215,0,1)] bg-[rgba(255,215,0,0.1)] text-[rgba(255,215,0,1)]
@@ -34,8 +36,8 @@ const HoverButton: React.FC<{
         "
         style={{ transitionTimingFunction: THEME.animation.curve }}
       >
-        {children}
-      </button>
+      {children}
+  </button>
     );
   }
 
@@ -63,6 +65,8 @@ export const HeroSection: React.FC<HeroSectionProps> = ({
   lang, 
   onStart, 
   onWhy, 
+  onGenesis,
+  onOdyssey,
   reducedMotion = false 
 }) => {
   const t = TRANSLATIONS[lang];
@@ -81,7 +85,7 @@ export const HeroSection: React.FC<HeroSectionProps> = ({
             </div>
           </div>
         </Wrapper>
-
+        
         {/* Title Stack */}
         <Wrapper animation="fade-up" delay={100}>
           <div className="flex flex-col items-center">
@@ -104,7 +108,7 @@ export const HeroSection: React.FC<HeroSectionProps> = ({
                 duration={600}
                 triggerOnHover={false}
               />
-            </h1>
+          </h1>
             
             {/* Secondary Line: Small/Wide/Gold + Subtle Halo */}
             <div 
@@ -126,10 +130,10 @@ export const HeroSection: React.FC<HeroSectionProps> = ({
               style={{ 
                 color: THEME.colors.text.muted,
                 marginTop: '32px' // Task: 32px gap
-              }}
-            >
-              {t.heroSubheading}
-            </p>
+            }}
+          >
+            {t.heroSubheading}
+          </p>
           </div>
         </Wrapper>
 
@@ -161,6 +165,83 @@ export const HeroSection: React.FC<HeroSectionProps> = ({
             <HoverButton onClick={onWhy} variant="secondary">
               {t.heroWhy}
             </HoverButton>
+          </div>
+          
+          {/* Immersive Experience Entries */}
+          <div className="mt-8 flex flex-col sm:flex-row items-center justify-center gap-4">
+            {/* Smith Odyssey - Magnetic Scrollytelling */}
+            {onOdyssey && (
+              <button
+                onClick={onOdyssey}
+                className="
+                  group flex items-center gap-3 px-5 py-2.5 rounded-full
+                  border border-[rgba(255,215,0,0.3)] bg-[rgba(255,215,0,0.05)]
+                  text-[11px] uppercase tracking-[0.15em] font-medium
+                  transition-all duration-500
+                  hover:border-[rgba(255,215,0,0.6)] hover:bg-[rgba(255,215,0,0.1)]
+                "
+                style={{ 
+                  color: 'rgba(255, 215, 0, 0.8)',
+                  transitionTimingFunction: THEME.animation.curve,
+                }}
+              >
+                <span 
+                  className="w-1.5 h-1.5 rounded-full transition-all duration-500 group-hover:scale-150"
+                  style={{ 
+                    backgroundColor: '#FFD700',
+                    boxShadow: '0 0 10px rgba(255, 215, 0, 0.6)',
+                  }}
+                />
+                <span className="group-hover:text-[#FFD700] transition-colors duration-500">
+                  {lang === 'zh' ? '「奥德赛」引导模式' : '"Odyssey" Guided Mode'}
+                </span>
+                <svg 
+                  className="w-3 h-3 opacity-60 group-hover:opacity-100 group-hover:translate-x-1 transition-all duration-300" 
+                  fill="none" 
+                  stroke="currentColor" 
+                  viewBox="0 0 24 24"
+                >
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                </svg>
+              </button>
+            )}
+            
+            {/* Genesis Experience - Origin Story */}
+            {onGenesis && (
+              <button
+                onClick={onGenesis}
+                className="
+                  group flex items-center gap-3 px-5 py-2.5 rounded-full
+                  border border-white/10 bg-white/[0.02]
+                  text-[11px] uppercase tracking-[0.15em] font-medium
+                  transition-all duration-500
+                  hover:border-white/30 hover:bg-white/[0.05]
+                "
+                style={{ 
+                  color: 'rgba(255, 255, 255, 0.5)',
+                  transitionTimingFunction: THEME.animation.curve,
+                }}
+              >
+                <span 
+                  className="w-1.5 h-1.5 rounded-full transition-all duration-500 group-hover:scale-150"
+                  style={{ 
+                    backgroundColor: 'rgba(255, 255, 255, 0.4)',
+                    boxShadow: '0 0 6px rgba(255, 255, 255, 0.3)',
+                  }}
+                />
+                <span className="group-hover:text-white/80 transition-colors duration-500">
+                  {lang === 'zh' ? '「创世纪」起源动画' : '"Genesis" Origin Animation'}
+                </span>
+                <svg 
+                  className="w-3 h-3 opacity-40 group-hover:opacity-80 group-hover:translate-x-1 transition-all duration-300" 
+                  fill="none" 
+                  stroke="currentColor" 
+                  viewBox="0 0 24 24"
+                >
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                </svg>
+              </button>
+            )}
           </div>
         </Wrapper>
       </div>
