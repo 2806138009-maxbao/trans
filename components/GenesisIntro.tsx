@@ -502,7 +502,9 @@ class GenesisCanvasEngine {
       
       // L3 Physics: Vertical Arc (The Fold)
       // Points arc into position during transition (upper half arcs up, lower half arcs down)
-      const verticalArcOffset = Math.sin(easedT * Math.PI) * 30;
+      // Increased arc intensity for more organic, less robotic movement
+      const arcIntensity = 40; // Increased from 30 for more pronounced arc
+      const verticalArcOffset = Math.sin(easedT * Math.PI) * arcIntensity;
       const arcDirection = cartY < cy ? -1 : 1; // Upper half arcs up, lower half arcs down
       const arcY = lerp(cartY, smithY, easedT) + verticalArcOffset * arcDirection;
       
@@ -539,9 +541,6 @@ class GenesisCanvasEngine {
     
     const thermalColor = `hsl(${hue}, ${saturation}%, ${lightness}%)`;
     
-    // Bloom effect: shadowBlur 0 → 20
-    const bloomIntensity = transformT * 20;
-    
     // Opacity curve: easeInQuad from 0.2 → 1.0
     const baseOpacity = lerp(0.2, 1.0, easeInQuad(transformT));
     
@@ -571,56 +570,69 @@ class GenesisCanvasEngine {
       const chromaticIntensity = chromaticActive ? Math.sin((transformT - 0.4) / 0.2 * Math.PI) : 0;
       const chromaticOffset = chromaticIntensity * 2; // Pixel offset for RGB separation
       
-      // Apply bloom effect
-      ctx.shadowColor = thermalColor;
-      ctx.shadowBlur = bloomIntensity;
+      // L3 Performance: Manual Glow (replaces expensive shadowBlur)
+      // Draw lines twice: wide/transparent (glow) + thin/solid (core)
+      const drawGlowingLine = (
+        ctx: CanvasRenderingContext2D,
+        points: Array<{ px: number; py: number }>,
+        color: string,
+        glowColor: string,
+        isMain: boolean
+      ) => {
+        // Pass 1: Glow (Wide, Low Opacity) - Only for main lines or high intensity
+        if (isMain && points.length > 1) {
+          ctx.beginPath();
+          points.forEach((p, i) => i === 0 ? ctx.moveTo(p.px, p.py) : ctx.lineTo(p.px, p.py));
+          ctx.strokeStyle = glowColor; // Low opacity glow
+          ctx.lineWidth = 4; // Wide stroke for glow
+          ctx.stroke();
+        }
+        
+        // Pass 2: Core (Thin, High Opacity)
+        if (points.length > 1) {
+          ctx.beginPath();
+          points.forEach((p, i) => i === 0 ? ctx.moveTo(p.px, p.py) : ctx.lineTo(p.px, p.py));
+          ctx.strokeStyle = color;
+          ctx.lineWidth = isMain ? 2 : 1;
+          ctx.stroke();
+        }
+      };
       
-      // Helper function to draw a line with optional chromatic aberration
+      // Helper function to draw a line with optional chromatic aberration and manual glow
       const drawLineWithChromatic = (
         points: Array<{ px: number; py: number }>,
         opacity: number,
-        lineWidth: number
+        lineWidth: number,
+        isMain: boolean
       ) => {
+        const baseColor = `hsla(${hue}, ${saturation}%, ${lightness}%, ${opacity})`;
+        const glowColor = `hsla(${hue}, ${saturation}%, ${lightness}%, ${opacity * 0.15})`; // Low opacity glow
+        
         if (chromaticActive && chromaticIntensity > 0.1) {
           // Draw RGB offsets for chromatic aberration
           const offsets = [
             { x: -chromaticOffset, y: 0, color: 'rgba(255, 0, 0, 0.3)' },   // Red
-            { x: 0, y: 0, color: `hsla(${hue}, ${saturation}%, ${lightness}%, ${opacity})` }, // Green (original)
+            { x: 0, y: 0, color: baseColor }, // Green (original)
             { x: chromaticOffset, y: 0, color: 'rgba(0, 0, 255, 0.3)' }    // Blue
           ];
           
           for (const offset of offsets) {
-            ctx.strokeStyle = offset.color;
-            ctx.lineWidth = lineWidth;
-            ctx.beginPath();
-            let started = false;
-            for (const point of points) {
-              const px = point.px + offset.x;
-              const py = point.py + offset.y;
-              if (!started) {
-                ctx.moveTo(px, py);
-                started = true;
-              } else {
-                ctx.lineTo(px, py);
-              }
+            const offsetPoints = points.map(p => ({ px: p.px + offset.x, py: p.py + offset.y }));
+            if (offset.x === 0) {
+              // Main line: use glow
+              drawGlowingLine(ctx, offsetPoints, offset.color, glowColor, isMain);
+            } else {
+              // Chromatic offsets: no glow, just draw
+              ctx.strokeStyle = offset.color;
+              ctx.lineWidth = lineWidth;
+              ctx.beginPath();
+              offsetPoints.forEach((p, i) => i === 0 ? ctx.moveTo(p.px, p.py) : ctx.lineTo(p.px, p.py));
+              ctx.stroke();
             }
-            ctx.stroke();
           }
         } else {
-          // Normal drawing without chromatic aberration
-          ctx.strokeStyle = `hsla(${hue}, ${saturation}%, ${lightness}%, ${opacity})`;
-          ctx.lineWidth = lineWidth;
-          ctx.beginPath();
-          let started = false;
-          for (const point of points) {
-            if (!started) {
-              ctx.moveTo(point.px, point.py);
-              started = true;
-            } else {
-              ctx.lineTo(point.px, point.py);
-            }
-          }
-          ctx.stroke();
+          // Normal drawing with manual glow (no chromatic aberration)
+          drawGlowingLine(ctx, points, baseColor, glowColor, isMain);
         }
       };
       
@@ -635,8 +647,8 @@ class GenesisCanvasEngine {
         const lineOpacity = baseOpacity * (isUnity ? 1.0 : 0.4);
         const lineWidth = isUnity ? 2 : 1;
         
-        // High resolution: 120 segments per line
-        const segments = 120;
+        // Optimized: 80 segments per line (reduced from 120 for performance)
+        const segments = 80;
         const points: Array<{ px: number; py: number }> = [];
         
         for (let i = 0; i <= segments; i++) {
@@ -653,7 +665,7 @@ class GenesisCanvasEngine {
         }
         
         if (points.length > 1) {
-          drawLineWithChromatic(points, lineOpacity, lineWidth);
+          drawLineWithChromatic(points, lineOpacity, lineWidth, isUnity);
         }
       }
       
@@ -668,8 +680,8 @@ class GenesisCanvasEngine {
         const lineOpacity = baseOpacity * (isCenter ? 1.0 : 0.4);
         const lineWidth = isCenter ? 2 : 1;
         
-        // High resolution: 100 segments per line
-        const segments = 100;
+        // Optimized: 64 segments per line (reduced from 100 for performance)
+        const segments = 64;
         const points: Array<{ px: number; py: number }> = [];
         
         for (let i = 0; i <= segments; i++) {
@@ -686,13 +698,9 @@ class GenesisCanvasEngine {
         }
         
         if (points.length > 1) {
-          drawLineWithChromatic(points, lineOpacity, lineWidth);
+          drawLineWithChromatic(points, lineOpacity, lineWidth, isCenter);
         }
       }
-      
-      // Reset bloom effect
-      ctx.shadowBlur = 0;
-      ctx.shadowColor = 'transparent';
     }
     
     ctx.restore();

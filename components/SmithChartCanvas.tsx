@@ -158,6 +158,35 @@ const X_VALUES = [0.2, 0.5, 1, 2, 5];
 const VSWR_VALUES = [1.5, 2, 3, 5];
 const G_VALUES = [0.2, 0.5, 1, 2];
 
+// ========================================
+// GENESIS ANIMATION - Physics Migration from GenesisIntro
+// ========================================
+
+// Helper: zToGamma for Genesis animation (simpler than impedanceToGammaNew)
+function zToGammaSimple(r: number, x: number): { re: number; im: number } {
+  const denMagSq = (r + 1) * (r + 1) + x * x;
+  if (denMagSq < 0.0001) return { re: 1, im: 0 };
+  return {
+    re: ((r - 1) * (r + 1) + x * x) / denMagSq,
+    im: (2 * x) / denMagSq,
+  };
+}
+
+// Easing function: easeOutExpo for snappy opening
+function easeOutExpo(t: number): number {
+  return t === 1 ? 1 : 1 - Math.pow(2, -10 * t);
+}
+
+// Lerp helper
+function lerp(a: number, b: number, t: number): number {
+  return a + (b - a) * t;
+}
+
+// Clamp helper
+function clamp(value: number, min: number, max: number): number {
+  return Math.min(Math.max(value, min), max);
+}
+
 function drawReactanceArc(
   ctx: CanvasRenderingContext2D, 
   cx: number, cy: number, scale: number, 
@@ -181,6 +210,213 @@ function drawReactanceArc(
     ctx.lineWidth = 0.5;
   }
   ctx.stroke();
+}
+
+// ========================================
+// GENESIS ANIMATION - Animated Grid Drawing
+// ========================================
+
+/**
+ * Draw animated grid with Genesis fold effect
+ * Uses mapPoint with vertical arc and elastic impact
+ */
+function drawAnimatedGrid(
+  ctx: CanvasRenderingContext2D,
+  cx: number,
+  cy: number,
+  radius: number,
+  progress: number, // 0 to 1
+  showAdmittance: boolean = false,
+  showVSWRCircles: boolean = false
+) {
+  // Apply easeOutExpo for snappy opening
+  const easedT = easeOutExpo(progress);
+  
+  // L3 Physics: Elastic Impact (The Slam)
+  // When progress > 0.8, modulate radius with damped sine wave
+  let smithR = radius;
+  if (easedT > 0.8) {
+    const impactT = (easedT - 0.8) / 0.2; // 0 to 1 in the final 20%
+    const dampedOvershoot = Math.exp(-impactT * 3) * Math.sin(impactT * Math.PI * 4) * 0.05;
+    smithR = radius * (1 + dampedOvershoot);
+  }
+  
+  // Thermal color transition: White → Gold
+  const hue = lerp(0, 51, easedT); // 0 → 51 (gold hue)
+  const saturation = lerp(0, 100, easedT); // 0% → 100%
+  let lightness: number;
+  if (easedT < 0.5) {
+    lightness = lerp(100, 85, easedT * 2); // Keep near white
+  } else {
+    lightness = lerp(85, 50, (easedT - 0.5) * 2); // Drop to gold
+  }
+  const thermalColor = `hsl(${hue}, ${saturation}%, ${lightness}%)`;
+  
+  // Opacity curve
+  const baseOpacity = lerp(0.2, 1.0, easedT * easedT);
+  
+  // mapPoint: Core transformation with vertical arc
+  // Note: t is already eased (easedT from outer scope), so we use it directly
+  const mapPoint = (r: number, x: number, t: number): { px: number; py: number } => {
+    // Cartesian coordinates (impedance plane)
+    const cartScale = smithR * 0.8;
+    const cartX = cx - cartScale * 0.3 + r * cartScale * 0.12;
+    const cartY = cy - x * cartScale * 0.12;
+    
+    // Smith Chart coordinates via bilinear transform
+    const gamma = zToGammaSimple(r, x);
+    const smithX = cx + gamma.re * smithR;
+    const smithY = cy - gamma.im * smithR;
+    
+    // L3 Physics: Vertical Arc (The Fold)
+    // Points arc into position during transition
+    // t is already eased, so we use it directly
+    const verticalArcOffset = Math.sin(t * Math.PI) * 30;
+    const arcDirection = cartY < cy ? -1 : 1; // Upper half arcs up, lower half arcs down
+    const arcY = lerp(cartY, smithY, t) + verticalArcOffset * arcDirection;
+    
+    return {
+      px: lerp(cartX, smithX, t),
+      py: arcY
+    };
+  };
+  
+  // Background glow
+  const gradient = ctx.createRadialGradient(cx, cy, 0, cx, cy, smithR);
+  gradient.addColorStop(0, `rgba(255, 215, 0, ${0.02 * baseOpacity})`);
+  gradient.addColorStop(1, 'transparent');
+  ctx.fillStyle = gradient;
+  ctx.beginPath();
+  ctx.arc(cx, cy, smithR, 0, TWO_PI);
+  ctx.fill();
+  
+  // VSWR circles (if enabled)
+  if (showVSWRCircles && easedT > 0.5) {
+    ctx.setLineDash([4, 6]);
+    const vswrAlpha = (easedT - 0.5) * 2; // Fade in after 50%
+    for (let i = 0; i < VSWR_VALUES.length; i++) {
+      const vswr = VSWR_VALUES[i];
+      const gammaMag = (vswr - 1) / (vswr + 1);
+      ctx.beginPath();
+      ctx.arc(cx, cy, gammaMag * smithR, 0, TWO_PI);
+      ctx.strokeStyle = `rgba(255, 215, 0, ${0.06 * vswrAlpha})`;
+      ctx.lineWidth = 0.5;
+      ctx.stroke();
+    }
+    ctx.setLineDash([]);
+  }
+  
+  // Unit circle - appears with ripple effect
+  if (easedT > 0.2) {
+    const circleT = (easedT - 0.2) / 0.8;
+    const circleAlpha = Math.min(1, circleT * 1.2);
+    ctx.beginPath();
+    ctx.arc(cx, cy, smithR, 0, TWO_PI);
+    ctx.strokeStyle = `hsla(${hue}, ${saturation}%, ${lightness}%, ${0.3 * circleAlpha * baseOpacity})`;
+    ctx.lineWidth = 1.5;
+    ctx.stroke();
+  }
+  
+  // Constant resistance circles (R lines)
+  for (let i = 0; i < R_VALUES.length; i++) {
+    const rVal = R_VALUES[i];
+    const isUnity = rVal === 1;
+    const lineOpacity = baseOpacity * (isUnity ? 1.0 : 0.4);
+    
+    // High resolution: 120 segments per line
+    const segments = 120;
+    const points: Array<{ px: number; py: number }> = [];
+    
+    for (let j = 0; j <= segments; j++) {
+      const t = j / segments;
+      // Map t to X value: -∞ to +∞, using tan for natural distribution
+      const xVal = Math.tan((t - 0.5) * Math.PI * 0.98) * 5;
+      
+      const { px, py } = mapPoint(rVal, xVal, easedT);
+      
+      // Clip to viewport with margin
+      if (py >= -50 && py <= cy * 2 + 50 && px >= -50 && px <= cx * 2 + 50) {
+        points.push({ px, py });
+      }
+    }
+    
+    if (points.length > 1) {
+      ctx.beginPath();
+      ctx.moveTo(points[0].px, points[0].py);
+      for (let k = 1; k < points.length; k++) {
+        ctx.lineTo(points[k].px, points[k].py);
+      }
+      ctx.strokeStyle = isUnity 
+        ? `hsla(${hue}, ${saturation}%, ${lightness}%, ${lineOpacity})`
+        : `hsla(${hue}, ${saturation}%, ${lightness}%, ${lineOpacity * 0.4})`;
+      ctx.lineWidth = isUnity ? 1 : 0.5;
+      ctx.stroke();
+    }
+  }
+  
+  // Constant reactance arcs (X lines)
+  for (let i = 0; i < X_VALUES.length; i++) {
+    const xVal = X_VALUES[i];
+    const isCenter = xVal === 1;
+    const lineOpacity = baseOpacity * (isCenter ? 1.0 : 0.4);
+    
+    // High resolution: 100 segments per line
+    const segments = 100;
+    const points: Array<{ px: number; py: number }> = [];
+    
+    for (let j = 0; j <= segments; j++) {
+      const t = j / segments;
+      // Map t to R value: 0 to ∞, using exponential for natural distribution
+      const rVal = Math.pow(t, 1.5) * 30;
+      
+      const { px, py } = mapPoint(rVal, xVal, easedT);
+      
+      // Clip to viewport
+      if (py >= -50 && py <= cy * 2 + 50 && px >= -50 && px <= cx * 2 + 50) {
+        points.push({ px, py });
+      }
+    }
+    
+    if (points.length > 1) {
+      // Draw positive arc
+      ctx.beginPath();
+      ctx.moveTo(points[0].px, points[0].py);
+      for (let k = 1; k < points.length; k++) {
+        ctx.lineTo(points[k].px, points[k].py);
+      }
+      ctx.strokeStyle = isCenter
+        ? `hsla(${hue}, ${saturation}%, ${lightness}%, ${lineOpacity})`
+        : `hsla(${hue}, ${saturation}%, ${lightness}%, ${lineOpacity * 0.4})`;
+      ctx.lineWidth = isCenter ? 0.8 : 0.5;
+      ctx.stroke();
+      
+      // Draw negative arc (mirror)
+      ctx.beginPath();
+      ctx.moveTo(points[0].px, 2 * cy - points[0].py);
+      for (let k = 1; k < points.length; k++) {
+        ctx.lineTo(points[k].px, 2 * cy - points[k].py);
+      }
+      ctx.strokeStyle = isCenter
+        ? `hsla(${hue}, ${saturation}%, ${lightness}%, ${lineOpacity})`
+        : `hsla(${hue}, ${saturation}%, ${lightness}%, ${lineOpacity * 0.4})`;
+      ctx.lineWidth = isCenter ? 0.8 : 0.5;
+      ctx.stroke();
+    }
+  }
+  
+  // Real axis (horizontal line)
+  if (easedT > 0.3) {
+    const axisT = (easedT - 0.3) / 0.7;
+    const axisAlpha = Math.min(1, axisT * 1.5);
+    ctx.beginPath();
+    const startX = lerp(cx - smithR * 0.8, cx - smithR, easedT);
+    const endX = lerp(cx + smithR * 0.8, cx + smithR, easedT);
+    ctx.moveTo(startX, cy);
+    ctx.lineTo(endX, cy);
+    ctx.strokeStyle = `hsla(${hue}, ${saturation}%, ${lightness}%, ${0.25 * axisAlpha * baseOpacity})`;
+    ctx.lineWidth = 1;
+    ctx.stroke();
+  }
 }
 
 // Optimized: Cache static grid to offscreen canvas
@@ -659,6 +895,10 @@ export const SmithChartCanvas: React.FC<SmithChartCanvasProps> = ({
     isDragging: false,
     isHovering: false,
     
+    // L3 Genesis Animation: Opening sequence progress (0 to 1)
+    openingProgress: 0,
+    openingStartTime: 0,
+    
     // Computed impedance (updated in draw loop)
     impedance: { r: 1, x: 0 } as Impedance,
     hasImpedance: false,
@@ -726,6 +966,18 @@ export const SmithChartCanvas: React.FC<SmithChartCanvasProps> = ({
   useEffect(() => {
     animationState.current.gridCacheValid = false;
   }, [showAdmittance, showVSWRCircles]);
+  
+  // L3 Genesis Animation: Reset opening sequence on mount or when reducedMotion changes
+  useEffect(() => {
+    if (!reducedMotion) {
+      // Reset opening animation
+      animationState.current.openingProgress = 0;
+      animationState.current.openingStartTime = 0;
+    } else {
+      // Skip animation if reduced motion
+      animationState.current.openingProgress = 1;
+    }
+  }, [reducedMotion]);
 
   // Main animation loop
   useEffect(() => {
@@ -882,15 +1134,34 @@ export const SmithChartCanvas: React.FC<SmithChartCanvasProps> = ({
       ctx.fillStyle = '#050505';
       ctx.fillRect(0, 0, w, h);
 
-      // Draw cached grid
-      if (gridCacheRef.current && state.gridCacheValid) {
-        ctx.drawImage(gridCacheRef.current, 0, 0, w, h);
-      } else if (!state.gridCacheValid) {
-        // Rebuild cache if invalid
-        const dpr = Math.min(window.devicePixelRatio || 1, 2);
-        updateGridCache(w, h, dpr);
-        if (gridCacheRef.current) {
+      // ========================================
+      // L3 Genesis Animation: Opening Sequence
+      // ========================================
+      // Update opening progress (1.2 seconds animation)
+      if (state.openingProgress < 1) {
+        if (state.openingStartTime === 0) {
+          state.openingStartTime = timestamp;
+        }
+        const elapsed = timestamp - state.openingStartTime;
+        const duration = 1200; // 1.2 seconds
+        state.openingProgress = Math.min(1, elapsed / duration);
+      }
+      
+      // Draw grid: animated during opening, cached after
+      if (state.openingProgress < 1 && !reducedMotion) {
+        // Use animated grid during opening sequence
+        drawAnimatedGrid(ctx, state.cx, state.cy, state.radius, state.openingProgress, showAdmittance, showVSWRCircles);
+      } else {
+        // Use cached static grid for performance
+        if (gridCacheRef.current && state.gridCacheValid) {
           ctx.drawImage(gridCacheRef.current, 0, 0, w, h);
+        } else if (!state.gridCacheValid) {
+          // Rebuild cache if invalid
+          const dpr = Math.min(window.devicePixelRatio || 1, 2);
+          updateGridCache(w, h, dpr);
+          if (gridCacheRef.current) {
+            ctx.drawImage(gridCacheRef.current, 0, 0, w, h);
+          }
         }
       }
 
