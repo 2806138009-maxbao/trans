@@ -745,7 +745,7 @@ export const SmithOdyssey: React.FC<SmithOdysseyProps> = ({
           showVector: false,
           showUI: false,
         });
-        engineRef.current.setAutoRotate(false);
+        engineRef.current.setAutoRotate(true); // Continue rotation
         break;
         
       case 3: // The Reflection - VSWR
@@ -756,7 +756,7 @@ export const SmithOdyssey: React.FC<SmithOdysseyProps> = ({
           showVector: true,
           showUI: false,
         });
-        engineRef.current.setAutoRotate(false);
+        engineRef.current.setAutoRotate(true); // Continue rotation
         break;
         
       case 4: // The Control - Full Lab
@@ -767,7 +767,7 @@ export const SmithOdyssey: React.FC<SmithOdysseyProps> = ({
           showVector: true,
           showUI: true,
         });
-        engineRef.current.setAutoRotate(false);
+        engineRef.current.setAutoRotate(true); // Continue rotation
         break;
     }
   }, [currentSection]);
@@ -987,7 +987,7 @@ export const SmithOdyssey: React.FC<SmithOdysseyProps> = ({
             onClick={handleComplete}
             className="px-10 py-4 rounded-lg font-semibold tracking-wide transition-all duration-300 hover:-translate-y-1 hover:scale-105"
             style={{
-              fontFamily: '"Space Grotesk", sans-serif',
+              fontFamily: '-apple-system, BlinkMacSystemFont, "Inter", "Segoe UI", "Roboto", "Noto Sans SC", sans-serif',
               backgroundColor: 'rgba(255, 215, 0, 0.15)',
               border: '2px solid rgba(255, 215, 0, 0.8)',
               color: '#FFD700',

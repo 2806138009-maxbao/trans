@@ -333,13 +333,15 @@ function drawActivePoint(
   // Calculate intensity based on match quality
   const vswr = gammaMag < 0.999 ? (1 + gammaMag) / (1 - gammaMag) : 10;
   const matchQuality = Math.max(0, 1 - gammaMag); // 1 = perfect match, 0 = total mismatch
-  const intensity = isSnapped ? 1.5 : (isDragging ? 1.2 : 1.0);
+  // L3 Interaction Bloom: When dragging, significantly increase intensity (2.5x) to compensate for hidden cursor
+  const intensity = isSnapped ? 1.5 : (isDragging ? 2.5 : 1.0);
   
   // ========================================
   // LAYER 0: Ambient Light Scatter
   // The point illuminates nearby grid lines
   // ========================================
-  const scatterRadius = 120 + (isDragging ? 30 : 0);
+  // L3 Interaction Bloom: Wider scatter radius when dragging (plasma effect)
+  const scatterRadius = 120 + (isDragging ? 60 : 0);
   const scatterGradient = ctx.createRadialGradient(posX, posY, 0, posX, posY, scatterRadius);
   scatterGradient.addColorStop(0, `rgba(255, 215, 0, ${0.06 * intensity})`);
   scatterGradient.addColorStop(0.5, `rgba(255, 200, 50, ${0.02 * intensity})`);
@@ -389,11 +391,13 @@ function drawActivePoint(
   const pulseScale = isSnapped ? 1.3 : 1.0;
   
   // L3.1: Outer bloom (scattered light)
+  // L3 Interaction Bloom: Wider bloom radius when dragging (plasma effect)
+  const bloomMultiplier = isDragging ? 4.5 : 3;
   ctx.beginPath();
-  ctx.arc(posX, posY, baseSize * 3 * pulseScale, 0, TWO_PI);
+  ctx.arc(posX, posY, baseSize * bloomMultiplier * pulseScale, 0, TWO_PI);
   const bloomGradient = ctx.createRadialGradient(
     posX, posY, 0, 
-    posX, posY, baseSize * 3 * pulseScale
+    posX, posY, baseSize * bloomMultiplier * pulseScale
   );
   bloomGradient.addColorStop(0, `rgba(255, 215, 0, ${0.3 * intensity})`);
   bloomGradient.addColorStop(0.5, `rgba(255, 200, 50, ${0.1 * intensity})`);
@@ -408,15 +412,24 @@ function drawActivePoint(
   ctx.fill();
   
   // L3.3: Core (hot white center)
+  // L3 Interaction Bloom: Pure white core when dragging (plasma hot)
   ctx.beginPath();
   ctx.arc(posX, posY, baseSize * pulseScale, 0, TWO_PI);
   const coreGradient = ctx.createRadialGradient(
     posX - baseSize * 0.2, posY - baseSize * 0.2, 0,
     posX, posY, baseSize * pulseScale
   );
-  coreGradient.addColorStop(0, 'rgba(255, 255, 255, 1)');
-  coreGradient.addColorStop(0.4, 'rgba(255, 240, 200, 0.95)');
-  coreGradient.addColorStop(1, `rgba(255, 200, 50, ${0.8 * intensity})`);
+  if (isDragging) {
+    // Pure white hot core when dragging
+    coreGradient.addColorStop(0, 'rgba(255, 255, 255, 1)');
+    coreGradient.addColorStop(0.3, 'rgba(255, 255, 255, 0.98)');
+    coreGradient.addColorStop(0.6, 'rgba(255, 240, 200, 0.9)');
+    coreGradient.addColorStop(1, `rgba(255, 200, 50, ${0.8 * intensity})`);
+  } else {
+    coreGradient.addColorStop(0, 'rgba(255, 255, 255, 1)');
+    coreGradient.addColorStop(0.4, 'rgba(255, 240, 200, 0.95)');
+    coreGradient.addColorStop(1, `rgba(255, 200, 50, ${0.8 * intensity})`);
+  }
   ctx.fillStyle = coreGradient;
   ctx.fill();
   

@@ -200,7 +200,17 @@ class GenesisCanvasEngine {
     
     const cx = width / 2;
     const cy = height / 2;
-    const smithR = Math.min(width, height) * 0.32;
+    const baseSmithR = Math.min(width, height) * 0.32;
+    
+    // L3 Physics: Elastic Impact (The Slam)
+    // When transformT > 0.8, modulate radius with damped sine wave for overshoot and bounce
+    let smithR = baseSmithR;
+    if (transformT > 0.8) {
+      const impactT = (transformT - 0.8) / 0.2; // 0 to 1 in the final 20%
+      const dampedOvershoot = Math.exp(-impactT * 3) * Math.sin(impactT * Math.PI * 4) * 0.05;
+      smithR = baseSmithR * (1 + dampedOvershoot);
+    }
+    
     const cartScale = smithR * 0.1;
     
     // ========================================
@@ -490,9 +500,15 @@ class GenesisCanvasEngine {
       // Apply easeInOutExpo for dramatic warp effect
       const easedT = easeInOutExpo(t);
       
+      // L3 Physics: Vertical Arc (The Fold)
+      // Points arc into position during transition (upper half arcs up, lower half arcs down)
+      const verticalArcOffset = Math.sin(easedT * Math.PI) * 30;
+      const arcDirection = cartY < cy ? -1 : 1; // Upper half arcs up, lower half arcs down
+      const arcY = lerp(cartY, smithY, easedT) + verticalArcOffset * arcDirection;
+      
       return {
         px: lerp(cartX, smithX, easedT),
-        py: lerp(cartY, smithY, easedT)
+        py: arcY
       };
     };
     
@@ -549,9 +565,64 @@ class GenesisCanvasEngine {
     const gridVisible = phase2Progress > 0.7 || transformT > 0;
     
     if (gridVisible) {
+      // L3 Physics: Chromatic Aberration (The Tear)
+      // When velocity is high (transformT ≈ 0.5), draw grid lines 3 times (R, G, B) with slight offsets
+      const chromaticActive = transformT > 0.4 && transformT < 0.6;
+      const chromaticIntensity = chromaticActive ? Math.sin((transformT - 0.4) / 0.2 * Math.PI) : 0;
+      const chromaticOffset = chromaticIntensity * 2; // Pixel offset for RGB separation
+      
       // Apply bloom effect
       ctx.shadowColor = thermalColor;
       ctx.shadowBlur = bloomIntensity;
+      
+      // Helper function to draw a line with optional chromatic aberration
+      const drawLineWithChromatic = (
+        points: Array<{ px: number; py: number }>,
+        opacity: number,
+        lineWidth: number
+      ) => {
+        if (chromaticActive && chromaticIntensity > 0.1) {
+          // Draw RGB offsets for chromatic aberration
+          const offsets = [
+            { x: -chromaticOffset, y: 0, color: 'rgba(255, 0, 0, 0.3)' },   // Red
+            { x: 0, y: 0, color: `hsla(${hue}, ${saturation}%, ${lightness}%, ${opacity})` }, // Green (original)
+            { x: chromaticOffset, y: 0, color: 'rgba(0, 0, 255, 0.3)' }    // Blue
+          ];
+          
+          for (const offset of offsets) {
+            ctx.strokeStyle = offset.color;
+            ctx.lineWidth = lineWidth;
+            ctx.beginPath();
+            let started = false;
+            for (const point of points) {
+              const px = point.px + offset.x;
+              const py = point.py + offset.y;
+              if (!started) {
+                ctx.moveTo(px, py);
+                started = true;
+              } else {
+                ctx.lineTo(px, py);
+              }
+            }
+            ctx.stroke();
+          }
+        } else {
+          // Normal drawing without chromatic aberration
+          ctx.strokeStyle = `hsla(${hue}, ${saturation}%, ${lightness}%, ${opacity})`;
+          ctx.lineWidth = lineWidth;
+          ctx.beginPath();
+          let started = false;
+          for (const point of points) {
+            if (!started) {
+              ctx.moveTo(point.px, point.py);
+              started = true;
+            } else {
+              ctx.lineTo(point.px, point.py);
+            }
+          }
+          ctx.stroke();
+        }
+      };
       
       // ========================================
       // CONSTANT R LINES (vertical in Cartesian → circles in Smith)
@@ -562,13 +633,11 @@ class GenesisCanvasEngine {
       for (const rVal of rValues) {
         const isUnity = rVal === 1;
         const lineOpacity = baseOpacity * (isUnity ? 1.0 : 0.4);
-        ctx.strokeStyle = `hsla(${hue}, ${saturation}%, ${lightness}%, ${lineOpacity})`;
-        ctx.lineWidth = isUnity ? 2 : 1;
-        ctx.beginPath();
+        const lineWidth = isUnity ? 2 : 1;
         
         // High resolution: 120 segments per line
         const segments = 120;
-        let started = false;
+        const points: Array<{ px: number; py: number }> = [];
         
         for (let i = 0; i <= segments; i++) {
           const t = i / segments;
@@ -578,19 +647,14 @@ class GenesisCanvasEngine {
           const { px, py } = mapPoint(rVal, xVal, transformT);
           
           // Clip to viewport with margin
-          if (py < -50 || py > height + 50 || px < -50 || px > width + 50) {
-            started = false;
-            continue;
-          }
-          
-          if (!started) {
-            ctx.moveTo(px, py);
-            started = true;
-          } else {
-            ctx.lineTo(px, py);
+          if (py >= -50 && py <= height + 50 && px >= -50 && px <= width + 50) {
+            points.push({ px, py });
           }
         }
-        ctx.stroke();
+        
+        if (points.length > 1) {
+          drawLineWithChromatic(points, lineOpacity, lineWidth);
+        }
       }
       
       // ========================================
@@ -602,13 +666,11 @@ class GenesisCanvasEngine {
       for (const xVal of xValues) {
         const isCenter = xVal === 0;
         const lineOpacity = baseOpacity * (isCenter ? 1.0 : 0.4);
-        ctx.strokeStyle = `hsla(${hue}, ${saturation}%, ${lightness}%, ${lineOpacity})`;
-        ctx.lineWidth = isCenter ? 2 : 1;
-        ctx.beginPath();
+        const lineWidth = isCenter ? 2 : 1;
         
         // High resolution: 100 segments per line
         const segments = 100;
-        let started = false;
+        const points: Array<{ px: number; py: number }> = [];
         
         for (let i = 0; i <= segments; i++) {
           const t = i / segments;
@@ -618,19 +680,14 @@ class GenesisCanvasEngine {
           const { px, py } = mapPoint(rVal, xVal, transformT);
           
           // Clip to viewport
-          if (py < -50 || py > height + 50 || px < -50 || px > width + 50) {
-            started = false;
-            continue;
-          }
-          
-          if (!started) {
-            ctx.moveTo(px, py);
-            started = true;
-          } else {
-            ctx.lineTo(px, py);
+          if (py >= -50 && py <= height + 50 && px >= -50 && px <= width + 50) {
+            points.push({ px, py });
           }
         }
-        ctx.stroke();
+        
+        if (points.length > 1) {
+          drawLineWithChromatic(points, lineOpacity, lineWidth);
+        }
       }
       
       // Reset bloom effect
@@ -1116,6 +1173,8 @@ export const GenesisIntro: React.FC<GenesisIntroProps> = ({
   
   const [progress, setProgress] = useState(0);
   const [phase, setPhase] = useState(0);
+  // L3 Anti-Blink: Track if Canvas has rendered first frame
+  const [canvasInitialized, setCanvasInitialized] = useState(false);
   
   const narrative = NARRATIVE[lang];
   
@@ -1180,8 +1239,21 @@ export const GenesisIntro: React.FC<GenesisIntroProps> = ({
     
     engineRef.current = new GenesisCanvasEngine(canvas);
     
+    // L3 Anti-Blink: Track first frame render
+    let firstFrameRendered = false;
+    
     const animate = () => {
-      engineRef.current?.render();
+      if (engineRef.current) {
+        engineRef.current.render();
+        // Mark first frame as rendered
+        if (!firstFrameRendered) {
+          firstFrameRendered = true;
+          // Small delay to ensure frame is visible, then fade out overlay
+          setTimeout(() => {
+            setCanvasInitialized(true);
+          }, 100);
+        }
+      }
       animIdRef.current = requestAnimationFrame(animate);
     };
     animIdRef.current = requestAnimationFrame(animate);
@@ -1285,6 +1357,28 @@ export const GenesisIntro: React.FC<GenesisIntroProps> = ({
         className="fixed inset-0 z-0"
         style={{ background: '#050505' }}
       />
+      
+      {/* L3 Anti-Blink: Loading Overlay - Fades out after first frame */}
+      <div
+        className="fixed inset-0 z-[10001] flex items-center justify-center transition-opacity duration-500 ease-out pointer-events-none"
+        style={{
+          backgroundColor: '#050505',
+          opacity: canvasInitialized ? 0 : 1,
+        }}
+      >
+        <div
+          className="text-center"
+          style={{
+            fontFamily: '"Space Grotesk", monospace',
+            fontSize: '0.875rem',
+            letterSpacing: '0.2em',
+            color: 'rgba(255, 215, 0, 0.6)',
+            textTransform: 'uppercase',
+          }}
+        >
+          {narrative.init || 'INITIALIZING RF MODULE...'}
+        </div>
+      </div>
       
       {/* Phase Overlay (Genesis phases 1-4) */}
       <GenesisPhaseOverlay phase={phase} progress={progress} narrative={narrative} />
