@@ -517,6 +517,11 @@ export const SmithChartExperiment: React.FC<SmithChartExperimentProps> = ({
             </div>
 
             {/* 
+              Interactive Tutorial - 在史密斯圆图显示后自动弹出
+            */}
+            <InteractiveTutorial lang={lang} autoStart={true} />
+
+            {/* 
               S-TIER CONTROL PANEL
               Design: Teenage Engineering / Blender / Linear
               Features: Glassmorphism, Scrubbable Inputs, Tactile Buttons
@@ -721,12 +726,6 @@ export const SmithChartExperiment: React.FC<SmithChartExperimentProps> = ({
         </TiltCard>
         </div>
 
-        {/* 
-          Interactive Tutorial - 滚动到此处时自动弹出教程演示
-        */}
-        <div className="mt-8">
-          <InteractiveTutorial lang={lang} />
-        </div>
       </div>
     </>
   );
