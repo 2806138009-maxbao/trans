@@ -1,5 +1,4 @@
-import React, { useEffect, useRef, useState } from "react";
-import p5 from "p5";
+import React, { useEffect, useRef } from "react";
 import { COLORS, Language, TRANSLATIONS, WaveformType } from "../types";
 
 interface FourierCanvasProps {
@@ -52,214 +51,332 @@ export const FourierCanvas: React.FC<FourierCanvasProps> = ({
   lang 
 }) => {
   const containerRef = useRef<HTMLDivElement>(null);
-  const p5Instance = useRef<p5 | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const [isLoading, setIsLoading] = React.useState(true);
   
-  // 使用 ref 存储可变参数，避免重建 p5 实例
+  // RAUNO-TIER: Use Refs for all mutable state - no React re-renders
+  const timeRef = useRef(0);
+  const waveRef = useRef<number[]>([]);
   const paramsRef = useRef({ nVal, waveformType });
+  const frameIdRef = useRef<number>(0);
+  const lastWidthRef = useRef(0);
+  const lastHeightRef = useRef(0);
+  const maxWavePoints = 800;
+
   const t = TRANSLATIONS[lang];
 
-  // 更新参数 ref（不触发 p5 重建）
+  // Update params ref (doesn't trigger re-render)
   useEffect(() => {
     paramsRef.current = { nVal, waveformType };
   }, [nVal, waveformType]);
 
-  // p5 实例只创建一次
+  // RAUNO-TIER: Independent render loop, completely outside React's render cycle
   useEffect(() => {
-    if (!containerRef.current) return;
+    const canvas = canvasRef.current;
+    const container = containerRef.current;
+    if (!canvas || !container) return;
 
-    const sketch = (p: p5) => {
-      let time = 0;
-      let wave: number[] = [];
-      const maxWavePoints = 800;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
 
-      p.setup = () => {
-        const canvas = p.createCanvas(
-          containerRef.current!.clientWidth,
-          containerRef.current!.clientHeight
-        );
-        canvas.parent(containerRef.current!);
-        canvas.elt.style.touchAction = "pan-y pinch-zoom";
-        canvas.elt.style.pointerEvents = "none";
-        p.frameRate(60);
+    // Helper functions (pure, no p5 dependency)
+    const getCoefficient = (i: number, type: WaveformType): { n: number; amplitude: number } => {
+      switch (type) {
+        case 'square': {
+          const n = i * 2 + 1;
+          return { n, amplitude: 4 / (n * Math.PI) };
+        }
+        case 'triangle': {
+          const n = i * 2 + 1;
+          const sign = (i % 2 === 0) ? 1 : -1;
+          return { n, amplitude: sign * 8 / (n * n * Math.PI * Math.PI) };
+        }
+        case 'sawtooth': {
+          const n = i + 1;
+          const sign = (i % 2 === 0) ? 1 : -1;
+          return { n, amplitude: sign * 2 / (n * Math.PI) };
+        }
+        default: {
+          const n = i * 2 + 1;
+          return { n, amplitude: 4 / (n * Math.PI) };
+        }
+      }
+    };
+
+    const drawGradientGrid = (width: number, height: number) => {
+      const gridSize = 60;
+      for (let x = gridSize; x < width; x += gridSize) {
+        const dist = Math.abs(x - width / 2) / (width / 2);
+        const alpha = Math.max(0, 0.25 * (1 - dist));
+        if (alpha > 0.01) {
+          ctx.strokeStyle = `rgba(255, 255, 255, ${alpha})`;
+          ctx.lineWidth = 1;
+          ctx.beginPath();
+          ctx.moveTo(x, 0);
+          ctx.lineTo(x, height);
+          ctx.stroke();
+        }
+      }
+
+      for (let y = gridSize; y < height; y += gridSize) {
+        const dist = Math.abs(y - height / 2) / (height / 2);
+        const alpha = Math.max(0, 0.25 * (1 - dist));
+        if (alpha > 0.01) {
+          ctx.strokeStyle = `rgba(255, 255, 255, ${alpha})`;
+          ctx.lineWidth = 1;
+          ctx.beginPath();
+          ctx.moveTo(0, y);
+          ctx.lineTo(width, y);
+          ctx.stroke();
+        }
+      }
+    };
+
+    const drawAmbientGlow = (cx: number, cy: number) => {
+      const gradient = ctx.createRadialGradient(cx, cy, 0, cx, cy, 350);
+      gradient.addColorStop(0, "rgba(94, 106, 210, 0.12)");
+      gradient.addColorStop(1, "rgba(0, 0, 0, 0)");
+      ctx.fillStyle = gradient;
+      ctx.beginPath();
+      ctx.arc(cx, cy, 700, 0, Math.PI * 2);
+      ctx.fill();
+    };
+
+    const drawConnectorLines = (
+      cx: number,
+      cy: number,
+      wx: number,
+      wy: number,
+      width: number,
+      height: number,
+      isMobile: boolean
+    ) => {
+      if (isMobile) {
+        const grad = ctx.createLinearGradient(0, wy, width, wy);
+        grad.addColorStop(0, "rgba(255, 255, 255, 0)");
+        grad.addColorStop(0.5, "rgba(255, 255, 255, 0.1)");
+        grad.addColorStop(1, "rgba(255, 255, 255, 0)");
+        ctx.strokeStyle = grad;
+        ctx.lineWidth = 1;
+        ctx.setLineDash([4, 4]);
+        ctx.beginPath();
+        ctx.moveTo(0, wy);
+        ctx.lineTo(width, wy);
+        ctx.stroke();
+        ctx.setLineDash([]);
+      } else {
+        const grad = ctx.createLinearGradient(0, 0, 0, height);
+        grad.addColorStop(0, "rgba(255, 255, 255, 0)");
+        grad.addColorStop(0.5, "rgba(255, 255, 255, 0.08)");
+        grad.addColorStop(1, "rgba(255, 255, 255, 0)");
+        ctx.strokeStyle = grad;
+        ctx.lineWidth = 1;
+        ctx.setLineDash([4, 4]);
+        ctx.beginPath();
+        ctx.moveTo(wx, 0);
+        ctx.lineTo(wx, height);
+        ctx.stroke();
+        ctx.setLineDash([]);
+      }
+    };
+
+    const render = () => {
+      // Update physics state (no React re-render)
+      timeRef.current += 0.02;
+
+      // Handle canvas resize
+      const width = container.clientWidth;
+      const height = container.clientHeight;
+      const dpr = window.devicePixelRatio || 1;
+
+      if (width !== lastWidthRef.current || height !== lastHeightRef.current) {
+        canvas.width = width * dpr;
+        canvas.height = height * dpr;
+        ctx.scale(dpr, dpr);
+        canvas.style.width = `${width}px`;
+        canvas.style.height = `${height}px`;
+        lastWidthRef.current = width;
+        lastHeightRef.current = height;
         
-        // Canvas 准备好后隐藏加载动画
-        setTimeout(() => setIsLoading(false), 500);
+        // Hide loading after first render
+        if (isLoading) {
+          setTimeout(() => setIsLoading(false), 500);
+        }
+      }
+
+      // Clear canvas
+      ctx.clearRect(0, 0, width, height);
+
+      // Get current params from ref
+      const { nVal: currentN, waveformType: currentWaveform } = paramsRef.current;
+
+      const isMobile = width <= 768;
+      const layout = {
+        centerX: isMobile ? width / 2 : width * 0.25,
+        centerY: isMobile ? height * 0.28 : height / 2,
+        waveStartX: isMobile ? width * 0.08 : width * 0.55,
+        waveBaselineY: isMobile ? height * 0.72 : height / 2,
+        baseRadius: Math.min(width, height) * (isMobile ? 0.1 : 0.12),
+        isMobile,
       };
 
-      p.touchStarted = () => true;
-      p.touchMoved = () => true;
-      p.touchEnded = () => true;
+      drawGradientGrid(width, height);
 
-      p.windowResized = () => {
-        if (containerRef.current) {
-          p.resizeCanvas(
-            containerRef.current.clientWidth,
-            containerRef.current.clientHeight
-          );
+      const { centerX, centerY, waveStartX, waveBaselineY, baseRadius } = layout;
+
+      drawAmbientGlow(centerX, centerY);
+      drawConnectorLines(centerX, centerY, waveStartX, waveBaselineY, width, height, layout.isMobile);
+
+      // Waveform Horizontal Axis
+      const axisGrad = ctx.createLinearGradient(waveStartX, waveBaselineY, width, waveBaselineY);
+      axisGrad.addColorStop(0, "rgba(255, 255, 255, 0.2)");
+      axisGrad.addColorStop(1, "rgba(255, 255, 255, 0)");
+      ctx.strokeStyle = axisGrad;
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.moveTo(waveStartX, waveBaselineY);
+      ctx.lineTo(width, waveBaselineY);
+      ctx.stroke();
+
+      let x = centerX;
+      let y = centerY;
+      const time = timeRef.current;
+
+      // Draw Fourier circles
+      for (let i = 0; i < currentN; i++) {
+        const prevx = x;
+        const prevy = y;
+
+        const { n, amplitude } = getCoefficient(i, currentWaveform);
+        const radius = baseRadius * Math.abs(amplitude);
+
+        x += radius * Math.cos(n * time) * Math.sign(amplitude);
+        y += radius * Math.sin(n * time) * Math.sign(amplitude);
+
+        if (radius > 1) {
+          const gradient = ctx.createRadialGradient(prevx, prevy, 0, prevx, prevy, radius);
+          gradient.addColorStop(0.7, "rgba(94, 106, 210, 0)");
+          gradient.addColorStop(0.9, "rgba(71, 156, 255, 0.15)");
+          gradient.addColorStop(1, "rgba(255, 255, 255, 0.4)");
+
+          ctx.fillStyle = gradient;
+          ctx.beginPath();
+          ctx.arc(prevx, prevy, radius * 2, 0, Math.PI * 2);
+          ctx.fill();
+
+          ctx.shadowBlur = 12;
+          ctx.shadowColor = "rgba(255, 255, 255, 0.7)";
+          ctx.strokeStyle = "rgba(255, 255, 255, 0.9)";
+          ctx.lineWidth = 1.5;
+          ctx.beginPath();
+          ctx.arc(prevx, prevy, radius * 2, 0, Math.PI * 2);
+          ctx.stroke();
+          ctx.shadowBlur = 0;
+
+          ctx.strokeStyle = "rgba(255, 255, 255, 0.6)";
+          ctx.lineWidth = 1.5;
+          ctx.beginPath();
+          ctx.moveTo(prevx, prevy);
+          ctx.lineTo(x, y);
+          ctx.stroke();
+
+          ctx.shadowBlur = 8;
+          ctx.shadowColor = "rgba(255, 255, 255, 0.7)";
+          ctx.fillStyle = "rgba(255, 255, 255, 1)";
+          ctx.beginPath();
+          ctx.arc(prevx, prevy, 4, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.shadowBlur = 0;
         }
-      };
+      }
 
-      p.draw = () => {
-        // 从 ref 读取当前参数
-        const { nVal: currentN, waveformType: currentWaveform } = paramsRef.current;
-        
-        p.clear();
-        const ctx = p.drawingContext as CanvasRenderingContext2D;
+      // Final point
+      ctx.shadowBlur = 12;
+      ctx.shadowColor = COLORS.primary;
+      ctx.fillStyle = COLORS.primary;
+      ctx.beginPath();
+      ctx.arc(x, y, 6, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.shadowBlur = 0;
 
-        const isMobile = p.width <= 768;
-        const layout = {
-          centerX: isMobile ? p.width / 2 : p.width * 0.25,
-          centerY: isMobile ? p.height * 0.28 : p.height / 2,
-          waveStartX: isMobile ? p.width * 0.08 : p.width * 0.55,
-          waveBaselineY: isMobile ? p.height * 0.72 : p.height / 2,
-          baseRadius: Math.min(p.width, p.height) * (isMobile ? 0.1 : 0.12),
-          isMobile,
-        };
+      // Wave trace
+      const relativeY = y - centerY;
+      const wavePointY = waveBaselineY + relativeY;
+      waveRef.current.unshift(wavePointY);
+      if (waveRef.current.length > maxWavePoints) {
+        waveRef.current.pop();
+      }
 
-        drawGradientGrid(p);
-
-        const { centerX, centerY, waveStartX, waveBaselineY, baseRadius } = layout;
-
-        drawAmbientGlow(p, centerX, centerY);
-        drawConnectorLines(p, centerX, centerY, waveStartX, waveBaselineY, layout.isMobile);
-
-        // Waveform Horizontal Axis
-        const axisGrad = ctx.createLinearGradient(waveStartX, waveBaselineY, p.width, waveBaselineY);
-        axisGrad.addColorStop(0, "rgba(255, 255, 255, 0.2)");
-        axisGrad.addColorStop(1, "rgba(255, 255, 255, 0)");
-        ctx.strokeStyle = axisGrad;
-        p.strokeWeight(1);
-        p.line(waveStartX, waveBaselineY, p.width, waveBaselineY);
-
-        let x = centerX;
-        let y = centerY;
-
-        const getCoefficient = (i: number, type: WaveformType): { n: number; amplitude: number } => {
-          switch (type) {
-            case 'square': {
-              const n = i * 2 + 1;
-              return { n, amplitude: 4 / (n * p.PI) };
-            }
-            case 'triangle': {
-              const n = i * 2 + 1;
-              const sign = (i % 2 === 0) ? 1 : -1;
-              return { n, amplitude: sign * 8 / (n * n * p.PI * p.PI) };
-            }
-            case 'sawtooth': {
-              const n = i + 1;
-              const sign = (i % 2 === 0) ? 1 : -1;
-              return { n, amplitude: sign * 2 / (n * p.PI) };
-            }
-            default: {
-              const n = i * 2 + 1;
-              return { n, amplitude: 4 / (n * p.PI) };
-            }
-          }
-        };
-
-        for (let i = 0; i < currentN; i++) {
-          const prevx = x;
-          const prevy = y;
-
-          const { n, amplitude } = getCoefficient(i, currentWaveform);
-          const radius = baseRadius * Math.abs(amplitude);
-
-          x += radius * p.cos(n * time) * Math.sign(amplitude);
-          y += radius * p.sin(n * time) * Math.sign(amplitude);
-
-          if (radius > 1) {
-            const gradient = ctx.createRadialGradient(prevx, prevy, 0, prevx, prevy, radius);
-            gradient.addColorStop(0.7, "rgba(94, 106, 210, 0)");
-            gradient.addColorStop(0.9, "rgba(71, 156, 255, 0.15)");
-            gradient.addColorStop(1, "rgba(255, 255, 255, 0.4)");
-
-            ctx.fillStyle = gradient;
-            p.noStroke();
-            p.circle(prevx, prevy, radius * 2);
-
-            ctx.shadowBlur = 12;
-            ctx.shadowColor = "rgba(255, 255, 255, 0.7)";
-            p.stroke("rgba(255, 255, 255, 0.9)");
-            p.strokeWeight(1.5);
-            p.noFill();
-            p.circle(prevx, prevy, radius * 2);
-            ctx.shadowBlur = 0;
-
-            p.stroke(255, 255, 255, 150);
-            p.strokeWeight(1.5);
-            p.line(prevx, prevy, x, y);
-
-            ctx.shadowBlur = 8;
-            ctx.shadowColor = "rgba(255, 255, 255, 0.7)";
-            p.noStroke();
-            p.fill(255);
-            p.circle(prevx, prevy, 4);
-            ctx.shadowBlur = 0;
-          }
-        }
-
-        ctx.shadowBlur = 12;
-        ctx.shadowColor = COLORS.primary;
-        p.fill(COLORS.primary);
-        p.noStroke();
-        p.circle(x, y, 6);
-        ctx.shadowBlur = 0;
-
-        const relativeY = y - centerY;
-        const wavePointY = waveBaselineY + relativeY;
-        wave.unshift(wavePointY);
-        if (wave.length > maxWavePoints) {
-          wave.pop();
-        }
-
-        const connGrad = ctx.createLinearGradient(x, y, waveStartX, wave[0]);
+      // Connection line
+      if (waveRef.current.length > 0) {
+        const connGrad = ctx.createLinearGradient(x, y, waveStartX, waveRef.current[0]);
         connGrad.addColorStop(0, "rgba(255,255,255,0.4)");
         connGrad.addColorStop(1, "rgba(255,255,255,0.1)");
         ctx.strokeStyle = connGrad;
-        p.strokeWeight(1);
+        ctx.lineWidth = 1;
         ctx.setLineDash([4, 4]);
-        p.line(x, y, waveStartX, wave[0]);
+        ctx.beginPath();
+        ctx.moveTo(x, y);
+        ctx.lineTo(waveStartX, waveRef.current[0]);
+        ctx.stroke();
         ctx.setLineDash([]);
+      }
 
-        p.noFill();
-        ctx.shadowBlur = 16;
-        ctx.shadowColor = COLORS.primary;
-        p.stroke(COLORS.primary);
-        p.strokeWeight(3);
-        p.beginShape();
-        for (let i = 0; i < wave.length; i++) {
-          const wx = i + waveStartX;
-          if (wx < p.width) p.vertex(wx, wave[i]);
+      // Draw wave trace (glow)
+      ctx.shadowBlur = 16;
+      ctx.shadowColor = COLORS.primary;
+      ctx.strokeStyle = COLORS.primary;
+      ctx.lineWidth = 3;
+      ctx.beginPath();
+      for (let i = 0; i < waveRef.current.length; i++) {
+        const wx = i + waveStartX;
+        if (wx < width) {
+          if (i === 0) {
+            ctx.moveTo(wx, waveRef.current[i]);
+          } else {
+            ctx.lineTo(wx, waveRef.current[i]);
+          }
         }
-        p.endShape();
+      }
+      ctx.stroke();
+      ctx.shadowBlur = 0;
 
-        ctx.shadowBlur = 0;
-        p.stroke(255, 255, 255, 220);
-        p.strokeWeight(1);
-        p.beginShape();
-        for (let i = 0; i < wave.length; i++) {
-          const wx = i + waveStartX;
-          if (wx < p.width) p.vertex(wx, wave[i]);
+      // Draw wave trace (core)
+      ctx.strokeStyle = "rgba(255, 255, 255, 0.86)";
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      for (let i = 0; i < waveRef.current.length; i++) {
+        const wx = i + waveStartX;
+        if (wx < width) {
+          if (i === 0) {
+            ctx.moveTo(wx, waveRef.current[i]);
+          } else {
+            ctx.lineTo(wx, waveRef.current[i]);
+          }
         }
-        p.endShape();
+      }
+      ctx.stroke();
 
-        time += 0.02;
-      };
+      // Continue animation loop
+      frameIdRef.current = requestAnimationFrame(render);
     };
 
-    // 只在挂载时创建一次
-    if (!p5Instance.current) {
-      p5Instance.current = new p5(sketch);
-    }
+    // Start render loop
+    render();
+
+    // Handle window resize
+    const handleResize = () => {
+      // Render loop will handle resize on next frame
+    };
+    window.addEventListener('resize', handleResize);
 
     return () => {
-      if (p5Instance.current) {
-        p5Instance.current.remove();
-        p5Instance.current = null;
+      if (frameIdRef.current) {
+        cancelAnimationFrame(frameIdRef.current);
       }
+      window.removeEventListener('resize', handleResize);
     };
-  }, []); // 空依赖数组 - 只运行一次
+  }, [isLoading]); // Only re-run if loading state changes
 
   return (
     <div className="relative w-full h-full">
@@ -271,7 +388,17 @@ export const FourierCanvas: React.FC<FourierCanvasProps> = ({
         className={`w-full h-full absolute top-0 left-0 z-0 pointer-events-none transition-opacity duration-500 ${
           isLoading ? 'opacity-0' : 'opacity-100'
         }`}
-      />
+      >
+        <canvas
+          ref={canvasRef}
+          style={{
+            width: '100%',
+            height: '100%',
+            touchAction: 'pan-y pinch-zoom',
+            pointerEvents: 'none',
+          }}
+        />
+      </div>
 
       {/* Minimal Labels */}
       <div className="absolute inset-0 z-10 pointer-events-none">
@@ -309,84 +436,4 @@ export const FourierCanvas: React.FC<FourierCanvasProps> = ({
       </div>
     </div>
   );
-};
-
-// --- Helper Functions ---
-
-const drawGradientGrid = (p: p5) => {
-  const ctx = p.drawingContext as CanvasRenderingContext2D;
-  const gridSize = 60;
-  const w = p.width;
-  const h = p.height;
-
-  for (let x = gridSize; x < w; x += gridSize) {
-    const dist = Math.abs(x - w / 2) / (w / 2);
-    const alpha = Math.max(0, 0.25 * (1 - dist));
-    if (alpha > 0.01) {
-      ctx.strokeStyle = `rgba(255, 255, 255, ${alpha})`;
-      ctx.lineWidth = 1;
-      ctx.beginPath();
-      ctx.moveTo(x, 0);
-      ctx.lineTo(x, h);
-      ctx.stroke();
-    }
-  }
-
-  for (let y = gridSize; y < h; y += gridSize) {
-    const dist = Math.abs(y - h / 2) / (h / 2);
-    const alpha = Math.max(0, 0.25 * (1 - dist));
-    if (alpha > 0.01) {
-      ctx.strokeStyle = `rgba(255, 255, 255, ${alpha})`;
-      ctx.lineWidth = 1;
-      ctx.beginPath();
-      ctx.moveTo(0, y);
-      ctx.lineTo(w, y);
-      ctx.stroke();
-    }
-  }
-};
-
-const drawAmbientGlow = (p: p5, cx: number, cy: number) => {
-  const ctx = p.drawingContext as CanvasRenderingContext2D;
-  const gradient = ctx.createRadialGradient(cx, cy, 0, cx, cy, 350);
-  gradient.addColorStop(0, "rgba(94, 106, 210, 0.12)");
-  gradient.addColorStop(1, "rgba(0, 0, 0, 0)");
-  ctx.fillStyle = gradient;
-  p.noStroke();
-  p.circle(cx, cy, 700);
-};
-
-const drawConnectorLines = (
-  p: p5,
-  _cx: number,
-  _cy: number,
-  wx: number,
-  wy: number,
-  isMobile: boolean
-) => {
-  const ctx = p.drawingContext as CanvasRenderingContext2D;
-  const w = p.width;
-  const h = p.height;
-
-  if (isMobile) {
-    const grad = ctx.createLinearGradient(0, wy, w, wy);
-    grad.addColorStop(0, "rgba(255, 255, 255, 0)");
-    grad.addColorStop(0.5, "rgba(255, 255, 255, 0.1)");
-    grad.addColorStop(1, "rgba(255, 255, 255, 0)");
-    ctx.strokeStyle = grad;
-    p.strokeWeight(1);
-    ctx.setLineDash([4, 4]);
-    p.line(0, wy, w, wy);
-    ctx.setLineDash([]);
-  } else {
-    const grad = ctx.createLinearGradient(0, 0, 0, h);
-    grad.addColorStop(0, "rgba(255, 255, 255, 0)");
-    grad.addColorStop(0.5, "rgba(255, 255, 255, 0.08)");
-    grad.addColorStop(1, "rgba(255, 255, 255, 0)");
-    ctx.strokeStyle = grad;
-    p.strokeWeight(1);
-    ctx.setLineDash([4, 4]);
-    p.line(wx, 0, wx, h);
-    ctx.setLineDash([]);
-  }
 };

@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef } from 'react';
 import { THEME } from '../theme';
 
 interface TransmissionLineSimProps {
@@ -21,109 +21,126 @@ export const TransmissionLineSim: React.FC<TransmissionLineSimProps> = ({
   className = '',
 }) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  const [time, setTime] = useState(0);
+  // RAUNO-TIER: Use Ref for physics state, not React State
+  // This prevents React re-renders on every frame
+  const timeRef = useRef(0);
+  const frameIdRef = useRef<number>(0);
+  const lastWidthRef = useRef(0);
 
+  // RAUNO-TIER: Independent render loop, completely outside React's render cycle
   useEffect(() => {
     if (reducedMotion) return;
 
-    let animId: number;
-    const animate = () => {
-      setTime(t => t + 0.02);
-      animId = requestAnimationFrame(animate);
-    };
-    animId = requestAnimationFrame(animate);
-    return () => cancelAnimationFrame(animId);
-  }, [reducedMotion]);
-
-  useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
 
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
 
-    const rect = canvas.getBoundingClientRect();
-    const dpr = window.devicePixelRatio || 1;
-    const width = rect.width;
-    canvas.width = width * dpr;
-    canvas.height = height * dpr;
-    ctx.scale(dpr, dpr);
-    canvas.style.width = `${width}px`;
-    canvas.style.height = `${height}px`;
+    const render = () => {
+      // Update physics state (no React re-render)
+      timeRef.current += 0.02;
 
-    ctx.clearRect(0, 0, width, height);
+      // Handle canvas resize
+      const rect = canvas.getBoundingClientRect();
+      const dpr = window.devicePixelRatio || 1;
+      const width = rect.width;
 
-    // Draw transmission line
-    const lineY = height / 2;
-    const startX = 50;
-    const endX = width - 50;
-
-    // Line
-    ctx.strokeStyle = 'rgba(255, 199, 0, 0.3)';
-    ctx.lineWidth = 2;
-    ctx.beginPath();
-    ctx.moveTo(startX, lineY);
-    ctx.lineTo(endX, lineY);
-    ctx.stroke();
-
-    // Wave
-    ctx.strokeStyle = THEME.colors.primary;
-    ctx.lineWidth = 2;
-    ctx.beginPath();
-    for (let x = startX; x <= endX; x++) {
-      const phase = (x - startX) / 30 - time * 2;
-      const y = lineY + Math.sin(phase) * 20;
-      if (x === startX) {
-        ctx.moveTo(x, y);
-      } else {
-        ctx.lineTo(x, y);
+      if (width !== lastWidthRef.current || canvas.width !== width * dpr || canvas.height !== height * dpr) {
+        canvas.width = width * dpr;
+        canvas.height = height * dpr;
+        ctx.scale(dpr, dpr);
+        canvas.style.width = `${width}px`;
+        canvas.style.height = `${height}px`;
+        lastWidthRef.current = width;
       }
-    }
-    ctx.stroke();
 
-    // Calculate endpoint positions
-    const startPhase = -time * 2;
-    const endPhase = (endX - startX) / 30 - time * 2;
-    const startY = lineY + Math.sin(startPhase) * 20;
-    const endY = lineY + Math.sin(endPhase) * 20;
+      ctx.clearRect(0, 0, width, height);
 
-    // Source (follows wave)
-    // Vertical connector
-    ctx.strokeStyle = THEME.colors.primary;
-    ctx.lineWidth = 2;
-    ctx.beginPath();
-    ctx.moveTo(startX, lineY);
-    ctx.lineTo(startX, startY);
-    ctx.stroke();
-    
-    // Dot
-    ctx.fillStyle = THEME.colors.primary;
-    ctx.beginPath();
-    ctx.arc(startX, startY, 8, 0, Math.PI * 2);
-    ctx.fill();
+      // Draw transmission line
+      const lineY = height / 2;
+      const startX = 50;
+      const endX = width - 50;
+      const time = timeRef.current;
 
-    // Load (follows wave)
-    // Vertical connector
-    ctx.strokeStyle = '#64B4FF';
-    ctx.beginPath();
-    ctx.moveTo(endX, lineY);
-    ctx.lineTo(endX, endY);
-    ctx.stroke();
+      // Line
+      ctx.strokeStyle = 'rgba(255, 199, 0, 0.3)';
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(startX, lineY);
+      ctx.lineTo(endX, lineY);
+      ctx.stroke();
 
-    // Dot
-    ctx.fillStyle = '#64B4FF';
-    ctx.beginPath();
-    ctx.arc(endX, endY, 8, 0, Math.PI * 2);
-    ctx.fill();
+      // Wave
+      ctx.strokeStyle = THEME.colors.primary;
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      for (let x = startX; x <= endX; x++) {
+        const phase = (x - startX) / 30 - time * 2;
+        const y = lineY + Math.sin(phase) * 20;
+        if (x === startX) {
+          ctx.moveTo(x, y);
+        } else {
+          ctx.lineTo(x, y);
+        }
+      }
+      ctx.stroke();
 
-    // Labels
-    ctx.fillStyle = 'rgba(255, 255, 255, 0.5)';
-    ctx.font = '10px "Space Grotesk"';
-    ctx.textAlign = 'center';
-    ctx.fillText(lang === 'zh' ? '源' : 'Source', startX, lineY + 30);
-    ctx.fillText(lang === 'zh' ? '负载' : 'Load', endX, lineY + 30);
+      // Calculate endpoint positions
+      const startPhase = -time * 2;
+      const endPhase = (endX - startX) / 30 - time * 2;
+      const startY = lineY + Math.sin(startPhase) * 20;
+      const endY = lineY + Math.sin(endPhase) * 20;
 
-  }, [time, height, lang]);
+      // Source (follows wave)
+      // Vertical connector
+      ctx.strokeStyle = THEME.colors.primary;
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(startX, lineY);
+      ctx.lineTo(startX, startY);
+      ctx.stroke();
+      
+      // Dot
+      ctx.fillStyle = THEME.colors.primary;
+      ctx.beginPath();
+      ctx.arc(startX, startY, 8, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Load (follows wave)
+      // Vertical connector
+      ctx.strokeStyle = '#64B4FF';
+      ctx.beginPath();
+      ctx.moveTo(endX, lineY);
+      ctx.lineTo(endX, endY);
+      ctx.stroke();
+
+      // Dot
+      ctx.fillStyle = '#64B4FF';
+      ctx.beginPath();
+      ctx.arc(endX, endY, 8, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Labels
+      ctx.fillStyle = 'rgba(255, 255, 255, 0.5)';
+      ctx.font = '10px "Space Grotesk"';
+      ctx.textAlign = 'center';
+      ctx.fillText(lang === 'zh' ? '源' : 'Source', startX, lineY + 30);
+      ctx.fillText(lang === 'zh' ? '负载' : 'Load', endX, lineY + 30);
+
+      // Continue animation loop
+      frameIdRef.current = requestAnimationFrame(render);
+    };
+
+    // Start render loop
+    render();
+
+    return () => {
+      if (frameIdRef.current) {
+        cancelAnimationFrame(frameIdRef.current);
+      }
+    };
+  }, [reducedMotion, height, lang]); // Empty deps - component only mounts once
 
   return (
     <div className={className}>

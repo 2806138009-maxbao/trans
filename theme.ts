@@ -108,12 +108,17 @@ export const THEME = {
   },
   
   // ========================================
-  // TYPOGRAPHY
+  // TYPOGRAPHY - L3 Type Contrast System
   // ========================================
   fonts: {
-    tech: "'Space Grotesk', -apple-system, sans-serif",
-    body: "'Noto Sans SC', -apple-system, sans-serif",
-    mono: "'Space Grotesk', 'SF Mono', monospace",
+    /** Display / Headings - Space Grotesk (Unique, Tech-forward) */
+    display: "'Space Grotesk', -apple-system, BlinkMacSystemFont, sans-serif",
+    
+    /** Body / UI Labels - System fonts (Invisible, Legible) */
+    body: "-apple-system, BlinkMacSystemFont, 'Inter', 'Segoe UI', 'Roboto', 'Noto Sans SC', sans-serif",
+    
+    /** Code / Mono - JetBrains Mono (Professional) */
+    mono: "'JetBrains Mono', 'Fira Code', 'SF Mono', 'Consolas', monospace",
   },
   
   // ========================================

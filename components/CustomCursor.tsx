@@ -20,6 +20,8 @@ export const CustomCursor: React.FC = () => {
   const [isHovering, setIsHovering] = useState(false);
   const [isClicking, setIsClicking] = useState(false);
   const [cursorData, setCursorData] = useState<CursorData>({});
+  const [isNearSmithPoint, setIsNearSmithPoint] = useState(false);
+  const [isDragging, setIsDragging] = useState(false);
   
   const mousePos = useRef({ x: -100, y: -100 });
   const smoothPos = useRef({ x: -100, y: -100 });
@@ -39,12 +41,21 @@ export const CustomCursor: React.FC = () => {
       if (canvas?.classList.contains('smith-canvas')) {
         const r = canvas.dataset.cursorR;
         const x = canvas.dataset.cursorX;
+        const isNear = canvas.dataset.cursorNear === 'true';
         if (r && x) {
           setCursorData({ r: parseFloat(r), x: parseFloat(x), isOnChart: true });
+          setIsNearSmithPoint(isNear || false);
+        } else {
+          setIsNearSmithPoint(false);
         }
       } else {
         setCursorData(prev => prev.isOnChart ? { isOnChart: false } : prev);
+        setIsNearSmithPoint(false);
       }
+      
+      // Check if dragging (canvas has data attribute)
+      const isDraggingState = canvas?.dataset.cursorDragging === 'true';
+      setIsDragging(isDraggingState || false);
     };
 
     const onMouseDown = () => setIsClicking(true);
@@ -144,25 +155,61 @@ export const CustomCursor: React.FC = () => {
           pointer-events: none;
         }
         
+        /* L3: Physics-Aware Cursor - 4 States */
         .cursor-center-dot {
           position: fixed;
           left: var(--cursor-x);
           top: var(--cursor-y);
           width: 6px;
           height: 6px;
-          background: #FFD700;
+          background: transparent;
+          border: 1.5px solid rgba(255, 215, 0, 0.6);
           border-radius: 50%;
           transform: translate(-50%, -50%);
-          box-shadow: 0 0 6px rgba(255, 215, 0, 0.4);
-          transition: transform 0.1s ease-out, box-shadow 0.1s ease-out;
-          will-change: transform;
+          transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1), 
+                      width 0.2s cubic-bezier(0.16, 1, 0.3, 1),
+                      height 0.2s cubic-bezier(0.16, 1, 0.3, 1),
+                      border-color 0.2s cubic-bezier(0.16, 1, 0.3, 1),
+                      opacity 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+          will-change: transform, width, height, border-color, opacity;
+          pointer-events: none;
         }
         
-        .cursor-center-dot.hovering {
-          transform: translate(-50%, -50%) scale(1.4);
-          box-shadow: 0 0 12px rgba(255, 215, 0, 0.6);
+        /* State 1: Idle - Small, hollow circle (Precision) */
+        .cursor-center-dot:not(.hovering):not(.near-smith):not(.dragging) {
+          width: 6px;
+          height: 6px;
+          border-color: rgba(255, 215, 0, 0.4);
+          opacity: 0.8;
         }
         
+        /* State 2: Hover - Slightly larger, lower opacity (Affordance) */
+        .cursor-center-dot.hovering:not(.near-smith):not(.dragging) {
+          width: 10px;
+          height: 10px;
+          border-color: rgba(255, 215, 0, 0.5);
+          opacity: 0.6;
+          transform: translate(-50%, -50%) scale(1.2);
+        }
+        
+        /* State 3: Magnetic - Crosshair when near snap point */
+        .cursor-center-dot.near-smith:not(.dragging) {
+          width: 20px;
+          height: 20px;
+          background: transparent;
+          border: 2px solid rgba(255, 215, 0, 0.9);
+          border-radius: 0;
+          transform: translate(-50%, -50%) rotate(45deg);
+          opacity: 1;
+          box-shadow: 0 0 12px rgba(255, 215, 0, 0.4);
+        }
+        
+        /* State 4: Dragging - Hide cursor (Direct Manipulation) */
+        .cursor-center-dot.dragging {
+          display: none;
+        }
+        
+        /* Click feedback */
         .cursor-center-dot.clicking {
           transform: translate(-50%, -50%) scale(0.85);
         }
@@ -177,6 +224,8 @@ export const CustomCursor: React.FC = () => {
         className={`custom-cursor-element cursor-center-dot pointer-events-none z-[9999]
           ${isHovering ? 'hovering' : ''}
           ${isClicking ? 'clicking' : ''}
+          ${isNearSmithPoint ? 'near-smith' : ''}
+          ${isDragging ? 'dragging' : ''}
         `}
       />
       

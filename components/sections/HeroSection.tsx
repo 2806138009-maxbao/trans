@@ -95,12 +95,7 @@ export const HeroSection: React.FC<HeroSectionProps> = ({
               className="text-6xl md:text-8xl lg:text-9xl font-extrabold tracking-tighter text-white leading-none select-text relative z-10"
               style={{ 
                 letterSpacing: '-0.04em',
-                // Layered shadow: Tight dark shadow for edge definition + Wide soft shadow for atmosphere
-                textShadow: `
-                  0 0 10px rgba(0, 0, 0, 0.9),
-                  0 0 30px rgba(0, 0, 0, 0.7),
-                  0 0 60px rgba(0, 0, 0, 0.5)
-                `,
+                // L3 Blackout Protocol: Removed text-shadow - let contrast do the work
               }}
             >
               <HackerText 
@@ -115,10 +110,7 @@ export const HeroSection: React.FC<HeroSectionProps> = ({
               className="text-xl md:text-3xl font-light tracking-[0.2em] mt-4 md:mt-6 select-text relative z-10"
               style={{ 
                 color: 'rgba(255, 215, 0, 0.8)',
-                textShadow: `
-                  0 0 8px rgba(0, 0, 0, 0.8),
-                  0 0 20px rgba(0, 0, 0, 0.6)
-                `,
+                // L3 Blackout Protocol: Removed text-shadow
               }}
             >
               {t.heroTitleSecondary || "RF IMPEDANCE LAB"}
@@ -189,7 +181,7 @@ export const HeroSection: React.FC<HeroSectionProps> = ({
                   className="w-1.5 h-1.5 rounded-full transition-all duration-500 group-hover:scale-150"
                   style={{ 
                     backgroundColor: '#FFD700',
-                    boxShadow: '0 0 10px rgba(255, 215, 0, 0.6)',
+                    // L3 Blackout Protocol: Removed box-shadow from static badge
                   }}
                 />
                 <span className="group-hover:text-[#FFD700] transition-colors duration-500">
@@ -226,7 +218,7 @@ export const HeroSection: React.FC<HeroSectionProps> = ({
                   className="w-1.5 h-1.5 rounded-full transition-all duration-500 group-hover:scale-150"
                   style={{ 
                     backgroundColor: 'rgba(255, 255, 255, 0.4)',
-                    boxShadow: '0 0 6px rgba(255, 255, 255, 0.3)',
+                    // L3 Blackout Protocol: Removed box-shadow from static dot
                   }}
                 />
                 <span className="group-hover:text-white/80 transition-colors duration-500">

@@ -30,7 +30,7 @@
     
     <!-- Load fonts with display=block to prevent FOUT during splash -->
     <link
-      href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@300;400;500;700&family=Space+Grotesk:wght@300;400;500;600;700&family=Space+Mono:wght@400;700&display=swap"
+      href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@300;400;500;700&family=Space+Grotesk:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap"
       rel="stylesheet"
     />
     
@@ -39,6 +39,24 @@
       :root {
         --apple-blue: #0a84ff;
         --luminous-bg: #050505;  /* Luminous OS Deep Dark */
+        
+        /* L3 Typography System */
+        --font-display: 'Space Grotesk', -apple-system, BlinkMacSystemFont, sans-serif;
+        --font-body: -apple-system, BlinkMacSystemFont, 'Inter', 'Segoe UI', 'Roboto', 'Noto Sans SC', sans-serif;
+        --font-mono: 'JetBrains Mono', 'Fira Code', 'SF Mono', 'Consolas', monospace;
+      }
+      
+      /* L3 Typography Classes */
+      .font-display {
+        font-family: var(--font-display);
+      }
+      
+      .font-body {
+        font-family: var(--font-body);
+      }
+      
+      .font-mono {
+        font-family: var(--font-mono);
       }
       html {
         height: 100%;
@@ -52,8 +70,8 @@
         padding: 0;
         min-height: 100%;
         background-color: #050505;  /* Luminous OS Deep Dark */
-        font-family: "Noto Sans SC", "Space Grotesk", -apple-system, BlinkMacSystemFont, "Inter", "Segoe UI",
-          Roboto, Helvetica, Arial, sans-serif;
+        font-family: -apple-system, BlinkMacSystemFont, "Inter", "Segoe UI",
+          Roboto, "Noto Sans SC", Helvetica, Arial, sans-serif;
         overflow-x: hidden;
         overflow-y: visible !important;
         -webkit-font-smoothing: antialiased;

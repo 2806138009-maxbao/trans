@@ -93,6 +93,14 @@ const App: React.FC = () => {
 
   useEffect(() => {
     document.body.style.overflow = 'hidden';
+    
+    // L3 Narrative: Hidden Easter Egg - The Love Letter in Code
+    console.log(
+      '%cLuminousZao System Online.\n%cDedicated to the one who grounds my signals.',
+      'color: #FFC700; font-size: 14px; font-weight: bold; font-family: "Space Grotesk", monospace;',
+      'color: rgba(255, 255, 255, 0.6); font-size: 11px; font-family: "Space Grotesk", monospace;'
+    );
+    
     return () => { document.body.style.overflow = 'auto'; };
   }, []);
 
@@ -113,24 +121,44 @@ const App: React.FC = () => {
   const Wrapper = reducedMotion ? React.Fragment : AnimateOnScroll;
 
   // ========================================
-  // STAGE 1: GENESIS INTRO (Conformal Mapping Animation)
+  // RAUNO-TIER: Stacked Scene Manager
+  // All scenes exist simultaneously, controlled by CSS transitions
+  // No hard cuts, no component unmounting
   // ========================================
-  if (showGenesisIntro) {
-    return (
-      <GenesisIntro 
-        lang={lang}
-        onComplete={handleGenesisIntroComplete}
-        reducedMotion={reducedMotion}
-      />
-    );
-  }
 
-  // ========================================
-  // STAGE 2: SMITH ODYSSEY (Interactive Guided Tour)
-  // ========================================
-  if (showOdyssey) {
-    return (
-      <div className="fixed inset-0 z-[10000]" style={{ backgroundColor: '#050505' }}>
+  return (
+    <>
+      {/* 
+        LAYER 1: GENESIS INTRO (Conformal Mapping Animation)
+        Fade in/out with opacity transition
+      */}
+      <div
+        className="fixed inset-0 z-[10000] transition-opacity duration-1000 ease-in-out"
+        style={{
+          opacity: showGenesisIntro ? 1 : 0,
+          pointerEvents: showGenesisIntro ? 'auto' : 'none',
+          backgroundColor: '#050505',
+        }}
+      >
+        <GenesisIntro 
+          lang={lang}
+          onComplete={handleGenesisIntroComplete}
+          reducedMotion={reducedMotion}
+        />
+      </div>
+
+      {/* 
+        LAYER 2: SMITH ODYSSEY (Interactive Guided Tour)
+        Slide in/out with transform transition
+      */}
+      <div
+        className="fixed inset-0 z-[9999] transition-transform duration-1000 ease-in-out"
+        style={{
+          transform: showOdyssey ? 'translateY(0)' : 'translateY(100%)',
+          pointerEvents: showOdyssey ? 'auto' : 'none',
+          backgroundColor: '#050505',
+        }}
+      >
         <SmithOdyssey 
           lang={lang}
           onComplete={handleOdysseyComplete}
@@ -161,14 +189,19 @@ const App: React.FC = () => {
           {lang === "en" ? "CN" : "EN"}
         </button>
       </div>
-    );
-  }
 
-  // ========================================
-  // STAGE 3: MAIN APPLICATION
-  // ========================================
-
-  return (
+      {/* 
+        LAYER 3: MAIN APPLICATION
+        Always rendered, visible when other layers are hidden
+      */}
+      <div
+        className="relative w-full min-h-screen text-white transition-opacity duration-1000 ease-in-out"
+        style={{
+          opacity: (!showGenesisIntro && !showOdyssey) ? 1 : 0,
+          pointerEvents: (!showGenesisIntro && !showOdyssey) ? 'auto' : 'none',
+          backgroundColor: THEME.colors.background,
+        }}
+      >
     <div 
       className="relative w-full min-h-screen text-white" 
       style={{ backgroundColor: THEME.colors.background }}
@@ -179,13 +212,7 @@ const App: React.FC = () => {
       <SectionNavigation lang={lang} reducedMotion={reducedMotion} onToggleMotion={toggleMotion} />
       {tier !== 'low' && <NoiseOverlay />}
 
-      {/* Vignette - Warm undertone */}
-      <div
-        className="fixed inset-0 pointer-events-none z-[3]"
-        style={{
-          background: `radial-gradient(ellipse at center, transparent 0%, ${THEME.colors.overlay.vignette} 100%)` 
-        }}
-      />
+      {/* L3 Blackout Protocol: Removed vignette - Deepen blacks instead of adding overlays */}
 
       {/* Top Right Controls */}
       <div className="fixed top-5 right-6 z-[60] flex items-center gap-2">
@@ -382,7 +409,9 @@ const App: React.FC = () => {
           {t.footerCopyright}
         </p>
       </footer>
+      </div>
     </div>
+    </>
   );
 };
 

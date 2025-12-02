@@ -1,6 +1,7 @@
-import React, { useEffect, useRef, useMemo, useCallback } from 'react';
+import React, { useEffect, useRef, useMemo, useCallback, useState } from 'react';
 import { THEME } from '../theme';
 import { audio } from '../utils/audioEngine';
+import { SmithChartSkeleton } from './SmithChartSkeleton';
 
 interface SmithChartCanvasProps {
   reducedMotion?: boolean;
@@ -351,8 +352,11 @@ function drawActivePoint(
   // ========================================
   // LAYER 1: Gamma Vector (Living Light)
   // Three-layer rendering: Bloom → Glow → Core
+  // Only show when dragging or hovering (not always visible)
   // ========================================
-  drawLivingLight(ctx, cx, cy, posX, posY, intensity * 0.8);
+  if (isDragging || isHovering || isSnapped) {
+    drawLivingLight(ctx, cx, cy, posX, posY, intensity * 0.8);
+  }
   
   // ========================================
   // LAYER 2: VSWR Circle (Pulsing if matched)
@@ -513,7 +517,14 @@ function drawLivingLight(
   x2: number, y2: number,
   intensity: number = 1.0
 ) {
-  // Layer 1: Bloom (wide, faint, scattered light)
+  // RAUNO-TIER: Additive Blending for Light
+  // Light is additive, not paint. Use 'lighter' mode for Bloom and Glow layers.
+  
+  // Save current composite operation
+  const originalComposite = ctx.globalCompositeOperation;
+  
+  // Layer 1: Bloom (wide, faint, scattered light) - ADDITIVE
+  ctx.globalCompositeOperation = 'lighter'; // Additive blending
   ctx.beginPath();
   ctx.moveTo(x1, y1);
   ctx.lineTo(x2, y2);
@@ -522,7 +533,7 @@ function drawLivingLight(
   ctx.lineCap = 'round';
   ctx.stroke();
 
-  // Layer 2: Glow (medium, visible aura)
+  // Layer 2: Glow (medium, visible aura) - ADDITIVE
   ctx.beginPath();
   ctx.moveTo(x1, y1);
   ctx.lineTo(x2, y2);
@@ -530,13 +541,18 @@ function drawLivingLight(
   ctx.lineWidth = 8;
   ctx.stroke();
 
-  // Layer 3: Hot Core (thin, bright white - true high temperature)
+  // Layer 3: Hot Core (thin, bright white - true high temperature) - SOLID
+  // Core must be solid, not additive
+  ctx.globalCompositeOperation = 'source-over'; // Restore normal blending for core
   ctx.beginPath();
   ctx.moveTo(x1, y1);
   ctx.lineTo(x2, y2);
   ctx.strokeStyle = `rgba(255, 255, 255, ${0.9 * intensity})`;
   ctx.lineWidth = 2;
   ctx.stroke();
+  
+  // Restore original composite operation
+  ctx.globalCompositeOperation = originalComposite;
 }
 
 // Chromatic aberration for text/edges
@@ -580,6 +596,12 @@ export const SmithChartCanvas: React.FC<SmithChartCanvasProps> = ({
 }) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const gridCacheRef = useRef<HTMLCanvasElement | null>(null);
+  
+  // L3 UX: Mobile Safety Lock - Prevent gesture conflicts
+  const [isMobile, setIsMobile] = useState(false);
+  const [isInteractionEnabled, setIsInteractionEnabled] = useState(false);
+  const [isCanvasReady, setIsCanvasReady] = useState(false);
+  const touchStartRef = useRef<{ x: number; y: number; time: number } | null>(null);
   
   // ========================================
   // ALL MUTABLE STATE IN REFS (NO useState for animation)
@@ -849,6 +871,47 @@ export const SmithChartCanvas: React.FC<SmithChartCanvasProps> = ({
         }
       }
 
+      // ========================================
+      // UPDATE CANVAS DATA ATTRIBUTES (for CustomCursor)
+      // ========================================
+      if (canvas && state.hasImpedance) {
+        canvas.dataset.cursorR = state.impedance.r.toFixed(2);
+        canvas.dataset.cursorX = state.impedance.x.toFixed(2);
+        canvas.dataset.cursorNear = state.isHovering ? 'true' : 'false';
+        canvas.dataset.cursorDragging = state.isDragging ? 'true' : 'false';
+      }
+      
+      // ========================================
+      // RAUNO-TIER: Interactive Ambient Light
+      // The cursor illuminates nearby grid lines
+      // ========================================
+      if (state.hasPosition && state.hasImpedance) {
+        const originalComposite = ctx.globalCompositeOperation;
+        
+        // Use 'overlay' mode to brighten the cached grid underneath
+        ctx.globalCompositeOperation = 'overlay';
+        
+        // Create radial gradient "flashlight" effect
+        const flashlightRadius = 200;
+        const flashlight = ctx.createRadialGradient(
+          state.currentX, state.currentY, 0,
+          state.currentX, state.currentY, flashlightRadius
+        );
+        
+        // Center: bright white (illuminates grid)
+        flashlight.addColorStop(0, 'rgba(255, 255, 255, 0.12)');
+        // Mid: warm gold tint
+        flashlight.addColorStop(0.4, 'rgba(255, 215, 0, 0.06)');
+        // Edge: fade to transparent
+        flashlight.addColorStop(1, 'rgba(0, 0, 0, 0)');
+        
+        ctx.fillStyle = flashlight;
+        ctx.fillRect(0, 0, w, h);
+        
+        // Restore composite operation
+        ctx.globalCompositeOperation = originalComposite;
+      }
+
       // Draw active point
       if (state.hasPosition) {
         // Calculate impedance from screen position (in-place update)
@@ -1080,26 +1143,135 @@ export const SmithChartCanvas: React.FC<SmithChartCanvasProps> = ({
     return 'cursor-crosshair';
   }, [allowDirectDrag, overrideImpedance]);
 
+  // L3 UX: Mobile detection and safety lock
+  useEffect(() => {
+    const checkMobile = () => {
+      const isTouchDevice = window.matchMedia('(pointer: coarse)').matches;
+      setIsMobile(isTouchDevice);
+      if (!isTouchDevice) {
+        setIsInteractionEnabled(true); // Desktop: always enabled
+      }
+    };
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
+
+  // Touch event handlers (mobile safety lock)
+  const handleTouchStart = useCallback((e: React.TouchEvent<HTMLCanvasElement>) => {
+    if (!isMobile || !allowDirectDrag || !isInteractionEnabled) {
+      // If interaction not enabled, allow scroll to pass through
+      return;
+    }
+    
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    
+    const touch = e.touches[0];
+    const rect = canvas.getBoundingClientRect();
+    const x = touch.clientX - rect.left;
+    const y = touch.clientY - rect.top;
+    
+    touchStartRef.current = { x, y, time: Date.now() };
+    
+    const state = animationState.current;
+    if (isNearActivePoint(x, y) || !state.hasPosition) {
+      e.preventDefault(); // Prevent scroll when dragging
+      state.isDragging = true;
+      callbacksRef.current.onDragChange?.(true);
+      
+      if (!state.hasPosition) {
+        state.targetX = x;
+        state.targetY = y;
+        state.currentX = x;
+        state.currentY = y;
+        state.hasPosition = true;
+        const newZ = screenToImpedance(x, y);
+        if (newZ) {
+          callbacksRef.current.onDirectDrag?.(newZ);
+        }
+      }
+    }
+  }, [isMobile, allowDirectDrag, isInteractionEnabled, isNearActivePoint, screenToImpedance]);
+
+  const handleTouchMove = useCallback((e: React.TouchEvent<HTMLCanvasElement>) => {
+    if (!isMobile || !allowDirectDrag || !isInteractionEnabled) return;
+    
+    const state = animationState.current;
+    if (!state.isDragging) return;
+    
+    e.preventDefault(); // Prevent scroll when dragging
+    
+    const touch = e.touches[0];
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    
+    const rect = canvas.getBoundingClientRect();
+    const x = touch.clientX - rect.left;
+    const y = touch.clientY - rect.top;
+    
+    state.targetX = x;
+    state.targetY = y;
+    const newZ = screenToImpedance(x, y);
+    if (newZ) {
+      callbacksRef.current.onDirectDrag?.(newZ);
+    }
+  }, [isMobile, allowDirectDrag, isInteractionEnabled, screenToImpedance]);
+
+  const handleTouchEnd = useCallback(() => {
+    const state = animationState.current;
+    if (state.isDragging) {
+      state.isDragging = false;
+      callbacksRef.current.onDragChange?.(false);
+    }
+    touchStartRef.current = null;
+  }, []);
+
   // Get HUD data from ref
   const hudData = hudStateRef.current;
 
   return (
     <div className="relative w-full h-[500px] md:h-[600px] rounded-3xl overflow-hidden">
-      {/* Simplified vignette */}
-      <div 
-        className="absolute inset-0 pointer-events-none z-10"
-        style={{
-          background: 'radial-gradient(circle at center, transparent 60%, rgba(0,0,0,0.4) 100%)',
-        }}
-      />
+      {/* L3 UX: Mobile Safety Lock - Interaction Toggle */}
+      {isMobile && allowDirectDrag && !isInteractionEnabled && (
+        <div className="absolute inset-0 z-20 flex items-center justify-center pointer-events-auto">
+          <button
+            onClick={() => setIsInteractionEnabled(true)}
+            className="px-6 py-3 rounded-lg font-semibold transition-all duration-300"
+            style={{
+              backgroundColor: 'rgba(255, 215, 0, 0.15)',
+              border: '2px solid rgba(255, 215, 0, 0.5)',
+              color: '#FFD700',
+              fontFamily: '-apple-system, BlinkMacSystemFont, "Inter", "Segoe UI", "Roboto", "Noto Sans SC", sans-serif',
+            }}
+          >
+            {lang === 'zh' ? '激活交互' : 'Enable Interaction'}
+          </button>
+        </div>
+      )}
+      
+      {/* L3 UX: Blueprint Skeleton - Show before Canvas loads */}
+      {!isCanvasReady && (
+        <div className="absolute inset-0 z-5 flex items-center justify-center">
+          <SmithChartSkeleton width={600} height={600} />
+        </div>
+      )}
+      
+      {/* L3 Visual De-noising: Removed vignette - Deepen blacks instead */}
       
       <canvas
         ref={canvasRef}
         className={`absolute inset-0 w-full h-full smith-canvas ${getCursorStyle()}`}
+        style={{
+          touchAction: isMobile && !isInteractionEnabled ? 'pan-y pinch-zoom' : 'none',
+        }}
         onMouseMove={handleMouseMove}
         onMouseDown={handleMouseDown}
         onMouseUp={handleMouseUp}
         onMouseLeave={handleMouseLeave}
+        onTouchStart={handleTouchStart}
+        onTouchMove={handleTouchMove}
+        onTouchEnd={handleTouchEnd}
       />
       
       {/* Simplified HUD - only updates when hudUpdateTrigger changes */}

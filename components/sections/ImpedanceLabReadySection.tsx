@@ -28,7 +28,8 @@ const MiniSmithPreviewOptimized: React.FC<MiniSmithPreviewProps> = memo(({
     <div 
       className="relative overflow-hidden"
       style={{
-        boxShadow: isHovered ? '0 0 40px rgba(255, 199, 0, 0.15)' : 'none',
+        // L3 Blackout Protocol: Reduced glow intensity - only subtle feedback on hover
+        boxShadow: isHovered ? '0 0 20px rgba(255, 199, 0, 0.08)' : 'none',
         transition: 'box-shadow 300ms',
       }}
     >
@@ -288,17 +289,17 @@ export const ImpedanceLabReadySection: React.FC<ImpedanceLabReadySectionProps> =
   }, [onLaunchConsole]);
 
   const t = lang === 'zh' ? {
-    badge: 'Impedance Lab · Ready',
-    title: '带着 Smith 图，上机做实验。',
-    subtitle: '已经掌握匹配、反射和 VSWR。现在，把你的真实电路丢进来。',
+    badge: 'Impedance Lab · Deployment',
+    title: '你已掌控圆环。现在，去连接孤岛。',
+    subtitle: '匹配、反射、VSWR 已在你掌控之中。现在，用真实电路征服世界。',
     consoleTitle: 'Impedance Lab 控制台',
     consoleDesc: '输入阻抗、频段、目标 VSWR，系统帮你画出路径。',
     ctaButton: '开始实验',
     altLink: '或：看看 Fourier 实验室',
   } : {
-    badge: 'Impedance Lab · Ready',
-    title: 'Take the Smith Chart to the bench.',
-    subtitle: 'You\'ve mastered matching, reflection, and VSWR. Now bring your real circuit.',
+    badge: 'Impedance Lab · Deployment',
+    title: 'You have mastered the circle. Now, go connect the world.',
+    subtitle: 'Matching, reflection, VSWR — all under your control. Now deploy with real circuits.',
     consoleTitle: 'Impedance Lab Console',
     consoleDesc: 'Enter impedance, frequency, target VSWR — the system draws the path.',
     ctaButton: 'Launch Console',

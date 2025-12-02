@@ -43,8 +43,9 @@ const NARRATIVE = {
       body: '每个阻抗都有归宿，每个反射都有故事',
       concepts: [
         { title: '1939', desc: '在计算机之前，工程师用手画出答案' },
-        { title: '零损耗', desc: '不匹配就是损失。可视化它，修复它' },
+        { title: '反射即敌人', desc: '反射是幽灵。它不仅偷走能量，还会烧毁你的放大器。消灭回声。' },
         { title: '双视角', desc: 'Z 看串联，Y 看并联。同一个圆，不同视角' },
+        { title: '耦合', desc: '两个信号，完美同相。就像我们。', hidden: true },
       ],
     },
     section3: {
@@ -56,15 +57,15 @@ const NARRATIVE = {
     section4: {
       eyebrow: '第二课',
       title: '反射',
-      subtitle: '不匹配的代价',
-      instruction: '试着把红线缩短到 0',
+      subtitle: '反射即敌人。消灭回声。',
+      instruction: '把红线缩短到 0，杀死反射',
       vswr: '驻波比',
       gamma: '反射系数',
     },
     section5: {
-      eyebrow: '实验室',
+      eyebrow: '舰桥',
       title: '掌控',
-      subtitle: '你的精密控制台',
+      subtitle: '欢迎来到舰桥，指挥官',
       instruction: '所有工具已解锁',
     },
   },
@@ -79,8 +80,9 @@ const NARRATIVE = {
       body: 'Every impedance has a home. Every reflection tells a story.',
       concepts: [
         { title: '1939', desc: 'Before computers, engineers drew their answers' },
-        { title: 'Zero Waste', desc: 'Mismatch is loss. Visualize it. Fix it.' },
+        { title: 'The Enemy', desc: 'Reflection is the ghost in the machine. It burns your power and kills your signal. Kill the echo.' },
         { title: 'Two Views', desc: 'Z for series, Y for parallel. Same circle.' },
+        { title: 'Coupling', desc: 'Two signals, synced in perfect phase. Just like us.', hidden: true },
       ],
     },
     section3: {
@@ -92,15 +94,15 @@ const NARRATIVE = {
     section4: {
       eyebrow: 'LESSON TWO',
       title: 'Reflection',
-      subtitle: 'The cost of mismatch',
-      instruction: 'Try to shrink the red line to zero',
+      subtitle: 'The Reflection is the enemy. Kill the echo.',
+      instruction: 'Shrink the red line to zero. Kill the reflection.',
       vswr: 'VSWR',
       gamma: 'Γ',
     },
     section5: {
-      eyebrow: 'LABORATORY',
+      eyebrow: 'THE BRIDGE',
       title: 'Control',
-      subtitle: 'Your precision console',
+      subtitle: 'Welcome to the Bridge, Commander.',
       instruction: 'All tools unlocked',
     },
   },
@@ -551,7 +553,7 @@ const SectionText: React.FC<SectionTextProps> = ({
           fontFamily: '"Space Grotesk", sans-serif',
           letterSpacing: '-0.04em',
           color: '#FFFFFF',
-          textShadow: '0 0 60px rgba(0, 0, 0, 0.8)',
+          // L3 Blackout Protocol: Removed text-shadow
         }}
       >
         {title}
@@ -561,7 +563,7 @@ const SectionText: React.FC<SectionTextProps> = ({
         <p 
           className="text-lg md:text-xl mb-6"
           style={{ 
-            fontFamily: '"Space Grotesk", sans-serif',
+            fontFamily: '-apple-system, BlinkMacSystemFont, "Inter", "Segoe UI", "Roboto", "Noto Sans SC", sans-serif',
             color: 'rgba(255, 255, 255, 0.6)',
           }}
         >
@@ -573,7 +575,7 @@ const SectionText: React.FC<SectionTextProps> = ({
         <p 
           className="text-sm md:text-base px-4 py-2 rounded-lg"
           style={{ 
-            fontFamily: '"Space Grotesk", sans-serif',
+            fontFamily: '-apple-system, BlinkMacSystemFont, "Inter", "Segoe UI", "Roboto", "Noto Sans SC", sans-serif',
             color: 'rgba(255, 215, 0, 0.8)',
             backgroundColor: 'rgba(255, 215, 0, 0.1)',
             border: '1px solid rgba(255, 215, 0, 0.2)',
@@ -616,7 +618,7 @@ const DataDisplay: React.FC<DataDisplayProps> = ({ label, value, unit, highlight
       className="text-2xl md:text-3xl font-mono font-bold"
       style={{ 
         color: highlight ? '#FF5050' : '#64FFB4',
-        textShadow: highlight ? '0 0 20px rgba(255, 80, 80, 0.5)' : '0 0 20px rgba(100, 255, 180, 0.3)',
+        // L3 Blackout Protocol: Removed text-shadow - data values should be clear, not glowing
       }}
     >
       {value}
@@ -824,6 +826,18 @@ export const SmithOdyssey: React.FC<SmithOdysseyProps> = ({
         className="relative z-10 h-screen"
         style={{ scrollSnapAlign: 'start' }}
       >
+        {/* L3 Narrative: Golden Flash Effect for "Infinity, Folded" */}
+        {currentSection === 1 && (
+          <div
+            className="absolute inset-0 pointer-events-none transition-opacity duration-1000"
+            style={{
+              opacity: currentSection === 1 ? 1 : 0,
+              background: 'radial-gradient(ellipse at center, rgba(255, 215, 0, 0.15) 0%, transparent 70%)',
+              animation: currentSection === 1 ? 'infinityFlash 2s ease-out' : 'none',
+            }}
+          />
+        )}
+        
         <SectionText
           eyebrow={narrative.section2.eyebrow}
           title={narrative.section2.title}
@@ -840,7 +854,7 @@ export const SmithOdyssey: React.FC<SmithOdysseyProps> = ({
             transform: `translateX(-50%) translateY(${currentSection === 1 ? 0 : 30}px)`,
           }}
         >
-          {narrative.section2.concepts?.map((concept, idx) => (
+          {narrative.section2.concepts?.filter(c => !c.hidden).map((concept, idx) => (
             <div 
               key={idx}
               className="px-6 py-4 rounded-xl transition-all duration-500 hover:scale-105"
@@ -873,7 +887,7 @@ export const SmithOdyssey: React.FC<SmithOdysseyProps> = ({
           style={{ 
             opacity: currentSection === 1 ? 0.6 : 0,
             color: 'rgba(255, 255, 255, 0.5)',
-            fontFamily: '"Space Grotesk", sans-serif',
+            fontFamily: '-apple-system, BlinkMacSystemFont, "Inter", "Segoe UI", "Roboto", "Noto Sans SC", sans-serif',
             fontSize: '0.9rem',
           }}
         >
@@ -1022,6 +1036,21 @@ export const SmithOdyssey: React.FC<SmithOdysseyProps> = ({
         @keyframes scrollPulse {
           0%, 100% { transform: translateY(0); opacity: 0.5; }
           50% { transform: translateY(6px); opacity: 1; }
+        }
+        
+        @keyframes infinityFlash {
+          0% { 
+            opacity: 0;
+            transform: scale(0.8);
+          }
+          20% { 
+            opacity: 1;
+            transform: scale(1.1);
+          }
+          100% { 
+            opacity: 0.3;
+            transform: scale(1);
+          }
         }
       `}</style>
     </div>

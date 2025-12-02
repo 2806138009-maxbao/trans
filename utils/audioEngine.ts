@@ -157,6 +157,8 @@ class AudioEngine {
   }
 
   // 3. Snap: "Thud" - Mechanical click
+  // RAUNO-TIER: Micro-Variance to prevent "Machine Gun Effect"
+  // Real-world impacts are never identical
   public playSnap() {
     this.resume();
     if (!this.ctx) return;
@@ -165,11 +167,20 @@ class AudioEngine {
     const osc = this.ctx.createOscillator();
     const gain = this.ctx.createGain();
     
-    osc.type = 'sine';
-    osc.frequency.setValueAtTime(80, t);
-    osc.frequency.exponentialRampToValueAtTime(30, t + 0.15);
+    // Micro-Variance: ±5% random detune for frequency
+    const freqDetune = 1 + (Math.random() * 0.1 - 0.05); // -5% to +5%
+    const baseFreq = 80;
+    const endFreq = 30;
     
-    gain.gain.setValueAtTime(0.3, t);
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(baseFreq * freqDetune, t);
+    osc.frequency.exponentialRampToValueAtTime(endFreq * freqDetune, t + 0.15);
+    
+    // Micro-Variance: ±5% random variation for gain
+    const gainDetune = 1 + (Math.random() * 0.1 - 0.05); // -5% to +5%
+    const baseGain = 0.3;
+    
+    gain.gain.setValueAtTime(baseGain * gainDetune, t);
     gain.gain.exponentialRampToValueAtTime(0.001, t + 0.15);
 
     osc.connect(gain);

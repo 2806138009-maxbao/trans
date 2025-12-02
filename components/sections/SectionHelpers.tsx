@@ -236,8 +236,8 @@ export const HoverListItem = ({
           transform: 'translateZ(10px)',
         }}
       >
-        <span className="text-[#FFC700] mt-0.5 flex-shrink-0 transition-all duration-300 group-hover:scale-125 group-hover:drop-shadow-[0_0_8px_rgba(255,199,0,0.6)] select-none">•</span>
-        <span className="flex-1 text-[#D0D6E0] transition-all duration-300 group-hover:text-white group-hover:text-shadow-glow select-text cursor-text">{children}</span>
+        <span className="text-[#FFC700] mt-0.5 flex-shrink-0 transition-all duration-300 group-hover:scale-125 select-none">•</span>
+        <span className="flex-1 text-[#D0D6E0] transition-all duration-300 group-hover:text-white select-text cursor-text">{children}</span>
         
         {/* Noise Texture */}
         <div className="absolute inset-0 opacity-[0.02] pointer-events-none bg-[url('https://grainy-gradients.vercel.app/noise.svg')]" />
