@@ -602,6 +602,15 @@ export const SmithChartCanvas: React.FC<SmithChartCanvasProps> = ({
   const [isInteractionEnabled, setIsInteractionEnabled] = useState(false);
   const [isCanvasReady, setIsCanvasReady] = useState(false);
   const touchStartRef = useRef<{ x: number; y: number; time: number } | null>(null);
+
+  useEffect(() => {
+    const checkMobile = () => {
+      setIsMobile(window.matchMedia('(pointer: coarse)').matches);
+    };
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
   
   // ========================================
   // ALL MUTABLE STATE IN REFS (NO useState for animation)

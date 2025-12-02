@@ -192,16 +192,18 @@ export const CustomCursor: React.FC = () => {
           transform: translate(-50%, -50%) scale(1.2);
         }
         
-        /* State 3: Magnetic - Crosshair when near snap point */
+        /* State 3: Magnetic - Crosshair (+) Lock On */
         .cursor-center-dot.near-smith:not(.dragging) {
-          width: 20px;
-          height: 20px;
-          background: transparent;
-          border: 2px solid rgba(255, 215, 0, 0.9);
-          border-radius: 0;
-          transform: translate(-50%, -50%) rotate(45deg);
+          width: 24px;
+          height: 24px;
+          background: 
+            linear-gradient(to right, transparent 42%, rgba(255, 215, 0, 1) 42%, rgba(255, 215, 0, 1) 58%, transparent 58%),
+            linear-gradient(to bottom, transparent 42%, rgba(255, 215, 0, 1) 42%, rgba(255, 215, 0, 1) 58%, transparent 58%);
+          border: 1px solid rgba(255, 215, 0, 0.3);
+          border-radius: 50%;
+          transform: translate(-50%, -50%) rotate(0deg);
           opacity: 1;
-          box-shadow: 0 0 12px rgba(255, 215, 0, 0.4);
+          box-shadow: 0 0 15px rgba(255, 215, 0, 0.5);
         }
         
         /* State 4: Dragging - Hide cursor (Direct Manipulation) */

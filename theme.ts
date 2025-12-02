@@ -17,7 +17,7 @@ export const THEME = {
     // ========================================
     
     /** Main page background - Deep warm charcoal */
-    background: "#0A0A08",                // 微微偏暖的深黑
+    background: "#050505",                // Deep Dark
     
     /** Card/Panel background - 明显更亮，带暖色调 */
     surface: "#16140F",                   // 更亮的暖棕色
@@ -115,7 +115,7 @@ export const THEME = {
     display: "'Space Grotesk', -apple-system, BlinkMacSystemFont, sans-serif",
     
     /** Body / UI Labels - System fonts (Invisible, Legible) */
-    body: "-apple-system, BlinkMacSystemFont, 'Inter', 'Segoe UI', 'Roboto', 'Noto Sans SC', sans-serif",
+    body: "'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Noto Sans SC', sans-serif",
     
     /** Code / Mono - JetBrains Mono (Professional) */
     mono: "'JetBrains Mono', 'Fira Code', 'SF Mono', 'Consolas', monospace",
@@ -224,15 +224,15 @@ export const THEME = {
   // ========================================
   shadows: {
     /** Subtle elevation */
-    sm: "0 2px 8px hsla(40, 20%, 0%, 0.3)",
+    sm: "0 1px 2px rgba(0, 0, 0, 0.3)",
     
     /** Card shadow */
-    md: "0 4px 24px hsla(40, 20%, 0%, 0.4)",
+    md: "0 4px 12px rgba(0, 0, 0, 0.4)",
     
     /** Modal/Elevated */
-    lg: "0 8px 48px hsla(40, 20%, 0%, 0.5)",
+    lg: "0 12px 32px rgba(0, 0, 0, 0.6)",
     
-    /** Gold glow */
+    /** Gold glow - Only for active states */
     glow: "0 0 20px rgba(255, 199, 0, 0.3)",
     glowStrong: "0 0 40px rgba(255, 199, 0, 0.4)",
   },
