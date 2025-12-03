@@ -245,28 +245,28 @@ class SmithCanvasEngine {
     this.canvas = canvas;
     this.ctx = canvas.getContext("2d", { alpha: false })!;
     this.dpr = Math.min(window.devicePixelRatio || 1, 2);
-    
+
     // Initialize offscreen buffer
-    this.gridCanvas = document.createElement('canvas');
-    this.gridCtx = this.gridCanvas.getContext('2d', { alpha: true })!;
+    this.gridCanvas = document.createElement("canvas");
+    this.gridCtx = this.gridCanvas.getContext("2d", { alpha: true })!;
   }
 
   resize(width: number, height: number): void {
     this.width = width;
     this.height = height;
-    
+
     // Resize main canvas
     this.canvas.width = width * this.dpr;
     this.canvas.height = height * this.dpr;
     this.canvas.style.width = `${width}px`;
     this.canvas.style.height = `${height}px`;
     this.ctx.setTransform(this.dpr, 0, 0, this.dpr, 0, 0);
-    
+
     // Resize grid buffer
     this.gridCanvas.width = width * this.dpr;
     this.gridCanvas.height = height * this.dpr;
     this.gridCtx.setTransform(this.dpr, 0, 0, this.dpr, 0, 0);
-    
+
     this.needsGridUpdate = true;
   }
 
@@ -480,7 +480,7 @@ class SmithCanvasEngine {
 
     // Use Additive Blending for "Light" look
     ctx.globalCompositeOperation = "lighter";
-    
+
     // Draw cached grid
     ctx.drawImage(this.gridCanvas, 0, 0, width, height);
 
@@ -868,7 +868,7 @@ export const SmithOdyssey: React.FC<SmithOdysseyProps> = ({
         // Throttle HUD updates to 10fps (100ms) to avoid React re-render spam
         if (timestamp - lastHudUpdate.current > 100) {
           lastHudUpdate.current = timestamp;
-          
+
           const z = engineRef.current.getImpedance();
           const v = engineRef.current.getVSWR();
           const g = engineRef.current.getGamma();
