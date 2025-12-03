@@ -120,6 +120,66 @@ const zToGamma = (r: number, x: number): { re: number; im: number } => {
   };
 };
 
+// easeInOutExpo for dramatic "warp drive" effect
+const easeInOutExpo = (t: number): number => {
+  if (t === 0) return 0;
+  if (t === 1) return 1;
+  if (t < 0.5) return Math.pow(2, 20 * t - 10) / 2;
+  return (2 - Math.pow(2, -20 * t + 10)) / 2;
+};
+
+// [L3 Architecture] Physics Kernel - Isolated for WebGL Porting
+// Returns normalized coordinates (0-1)
+export const getPhysicsPosition = (
+  r: number, 
+  x: number, 
+  t: number, 
+  baseR: number, 
+  width: number, 
+  height: number
+): { x: number; y: number } => {
+  const cx = width / 2;
+  const cy = height / 2;
+  
+  // 1. Elastic Impact (Time Distortion)
+  let impactScale = 1.0;
+  if (t > 0.8) {
+     const impactT = (t - 0.8) / 0.2; 
+     const damp = Math.exp(-impactT * 5);
+     const wave = -Math.sin(impactT * Math.PI * 3); 
+     impactScale = 1.0 + (wave * damp * 0.05);
+  }
+  
+  const smithR = baseR * impactScale;
+  const effectiveCartScale = smithR * 0.8;
+  
+  // 2. Cartesian Coordinates
+  const cartX = cx - effectiveCartScale * 0.3 + r * effectiveCartScale * 0.12;
+  const cartY = cy - x * effectiveCartScale * 0.12;
+  
+  // 3. Smith Chart Coordinates
+  const gamma = zToGamma(r, x);
+  const smithX = cx + gamma.re * smithR;
+  const smithY = cy - gamma.im * smithR;
+  
+  // 4. Interpolation
+  const easedT = easeInOutExpo(t);
+  
+  // 5. Vertical Arc (Paper Folding Physics)
+  const arcIntensity = smithR * 0.8; 
+  const arcPhase = Math.sin(easedT * Math.PI); 
+  const direction = x === 0 ? 0 : (x > 0 ? -1 : 1); 
+  const verticalArc = arcPhase * arcIntensity * direction;
+  
+  const px = lerp(cartX, smithX, easedT);
+  const py = lerp(cartY, smithY, easedT) + verticalArc;
+  
+  return {
+    x: px / width,
+    y: py / height
+  };
+};
+
 // Spring physics
 interface SpringPoint {
   y: number;
@@ -588,41 +648,9 @@ class GenesisCanvasEngine {
     // Using high-resolution polylines and bilinear transform
     // ========================================
     
-    // easeInOutExpo for dramatic "warp drive" effect
-    const easeInOutExpo = (t: number): number => {
-      if (t === 0) return 0;
-      if (t === 1) return 1;
-      if (t < 0.5) return Math.pow(2, 20 * t - 10) / 2;
-      return (2 - Math.pow(2, -20 * t + 10)) / 2;
-    };
-    
-    // mapPoint: Core transformation function
-    // z = r + jx (complex impedance)
-    // t = 0: Cartesian position
-    // t = 1: Smith Chart position (Γ = (z-1)/(z+1))
-    const mapPoint = (r: number, x: number, t: number): { px: number; py: number } => {
-      const cartScale = smithR * 0.8;
-      const cartX = cx - cartScale * 0.3 + r * cartScale * 0.12;
-      const cartY = cy - x * cartScale * 0.12;
-      
-      const gamma = zToGamma(r, x);
-      const smithX = cx + gamma.re * smithR;
-      const smithY = cy - gamma.im * smithR;
-      
-      const easedT = easeInOutExpo(t);
-      
-      // [L3 物理注入] 垂直弧度：模拟纸张折叠的张力
-      // 在 t=0.5 时达到最大拱起高度
-      const arcIntensity = smithR * 0.8; 
-      const arcPhase = Math.sin(easedT * Math.PI); // 0 -> 1 -> 0
-      // 上半部分向上拱，下半部分向下拱
-      const direction = x === 0 ? 0 : (x > 0 ? -1 : 1); 
-      const verticalArc = arcPhase * arcIntensity * direction;
-      return {
-        px: lerp(cartX, smithX, easedT),
-        py: lerp(cartY, smithY, easedT) + verticalArc // 注入灵魂
-      };
-    };
+    // [L3 Architecture] Physics logic moved to getPhysicsPosition
+    // We keep the inline logic in the loop below for Zero-Allocation performance
+    // until the full WebGL migration.
     
     // ========================================
     // THERMAL ENERGY COLOR TRANSITION
@@ -1282,6 +1310,12 @@ export const GenesisIntro: React.FC<GenesisIntroProps> = ({
   const animIdRef = useRef<number>(0);
   const scrollRef = useRef<HTMLDivElement>(null);
   
+  // [L3 Inertial Drive] Physics State
+  const velocityRef = useRef(0);
+  const progressRef = useRef(0);
+  const isDraggingRef = useRef(false);
+  const lastYRef = useRef(0);
+  
   // Stage management: 'genesis' (scroll-controlled) → 'splash' (auto-play celebration)
   const [stage, setStage] = useState<'genesis' | 'splash'>('genesis');
   
@@ -1358,7 +1392,33 @@ export const GenesisIntro: React.FC<GenesisIntroProps> = ({
     
     const animate = () => {
       if (engineRef.current) {
+        // [L3 Inertial Drive] Apply Momentum
+        if (Math.abs(velocityRef.current) > 0.00001 || isDraggingRef.current) {
+          progressRef.current += velocityRef.current;
+          progressRef.current = clamp(progressRef.current, 0, 1);
+          
+          // Decay
+          if (!isDraggingRef.current) {
+            velocityRef.current *= 0.92;
+          }
+          
+          // Sync Engine (Bypassing React State)
+          engineRef.current.setProgress(progressRef.current);
+          
+          // Sync React State (Throttled/Synced for UI)
+          // We update this every frame where there is motion to ensure UI follows
+          setProgress(progressRef.current);
+          
+          // Update Phase Logic
+          const p = progressRef.current;
+          if (p < 0.25) setPhase(1);
+          else if (p < 0.50) setPhase(2);
+          else if (p < 0.85) setPhase(3);
+          else setPhase(4);
+        }
+
         engineRef.current.render();
+        
         // Mark first frame as rendered
         if (!firstFrameRendered) {
           firstFrameRendered = true;
@@ -1393,65 +1453,52 @@ export const GenesisIntro: React.FC<GenesisIntroProps> = ({
     return () => window.removeEventListener('resize', handleResize);
   }, [stage]);
   
-  // Scroll accumulator (persists across renders)
-  const scrollAccumulatorRef = useRef(0);
-  const touchStartYRef = useRef(0);
-  const maxScroll = 3000;
-  const sensitivity = 1.5;
-  
-  // Wheel-controlled progress (no native scroll)
+  // [L3 Inertial Drive] Input Handling
   useEffect(() => {
     if (stage !== 'genesis') return;
     
     const container = scrollRef.current;
     if (!container) return;
     
-    const updateProgress = (p: number) => {
-      setProgress(p);
-      engineRef.current?.setProgress(p);
-      
-      // Determine phase (1-4, no phase 0 in genesis)
-      if (p < 0.25) setPhase(1);
-      else if (p < 0.50) setPhase(2);
-      else if (p < 0.85) setPhase(3);
-      else setPhase(4);
-    };
-    
     const handleWheel = (e: WheelEvent) => {
       e.preventDefault();
-      
-      scrollAccumulatorRef.current += e.deltaY * sensitivity;
-      scrollAccumulatorRef.current = clamp(scrollAccumulatorRef.current, 0, maxScroll);
-      
-      const p = scrollAccumulatorRef.current / maxScroll;
-      updateProgress(p);
+      // Add momentum
+      velocityRef.current += e.deltaY * 0.00005;
+      velocityRef.current = clamp(velocityRef.current, -0.02, 0.02);
     };
     
     const handleTouchStart = (e: TouchEvent) => {
-      touchStartYRef.current = e.touches[0].clientY;
+      isDraggingRef.current = true;
+      lastYRef.current = e.touches[0].clientY;
+      velocityRef.current = 0;
     };
     
     const handleTouchMove = (e: TouchEvent) => {
       e.preventDefault();
+      if (!isDraggingRef.current) return;
+      
       const touchY = e.touches[0].clientY;
-      const deltaY = (touchStartYRef.current - touchY) * 3;
-      touchStartYRef.current = touchY;
+      const deltaY = lastYRef.current - touchY;
+      lastYRef.current = touchY;
       
-      scrollAccumulatorRef.current += deltaY;
-      scrollAccumulatorRef.current = clamp(scrollAccumulatorRef.current, 0, maxScroll);
-      
-      const p = scrollAccumulatorRef.current / maxScroll;
-      updateProgress(p);
+      // Direct control during drag
+      velocityRef.current = deltaY * 0.001;
+    };
+    
+    const handleTouchEnd = () => {
+      isDraggingRef.current = false;
     };
     
     container.addEventListener('wheel', handleWheel, { passive: false });
     container.addEventListener('touchstart', handleTouchStart, { passive: true });
     container.addEventListener('touchmove', handleTouchMove, { passive: false });
+    container.addEventListener('touchend', handleTouchEnd);
     
     return () => {
       container.removeEventListener('wheel', handleWheel);
       container.removeEventListener('touchstart', handleTouchStart);
       container.removeEventListener('touchmove', handleTouchMove);
+      container.removeEventListener('touchend', handleTouchEnd);
     };
   }, [stage]);
   
