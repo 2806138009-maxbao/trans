@@ -23,12 +23,7 @@ interface InteractiveTermProps {
   highlightColor?: string;
 }
 
-type VisualMode =
-  | "void"
-  | "genesis"
-  | "impedance"
-  | "reflection"
-  | "lab";
+type VisualMode = "void" | "genesis" | "impedance" | "reflection" | "lab";
 
 interface RFStats {
   gammaMag: number;
@@ -294,6 +289,7 @@ export const SmithOdyssey: React.FC<SmithOdysseyProps> = ({
       case 2:
         config.visualMode = "impedance";
         config.overrideImpedance = { r: 1, x: 1 };
+        config.allowDirectDrag = true;
         break;
       case 3:
         config.visualMode = "reflection";
@@ -312,9 +308,15 @@ export const SmithOdyssey: React.FC<SmithOdysseyProps> = ({
     return config;
   }, [currentSection]);
 
-  const displayedImpedance =
-    canvasDirectorProps.overrideImpedance ?? liveImpedance;
-  const rf = useMemo(() => calculateRF(displayedImpedance), [displayedImpedance]);
+  // When allowDirectDrag is true, use liveImpedance (from dragging)
+  // Otherwise use overrideImpedance as the display value
+  const displayedImpedance = canvasDirectorProps.allowDirectDrag
+    ? liveImpedance
+    : canvasDirectorProps.overrideImpedance ?? liveImpedance;
+  const rf = useMemo(
+    () => calculateRF(displayedImpedance),
+    [displayedImpedance]
+  );
 
   const handleComplete = useCallback(() => {
     onComplete?.();
@@ -331,9 +333,10 @@ export const SmithOdyssey: React.FC<SmithOdysseyProps> = ({
       }}
     >
       <div
-        className="fixed inset-0 z-0"
+        className="fixed inset-0 z-0 transition-all duration-1000 ease-out pointer-events-none"
         style={{
-          pointerEvents: canvasDirectorProps.allowDirectDrag ? "auto" : "none",
+          transform: currentSection === 4 ? "scale(0.6)" : "scale(1)",
+          filter: currentSection === 4 ? "blur(12px)" : "blur(0px)",
         }}
       >
         <SmithChartCanvas
@@ -352,7 +355,7 @@ export const SmithOdyssey: React.FC<SmithOdysseyProps> = ({
         />
       </div>
 
-      <div className="relative z-10">
+      <div className="relative z-10 pointer-events-none">
         <section className="relative w-full h-screen flex items-center justify-center snap-start">
           <ScrollHint
             text={lang === "zh" ? "初始化系统" : "INITIALIZING SYSTEM"}
@@ -426,7 +429,9 @@ export const SmithOdyssey: React.FC<SmithOdysseyProps> = ({
                 text={lang === "zh" ? "阻抗" : "Impedance"}
               />
             }
-            subtitle={lang === "zh" ? "电路的心跳。" : "The heartbeat of the circuit."}
+            subtitle={
+              lang === "zh" ? "电路的心跳。" : "The heartbeat of the circuit."
+            }
             instruction={
               lang === "zh" ? (
                 <span>
@@ -434,7 +439,8 @@ export const SmithOdyssey: React.FC<SmithOdysseyProps> = ({
                 </span>
               ) : (
                 <span>
-                  Move the point. <InteractiveTerm>Establish connection</InteractiveTerm>.
+                  Move the point.{" "}
+                  <InteractiveTerm>Establish connection</InteractiveTerm>.
                 </span>
               )
             }
@@ -474,7 +480,8 @@ export const SmithOdyssey: React.FC<SmithOdysseyProps> = ({
                 </span>
               ) : (
                 <span>
-                  Reflection is the enemy. <InteractiveTerm>Silence is golden</InteractiveTerm>.
+                  Reflection is the enemy.{" "}
+                  <InteractiveTerm>Silence is golden</InteractiveTerm>.
                 </span>
               )
             }
@@ -485,7 +492,8 @@ export const SmithOdyssey: React.FC<SmithOdysseyProps> = ({
                 </span>
               ) : (
                 <span>
-                  Shrink the red line. <InteractiveTerm>Return to zero</InteractiveTerm>.
+                  Shrink the red line.{" "}
+                  <InteractiveTerm>Return to zero</InteractiveTerm>.
                 </span>
               )
             }
@@ -524,7 +532,9 @@ export const SmithOdyssey: React.FC<SmithOdysseyProps> = ({
                   ? "Luminous 实验室准备就绪。"
                   : "Luminous Lab is ready."
               }
-              instruction={lang === "zh" ? "仪器已校准" : "Instrument Calibrated"}
+              instruction={
+                lang === "zh" ? "仪器已校准" : "Instrument Calibrated"
+              }
               visible={currentSection === 4}
             >
               <button

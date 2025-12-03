@@ -15,12 +15,12 @@ interface SmithChartCanvasProps {
   showAdmittance?: boolean;
   showVSWRCircles?: boolean;
   lang?: "en" | "zh";
-  visualMode?: "void" | "genesis" | "impedance" | "reflection" | "lab";
-  showVector?: boolean; // Force show red reflection vector
   onDirectDrag?: (impedance: { r: number; x: number }) => void;
   allowDirectDrag?: boolean;
   onHoverChange?: (isHovering: boolean) => void;
   onDragChange?: (isDragging: boolean) => void;
+  visualMode?: "void" | "genesis" | "impedance" | "reflection" | "lab";
+  showVector?: boolean;
 }
 
 // ========================================
@@ -176,11 +176,11 @@ function calculateRFParams(z: Impedance) {
 
 const fontTech = "'Space Grotesk', monospace";
 const GRID_WHITE_DISTANT = "rgba(255, 255, 255, 0.08)";
-const GRID_WHITE_PRIME = "rgba(255, 255, 255, 0.25)";
-const GRID_GOLD_ACCENT = "rgba(255, 215, 0, 0.3)";
-const GRID_GOLD_FAINT = "rgba(255, 215, 0, 0.06)";
-const TEXT_HIGH = "#EAEAEA";
-const TEXT_MED = "rgba(234, 234, 234, 0.5)";
+const GRID_WHITE_PRIME = "rgba(255, 255, 255, 0.08)";
+const GRID_GOLD_ACCENT = "rgba(255, 215, 0, 0.25)";
+const GRID_GOLD_FAINT = "rgba(255, 215, 0, 0.08)";
+const TEXT_HIGH = "#FFFFFF";
+const TEXT_MED = "rgba(255, 255, 255, 0.6)";
 
 // Pre-computed constants
 const TWO_PI = Math.PI * 2;
@@ -516,15 +516,6 @@ function drawSmithChartGrid(
   showVSWRCircles: boolean = false
 ) {
   ctx.lineWidth = 0.5;
-
-  // Background glow (simplified)
-  const gradient = ctx.createRadialGradient(cx, cy, 0, cx, cy, r);
-  gradient.addColorStop(0, "rgba(255, 215, 0, 0.02)");
-  gradient.addColorStop(1, "transparent");
-  ctx.fillStyle = gradient;
-  ctx.beginPath();
-  ctx.arc(cx, cy, r, 0, TWO_PI);
-  ctx.fill();
 
   // VSWR circles
   if (showVSWRCircles) {
@@ -1041,20 +1032,30 @@ export const SmithChartCanvas: React.FC<SmithChartCanvasProps> = ({
   showAdmittance,
   showVSWRCircles = false,
   lang = "zh",
-  visualMode,
-  showVector,
   onDirectDrag,
   allowDirectDrag = false,
   onHoverChange,
   onDragChange,
+  visualMode = "lab",
+  showVector = false,
 }) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const gridCacheRef = useRef<HTMLCanvasElement | null>(null);
+
+  // Derived flags for visual elements
+  const shouldShowPoint = useMemo(() => {
+    return ["impedance", "reflection", "lab"].includes(visualMode);
+  }, [visualMode]);
+
+  const shouldDrawVector = useMemo(() => {
+    return ["reflection", "lab"].includes(visualMode) || showVector;
+  }, [visualMode, showVector]);
 
   // L3 UX: Mobile Safety Lock - Prevent gesture conflicts
   const [isMobile, setIsMobile] = useState(false);
   const [isInteractionEnabled, setIsInteractionEnabled] = useState(false);
   const [isCanvasReady, setIsCanvasReady] = useState(false);
+  const [circleSize, setCircleSize] = useState(0);
   const touchStartRef = useRef<{ x: number; y: number; time: number } | null>(
     null
   );
@@ -1239,6 +1240,9 @@ export const SmithChartCanvas: React.FC<SmithChartCanvasProps> = ({
         state.cy = height / 2;
         state.radius = Math.min(width, height) * 0.4;
 
+        // Update circle size for interaction overlay
+        setCircleSize(state.radius * 2);
+
         // Update grid cache
         updateGridCache(width, height, dpr);
       }
@@ -1260,10 +1264,6 @@ export const SmithChartCanvas: React.FC<SmithChartCanvasProps> = ({
       state.deltaTime = deltaMs;
       state.lastFrameTime = timestamp;
 
-      const shouldShowPoint =
-        visualMode !== "void" && visualMode !== "genesis";
-      const shouldDrawVector = visualMode === "reflection" || !!showVector;
-
       const { cx, cy, radius, width: w, height: h } = state;
       if (w === 0 || h === 0) {
         animationFrameId = requestAnimationFrame(draw);
@@ -1272,7 +1272,7 @@ export const SmithChartCanvas: React.FC<SmithChartCanvasProps> = ({
 
       // Gentle background rotation for perpetual motion
       if (!reducedMotion) {
-        state.rotation += 0.002 * dt;
+        state.rotation += 0.005 * dt;
       }
 
       // ========================================
@@ -1354,33 +1354,12 @@ export const SmithChartCanvas: React.FC<SmithChartCanvasProps> = ({
           const dx = state.targetX - state.currentX;
           const dy = state.targetY - state.currentY;
 
-          // F = -k(x - target) - c*v
-          // Acceleration = F / mass
-          const forceX =
-            SPRING_STIFFNESS * dx - SPRING_DAMPING * state.velocityX;
-          const forceY =
-            SPRING_STIFFNESS * dy - SPRING_DAMPING * state.velocityY;
-
-          // Integrate velocity (with dt for frame independence)
-          state.velocityX += (forceX / SPRING_MASS) * dt;
-          state.velocityY += (forceY / SPRING_MASS) * dt;
-
-          // Integrate position
-          state.currentX += state.velocityX * dt;
-          state.currentY += state.velocityY * dt;
-
-          // Tiny threshold to stop micro-oscillations
-          if (
-            Math.abs(dx) < 0.1 &&
-            Math.abs(dy) < 0.1 &&
-            Math.abs(state.velocityX) < 0.1 &&
-            Math.abs(state.velocityY) < 0.1
-          ) {
-            state.currentX = state.targetX;
-            state.currentY = state.targetY;
-            state.velocityX = 0;
-            state.velocityY = 0;
-          }
+          // Direct follow - no spring physics (removed for performance)
+          // Simply set current position to target position
+          state.currentX = state.targetX;
+          state.currentY = state.targetY;
+          state.velocityX = 0;
+          state.velocityY = 0;
         }
       }
 
@@ -1492,11 +1471,11 @@ export const SmithChartCanvas: React.FC<SmithChartCanvasProps> = ({
       // Draw active point
       if (state.hasPosition) {
         // Calculate impedance from screen position (in-place update)
-        const useManualImpedance =
-          allowDirectDrag &&
-          (state.isDragging || (!overrideImpedance && state.hasPosition));
+        // If direct drag is allowed, the physics/screen position is the Source of Truth.
+        // Override is only used for initial seeding (handled in Target Position Update).
+        const shouldUsePhysics = !overrideImpedance || allowDirectDrag;
 
-        if (!overrideImpedance || useManualImpedance) {
+        if (shouldUsePhysics) {
           const u = (state.currentX - cx) / radius;
           const v = (cy - state.currentY) / radius;
 
@@ -1632,7 +1611,7 @@ export const SmithChartCanvas: React.FC<SmithChartCanvasProps> = ({
       window.removeEventListener("resize", resize);
       if (animationFrameId) cancelAnimationFrame(animationFrameId);
     };
-  }, [reducedMotion, overrideImpedance, updateGridCache, visualMode, showVector]);
+  }, [reducedMotion, overrideImpedance, updateGridCache]);
 
   // ========================================
   // EVENT HANDLERS (Update refs directly)
@@ -1684,7 +1663,7 @@ export const SmithChartCanvas: React.FC<SmithChartCanvasProps> = ({
   );
 
   const handleMouseMove = useCallback(
-    (e: React.MouseEvent<HTMLCanvasElement>) => {
+    (e: React.MouseEvent) => {
       const canvas = canvasRef.current;
       if (!canvas) return;
 
@@ -1753,6 +1732,14 @@ export const SmithChartCanvas: React.FC<SmithChartCanvasProps> = ({
         state.targetX = x;
         state.targetY = y;
         state.hasPosition = true;
+
+        // Update impedance display even when not dragging (hover mode)
+        if (allowDirectDrag) {
+          const newZ = screenToImpedance(x, y);
+          if (newZ) {
+            callbacksRef.current.onDirectDrag?.(newZ);
+          }
+        }
       } else {
         state.hasPosition = false;
       }
@@ -1761,7 +1748,7 @@ export const SmithChartCanvas: React.FC<SmithChartCanvasProps> = ({
   );
 
   const handleMouseDown = useCallback(
-    (e: React.MouseEvent<HTMLCanvasElement>) => {
+    (e: React.MouseEvent) => {
       if (!allowDirectDrag) return;
 
       const canvas = canvasRef.current;
@@ -1772,27 +1759,32 @@ export const SmithChartCanvas: React.FC<SmithChartCanvasProps> = ({
       const y = e.clientY - rect.top;
       const state = animationState.current;
 
-      if (isNearActivePoint(x, y) || !state.hasPosition) {
+      // Check if click is within the Smith chart circle
+      const { cx, cy, radius } = state;
+      const dx = x - cx;
+      const dy = y - cy;
+      const isInsideCircle = dx * dx + dy * dy <= radius * radius * 1.1;
+
+      if (isInsideCircle) {
         state.isDragging = true;
         callbacksRef.current.onDragChange?.(true);
 
-        if (!state.hasPosition) {
-          state.targetX = x;
-          state.targetY = y;
-          state.currentX = x;
-          state.currentY = y;
-          state.hasPosition = true;
-          const newZ = screenToImpedance(x, y);
-          if (newZ) {
-            callbacksRef.current.onDirectDrag?.(newZ);
-            // [L3 Synesthesia] Start sonification immediately on drag start
-            audio.startSonification();
-            audio.updateSonification(newZ.r, newZ.x);
-          }
+        // Move point to click position
+        state.targetX = x;
+        state.targetY = y;
+        state.currentX = x;
+        state.currentY = y;
+        state.hasPosition = true;
+        const newZ = screenToImpedance(x, y);
+        if (newZ) {
+          callbacksRef.current.onDirectDrag?.(newZ);
+          // [L3 Synesthesia] Start sonification immediately on drag start
+          audio.startSonification();
+          audio.updateSonification(newZ.r, newZ.x);
         }
       }
     },
-    [allowDirectDrag, isNearActivePoint, screenToImpedance]
+    [allowDirectDrag, screenToImpedance]
   );
 
   const handleMouseUp = useCallback(() => {
@@ -1865,34 +1857,34 @@ export const SmithChartCanvas: React.FC<SmithChartCanvasProps> = ({
       touchStartRef.current = { x, y, time: Date.now() };
 
       const state = animationState.current;
-      if (isNearActivePoint(x, y) || !state.hasPosition) {
+
+      // Check if touch is within the Smith chart circle
+      const { cx, cy, radius } = state;
+      const dx = x - cx;
+      const dy = y - cy;
+      const isInsideCircle = dx * dx + dy * dy <= radius * radius * 1.1;
+
+      if (isInsideCircle) {
         e.preventDefault(); // Prevent scroll when dragging
         state.isDragging = true;
         callbacksRef.current.onDragChange?.(true);
 
-        if (!state.hasPosition) {
-          state.targetX = x;
-          state.targetY = y;
-          state.currentX = x;
-          state.currentY = y;
-          state.hasPosition = true;
-          const newZ = screenToImpedance(x, y);
-          if (newZ) {
-            callbacksRef.current.onDirectDrag?.(newZ);
-            // [L3 Synesthesia] Start sonification
-            audio.startSonification();
-            audio.updateSonification(newZ.r, newZ.x);
-          }
+        // Move point to touch position
+        state.targetX = x;
+        state.targetY = y;
+        state.currentX = x;
+        state.currentY = y;
+        state.hasPosition = true;
+        const newZ = screenToImpedance(x, y);
+        if (newZ) {
+          callbacksRef.current.onDirectDrag?.(newZ);
+          // [L3 Synesthesia] Start sonification
+          audio.startSonification();
+          audio.updateSonification(newZ.r, newZ.x);
         }
       }
     },
-    [
-      isMobile,
-      allowDirectDrag,
-      isInteractionEnabled,
-      isNearActivePoint,
-      screenToImpedance,
-    ]
+    [isMobile, allowDirectDrag, isInteractionEnabled, screenToImpedance]
   );
 
   const handleTouchMove = useCallback(
@@ -1936,7 +1928,7 @@ export const SmithChartCanvas: React.FC<SmithChartCanvasProps> = ({
   }, []);
 
   return (
-    <div className="relative w-full h-full min-h-[500px] md:min-h-[600px] rounded-3xl overflow-hidden">
+    <div className="relative w-full h-full overflow-hidden pointer-events-none">
       {/* L3 UX: Mobile Safety Lock - Interaction Toggle */}
       {isMobile && allowDirectDrag && !isInteractionEnabled && (
         <div className="absolute inset-0 z-20 flex items-center justify-center pointer-events-auto">
@@ -1956,22 +1948,34 @@ export const SmithChartCanvas: React.FC<SmithChartCanvasProps> = ({
         </div>
       )}
 
+      {/* Circular interaction overlay - only covers the Smith chart circle */}
+      {allowDirectDrag && circleSize > 0 && (
+        <div
+          className={`absolute rounded-full z-10 ${getCursorStyle()}`}
+          style={{
+            left: "50%",
+            top: "50%",
+            width: `${circleSize}px`,
+            height: `${circleSize}px`,
+            transform: "translate(-50%, -50%)",
+            pointerEvents: "auto",
+          }}
+          onMouseMove={handleMouseMove}
+          onMouseDown={handleMouseDown}
+          onMouseUp={handleMouseUp}
+          onMouseLeave={handleMouseLeave}
+        />
+      )}
+
       {/* L3 Visual De-noising: Removed vignette - Deepen blacks instead */}
 
       <canvas
         ref={canvasRef}
-        className={`absolute inset-0 w-full h-full smith-canvas ${getCursorStyle()} ${
+        className={`absolute inset-0 w-full h-full smith-canvas pointer-events-none ${
           isMobile && !isInteractionEnabled
             ? "touch-pan-y touch-pinch-zoom"
             : "touch-none"
         }`}
-        onMouseMove={handleMouseMove}
-        onMouseDown={handleMouseDown}
-        onMouseUp={handleMouseUp}
-        onMouseLeave={handleMouseLeave}
-        onTouchStart={handleTouchStart}
-        onTouchMove={handleTouchMove}
-        onTouchEnd={handleTouchEnd}
       />
 
       {/* Simplified HUD - Direct DOM Updates */}
