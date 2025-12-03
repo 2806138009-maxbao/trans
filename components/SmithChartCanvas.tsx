@@ -15,6 +15,8 @@ interface SmithChartCanvasProps {
   showAdmittance?: boolean;
   showVSWRCircles?: boolean;
   lang?: "en" | "zh";
+  visualMode?: "void" | "genesis" | "impedance" | "reflection" | "lab";
+  showVector?: boolean; // Force show red reflection vector
   onDirectDrag?: (impedance: { r: number; x: number }) => void;
   allowDirectDrag?: boolean;
   onHoverChange?: (isHovering: boolean) => void;
@@ -1039,6 +1041,8 @@ export const SmithChartCanvas: React.FC<SmithChartCanvasProps> = ({
   showAdmittance,
   showVSWRCircles = false,
   lang = "zh",
+  visualMode,
+  showVector,
   onDirectDrag,
   allowDirectDrag = false,
   onHoverChange,
@@ -1112,6 +1116,10 @@ export const SmithChartCanvas: React.FC<SmithChartCanvasProps> = ({
     radius: 0,
     width: 0,
     height: 0,
+    rotation: 0,
+    vectorX: 0,
+    vectorY: 0,
+    vectorReady: false,
 
     // Frame timing (Delta Time for frame independence)
     lastFrameTime: 0,
@@ -1252,10 +1260,19 @@ export const SmithChartCanvas: React.FC<SmithChartCanvasProps> = ({
       state.deltaTime = deltaMs;
       state.lastFrameTime = timestamp;
 
+      const shouldShowPoint =
+        visualMode !== "void" && visualMode !== "genesis";
+      const shouldDrawVector = visualMode === "reflection" || !!showVector;
+
       const { cx, cy, radius, width: w, height: h } = state;
       if (w === 0 || h === 0) {
         animationFrameId = requestAnimationFrame(draw);
         return;
+      }
+
+      // Gentle background rotation for perpetual motion
+      if (!reducedMotion) {
+        state.rotation += 0.002 * dt;
       }
 
       // ========================================
@@ -1266,9 +1283,27 @@ export const SmithChartCanvas: React.FC<SmithChartCanvasProps> = ({
         const denom = (z.r + 1) * (z.r + 1) + z.x * z.x;
         const gammaU = (z.r * z.r + z.x * z.x - 1) / denom;
         const gammaV = (2 * z.x) / denom;
-        state.targetX = cx + gammaU * radius;
-        state.targetY = cy - gammaV * radius;
-        state.hasPosition = true;
+        const targetX = cx + gammaU * radius;
+        const targetY = cy - gammaV * radius;
+
+        // If direct drag is enabled, treat override as an initial seed only.
+        if (!allowDirectDrag) {
+          state.targetX = targetX;
+          state.targetY = targetY;
+          state.hasPosition = true;
+          state.currentX = state.targetX;
+          state.currentY = state.targetY;
+          state.velocityX = 0;
+          state.velocityY = 0;
+          state.vectorReady = false;
+        } else if (!state.hasPosition && !state.isDragging) {
+          state.targetX = targetX;
+          state.targetY = targetY;
+          state.currentX = targetX;
+          state.currentY = targetY;
+          state.hasPosition = true;
+          state.vectorReady = false;
+        }
       }
 
       // ========================================
@@ -1369,6 +1404,10 @@ export const SmithChartCanvas: React.FC<SmithChartCanvasProps> = ({
       // Draw grid: animated during opening, cached after
       if (state.openingProgress < 1 && !reducedMotion) {
         // Use animated grid during opening sequence
+        ctx.save();
+        ctx.translate(cx, cy);
+        ctx.rotate(state.rotation);
+        ctx.translate(-cx, -cy);
         const cachedLines = getGenesisCache();
         drawAnimatedGrid(
           ctx,
@@ -1380,16 +1419,27 @@ export const SmithChartCanvas: React.FC<SmithChartCanvasProps> = ({
           showAdmittance,
           showVSWRCircles
         );
+        ctx.restore();
       } else {
         // Use cached static grid for performance
         if (gridCacheRef.current && state.gridCacheValid) {
+          ctx.save();
+          ctx.translate(cx, cy);
+          ctx.rotate(state.rotation);
+          ctx.translate(-cx, -cy);
           ctx.drawImage(gridCacheRef.current, 0, 0, w, h);
+          ctx.restore();
         } else if (!state.gridCacheValid) {
           // Rebuild cache if invalid
           const dpr = Math.min(window.devicePixelRatio || 1, 2);
           updateGridCache(w, h, dpr);
           if (gridCacheRef.current) {
+            ctx.save();
+            ctx.translate(cx, cy);
+            ctx.rotate(state.rotation);
+            ctx.translate(-cx, -cy);
             ctx.drawImage(gridCacheRef.current, 0, 0, w, h);
+            ctx.restore();
           }
         }
       }
@@ -1442,7 +1492,11 @@ export const SmithChartCanvas: React.FC<SmithChartCanvasProps> = ({
       // Draw active point
       if (state.hasPosition) {
         // Calculate impedance from screen position (in-place update)
-        if (!overrideImpedance) {
+        const useManualImpedance =
+          allowDirectDrag &&
+          (state.isDragging || (!overrideImpedance && state.hasPosition));
+
+        if (!overrideImpedance || useManualImpedance) {
           const u = (state.currentX - cx) / radius;
           const v = (cy - state.currentY) / radius;
 
@@ -1454,7 +1508,7 @@ export const SmithChartCanvas: React.FC<SmithChartCanvasProps> = ({
               state.hasImpedance = true;
             }
           }
-        } else {
+        } else if (overrideImpedance) {
           state.impedance.r = overrideImpedance.r;
           state.impedance.x = overrideImpedance.x;
           state.hasImpedance = true;
@@ -1462,27 +1516,53 @@ export const SmithChartCanvas: React.FC<SmithChartCanvasProps> = ({
 
         if (state.hasImpedance) {
           // Draw dynamic coordinate lines (R-circle and X-arc)
-          drawDynamicCoordinates(
-            ctx,
-            cx,
-            cy,
-            radius,
-            state.impedance.r,
-            state.impedance.x
-          );
+          if (shouldShowPoint) {
+            drawDynamicCoordinates(
+              ctx,
+              cx,
+              cy,
+              radius,
+              state.impedance.r,
+              state.impedance.x
+            );
+          }
 
-          drawActivePoint(
-            ctx,
-            cx,
-            cy,
-            radius,
-            state.impedance,
-            state.currentX,
-            state.currentY,
-            state.isHovering,
-            state.isDragging || !!overrideImpedance, // Show lines when dragging OR using sliders
-            state.isSnapped
-          );
+          if (shouldDrawVector) {
+            if (!state.vectorReady) {
+              state.vectorX = state.currentX;
+              state.vectorY = state.currentY;
+              state.vectorReady = true;
+            } else {
+              const ease = Math.min(1, 0.12 * dt);
+              state.vectorX += (state.currentX - state.vectorX) * ease;
+              state.vectorY += (state.currentY - state.vectorY) * ease;
+            }
+
+            const originalComposite = ctx.globalCompositeOperation;
+            ctx.globalCompositeOperation = "lighter";
+            ctx.beginPath();
+            ctx.moveTo(cx, cy);
+            ctx.lineTo(state.vectorX, state.vectorY);
+            ctx.strokeStyle = "rgba(255, 50, 50, 0.8)";
+            ctx.lineWidth = 2;
+            ctx.stroke();
+            ctx.globalCompositeOperation = originalComposite;
+          }
+
+          if (shouldShowPoint) {
+            drawActivePoint(
+              ctx,
+              cx,
+              cy,
+              radius,
+              state.impedance,
+              state.currentX,
+              state.currentY,
+              state.isHovering,
+              state.isDragging || !!overrideImpedance, // Show lines when dragging OR using sliders
+              state.isSnapped
+            );
+          }
 
           // Throttled HUD update (Direct DOM Manipulation)
           if (timestamp - lastHudUpdate.current > 60) {
@@ -1552,7 +1632,7 @@ export const SmithChartCanvas: React.FC<SmithChartCanvasProps> = ({
       window.removeEventListener("resize", resize);
       if (animationFrameId) cancelAnimationFrame(animationFrameId);
     };
-  }, [reducedMotion, overrideImpedance, updateGridCache]);
+  }, [reducedMotion, overrideImpedance, updateGridCache, visualMode, showVector]);
 
   // ========================================
   // EVENT HANDLERS (Update refs directly)
@@ -1663,7 +1743,7 @@ export const SmithChartCanvas: React.FC<SmithChartCanvasProps> = ({
         return;
       }
 
-      if (overrideImpedance) return;
+      if (overrideImpedance && !allowDirectDrag) return;
 
       const { cx, cy, radius } = state;
       const u = (x - cx) / radius;
@@ -1856,7 +1936,7 @@ export const SmithChartCanvas: React.FC<SmithChartCanvasProps> = ({
   }, []);
 
   return (
-    <div className="relative w-full h-[500px] md:h-[600px] rounded-3xl overflow-hidden">
+    <div className="relative w-full h-full min-h-[500px] md:min-h-[600px] rounded-3xl overflow-hidden">
       {/* L3 UX: Mobile Safety Lock - Interaction Toggle */}
       {isMobile && allowDirectDrag && !isInteractionEnabled && (
         <div className="absolute inset-0 z-20 flex items-center justify-center pointer-events-auto">
