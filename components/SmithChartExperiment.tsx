@@ -6,9 +6,10 @@ import { GridIcon, CircleIcon, RotateCcwIcon, CrosshairIcon, CableIcon } from '.
 import { InstrumentSlider } from './InstrumentSlider';
 import { MatchingNetworkCalculator } from './MatchingNetworkCalculator';
 import { TRANSLATIONS } from '../types';
-import { InteractiveTutorial } from './InteractiveTutorial';
+
 import { useExperimentHUD } from '../hooks/useExperimentHUD';
 import { useSmithModeOptional, SMITH_MODE_PRESETS } from '../state/smithModes';
+import { EquivalentCircuit } from './EquivalentCircuit';
 import { 
   ScrubbableInput, 
   PanelChassis, 
@@ -313,419 +314,294 @@ export const SmithChartExperiment: React.FC<SmithChartExperimentProps> = ({
     enabled: true,
   });
 
+  // [L3 Parallax Logic]
+  const chassisRef = useRef<HTMLDivElement>(null);
+  const [rotate, setRotate] = useState({ x: 0, y: 0 });
+  const [sheenPos, setSheenPos] = useState(0);
+
+  const handleChassisMouseMove = (e: React.MouseEvent) => {
+    if (!chassisRef.current || reducedMotion) return;
+    const rect = chassisRef.current.getBoundingClientRect();
+    const centerX = rect.left + rect.width / 2;
+    const centerY = rect.top + rect.height / 2;
+    
+    // Calculate normalized coordinates (-1 to 1)
+    const normX = (e.clientX - centerX) / (rect.width / 2);
+    const normY = (e.clientY - centerY) / (rect.height / 2);
+
+    // Micro-tilt (Max 1.5 deg)
+    setRotate({ x: normY * -1.5, y: normX * 1.5 });
+    
+    // Sheen position
+    setSheenPos(normX * 100); 
+  };
+
+  const handleChassisMouseLeave = () => {
+    setRotate({ x: 0, y: 0 });
+  };
+
+
   return (
     <>
       {/* Toast Notifications */}
       <ToastManager toasts={toasts} onDismiss={dismissToast} />
-      <div 
-        className="w-full flex flex-col"
-        style={{ gap: 'var(--space-12)' }}
-      >
-        {/* 48px = 6 x 8 */}
-        {/* 
-          Main Display Area - baseline layout
-          Muller-Brockmann grid
-        */}
-        <div className="relative w-full">
-        {/* Decorative corner accents - 使用 8pt 网格 */}
-        <div 
-          className="absolute w-8 h-8 border-l-2 border-t-2 border-[#FFC700]/30 rounded-tl-lg pointer-events-none z-20"
-          style={{ top: '-8px', left: '-8px' }}
-        />
-        <div 
-          className="absolute w-8 h-8 border-r-2 border-t-2 border-[#FFC700]/30 rounded-tr-lg pointer-events-none z-20"
-          style={{ top: '-8px', right: '-8px' }}
-        />
-        <div 
-          className="absolute w-8 h-8 border-l-2 border-b-2 border-[#FFC700]/30 rounded-bl-lg pointer-events-none z-20"
-          style={{ bottom: '-8px', left: '-8px' }}
-        />
-        <div 
-          className="absolute w-8 h-8 border-r-2 border-b-2 border-[#FFC700]/30 rounded-br-lg pointer-events-none z-20"
-          style={{ bottom: '-8px', right: '-8px' }}
-        />
+      
+      {/* VNA CHASSIS CONTAINER - With Perspective */}
+      <div className="relative w-full max-w-4xl mx-auto mt-8 mb-12 perspective-[2000px]">
         
-        <TiltCard glowColor={THEME.colors.chart.faintGold} disabled>
-          {/* 内边距使用 8pt 网格 */}
-          <div className="relative" style={{ padding: 'var(--space-2)' }}>  {/* 8px */}
-            {/* Top Bar - Presets & Mode */}
-            <div className="absolute top-4 left-4 right-4 z-20 flex items-center justify-between pointer-events-none">
-              {/* 
-                Preset Quick Access
-                Don Norman: 即时反馈 - 点击时有"弹跳"动画
-              */}
-              <div className="flex items-center gap-1 pointer-events-auto">
-                {PRESETS.map(preset => {
-                  const isActive = rValue === preset.r && xValue === preset.x;
-                  return (
-                    <button
-                      key={preset.id}
-                      onClick={(e) => {
-                        // Don Norman: 即时反馈 - 点击动画
-                        const btn = e.currentTarget;
-                        btn.style.transition = 'none';
-                        btn.style.transform = 'scale(0.92)';
-                        setTimeout(() => {
-                          btn.style.transition = 'transform 0.1s var(--ease-out-expo)';
-                          btn.style.transform = 'scale(1.05)';
-                          setTimeout(() => {
-                            btn.style.transform = 'scale(1)';
-                          }, 100);
-                        }, 80);
-                        handlePreset(preset);
-                      }}
-                      className="group relative rounded-lg text-[10px] font-bold uppercase tracking-wider backdrop-blur-md transition-all duration-200"
-                      style={{ 
-                        padding: 'var(--space-2) var(--space-3)',
-                        transitionTimingFunction: 'var(--ease-out-expo)',
-                        backgroundColor: isActive ? THEME.colors.primaryFaint : 'rgba(0,0,0,0.4)',
-                        color: isActive ? THEME.colors.primary : THEME.colors.text.muted,
-                        border: `1px solid ${isActive ? THEME.colors.primaryDim : 'rgba(255,255,255,0.1)'}`,
-                      }}
-                    >
-                      <span className="mr-1.5 font-mono text-[9px] opacity-70">{preset.symbol}</span>
-                      {preset.label[lang]}
-                      {isActive && (
-                        <span className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-1 h-1 rounded-full bg-[#FFC700] shadow-[0_0_6px_#FFC700]" />
-                      )}
-                    </button>
-                  );
-                })}
-              </div>
-
-              {/* Mode Indicator */}
-              <div className="flex items-center gap-2 pointer-events-auto">
-                {/* VSWR Circles Toggle */}
-                <button
-                  onClick={() => setShowVSWRCircles(!showVSWRCircles)}
-                  className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-[10px] font-bold uppercase tracking-wider backdrop-blur-md transition-all duration-300"
-                  style={{ 
-                    backgroundColor: showVSWRCircles ? THEME.colors.primaryFaint : 'rgba(0,0,0,0.4)',
-                    border: `1px solid ${showVSWRCircles ? THEME.colors.primaryDim : THEME.colors.border.default}`,
-                    color: showVSWRCircles ? THEME.colors.primary : THEME.colors.text.muted,
-                  }}
-                >
-                  <CircleIcon size={12} />
-                  VSWR
-                </button>
-
-                {/* Admittance Toggle */}
-                <button
-                  onClick={() => {
-                    setShowAdmittance(!showAdmittance);
-                    triggerHudEvent('modeToggle');
-                  }}
-                  className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-[10px] font-bold uppercase tracking-wider backdrop-blur-md transition-all duration-300"
-                  style={{ 
-                    backgroundColor: showAdmittance ? 'rgba(71, 156, 255, 0.15)' : 'rgba(0,0,0,0.4)',
-                    border: `1px solid ${showAdmittance ? 'rgba(71, 156, 255, 0.3)' : THEME.colors.border.default}`,
-                    color: showAdmittance ? '#479CFF' : THEME.colors.text.muted,
-                  }}
-                >
-                  <RotateCcwIcon size={12} className={showAdmittance ? 'rotate-180' : ''} />
-                  Y-Chart
-                </button>
-
-                {/* Control Mode Toggle */}
-                <div 
-                  className="flex items-center gap-1 p-1 rounded-lg backdrop-blur-md"
-                  style={{ 
-                    backgroundColor: 'rgba(0,0,0,0.4)',
-                    border: `1px solid ${THEME.colors.border.default}`
-                  }}
-                >
-                  <button
-                    onClick={() => setControlMode('slider')}
-                    className={`p-1.5 rounded transition-all duration-300 ${controlMode === 'slider' ? 'bg-white/10 text-white shadow-sm' : 'text-white/30 hover:text-white/60'}`}
-                    title="Slider Control"
-                  >
-                    <GridIcon size={14} />
-                  </button>
-                  <button
-                    onClick={() => setControlMode('mouse')}
-                    className={`p-1.5 rounded transition-all duration-300 ${controlMode === 'mouse' ? 'bg-[#FFC700]/20 text-[#FFC700] shadow-[0_0_10px_rgba(255,199,0,0.2)]' : 'text-white/30 hover:text-white/60'}`}
-                    title="Mouse Control (Direct Manipulation)"
-                  >
-                    <CrosshairIcon size={14} />
-                  </button>
-                </div>
+        {/* THE CHASSIS - Floating Monolith */}
+        <div 
+          ref={chassisRef}
+          onMouseMove={handleChassisMouseMove}
+          onMouseLeave={handleChassisMouseLeave}
+          className="rounded-3xl bg-[#111] border border-white/10 shadow-2xl overflow-hidden relative transition-transform duration-100 ease-out"
+          style={{
+            transform: `rotateX(${rotate.x}deg) rotateY(${rotate.y}deg)`,
+            transformStyle: 'preserve-3d',
+            willChange: 'transform',
+          }}
+        >
+          {/* Dynamic Sheen Layer */}
+          <div 
+            className="absolute inset-0 pointer-events-none z-50 mix-blend-overlay rounded-3xl"
+            style={{
+              background: 'linear-gradient(115deg, transparent, rgba(255,255,255,0.05) 45%, rgba(255,255,255,0.1) 50%, transparent 55%)',
+              backgroundSize: '200% 100%',
+              backgroundPosition: `${50 + sheenPos / 5}% center`,
+              opacity: 0.6,
+              transition: 'background-position 0.1s ease-out'
+            }}
+          />
+          
+          {/* Chassis Texture */}
+          <div className="absolute inset-0 bg-noise opacity-[0.03] pointer-events-none" />
+          
+          {/* =====================================================================================
+              1. SCREEN BAY (The Smith Chart)
+             ===================================================================================== */}
+          <div className="relative p-6 pb-0">
+             {/* Bezel */}
+             <div className="rounded-2xl border-4 border-[#1A1A1A] bg-black shadow-[inset_0_2px_10px_rgba(0,0,0,0.8)] overflow-hidden relative h-[500px] md:h-[600px]">
                 
-                {/* Studio Export Button */}
-                <StudioExport 
-                  targetRef={chartContainerRef}
-                  filename="smith-chart"
-                  size="sm"
-                />
-              </div>
-            </div>
-
-            {/* 
-              Visual Core: The Smith Chart Canvas 
-            */}
-            <div 
-              ref={chartContainerRef}
-              className="relative w-full h-[500px] md:h-[600px] mb-8 flex items-center justify-center"
-              onMouseEnter={() => setIsHoveringChart(true)}
-              onMouseLeave={() => setIsHoveringChart(false)}
-            >
-              <SmithChartCanvas 
-                reducedMotion={reducedMotion} 
-                overrideImpedance={controlMode === 'slider' ? { r: rValue, x: xValue } : null}
-                showAdmittance={showAdmittance}
-                showVSWRCircles={showVSWRCircles}
-                lang={lang}
-                allowDirectDrag={controlMode === 'mouse'}
-                onDirectDrag={(z) => {
-                  setRValue(z.r);
-                  setXValue(z.x);
-                }}
-                onHoverChange={(hovering) => {
-                  if (hovering) {
-                    triggerHudEvent('pointerHover');
-                  }
-                }}
-                onDragChange={(dragging) => {
-                  if (dragging) {
-                    triggerHudEvent('sliderDrag');
-                  }
-                }}
-              />
-            
-              {/* Floating Mini HUD for Mouse Mode */}
-              {controlMode === 'mouse' && (
-                <div 
-                  className="absolute bottom-6 left-1/2 -translate-x-1/2 px-4 py-2 rounded-full backdrop-blur-xl flex items-center gap-4 animate-fade-in-up pointer-events-none"
-                  style={{ 
-                    backgroundColor: THEME.colors.overlay.glass,
-                    border: `1px solid ${THEME.colors.primaryDim}`,
-                    boxShadow: THEME.shadows.glow,
-                  }}
-                >
-                  <div className="flex items-center gap-2">
-                    <span className="w-1.5 h-1.5 rounded-full animate-pulse" style={{ backgroundColor: THEME.colors.primary }} />
-                    <span className="text-[10px] font-bold uppercase tracking-widest" style={{ color: THEME.colors.primary }}>
-                      DIRECT CONTROL
-                    </span>
-                  </div>
-                  <div className="w-px h-3 bg-white/20" />
-                  <div className="font-mono text-xs text-white/90">
-                    <span className="opacity-50 mr-1">z:</span>
-                    {rValue.toFixed(2)} {xValue >= 0 ? '+' : '-'} j{Math.abs(xValue).toFixed(2)}
-                  </div>
-                </div>
-              )}
-            </div>
-
-            {/* 
-              Interactive Tutorial - 在史密斯圆图显示后自动弹出
-            */}
-            <InteractiveTutorial lang={lang} autoStart={true} />
-
-            {/* 
-              S-TIER CONTROL PANEL
-              Design: Teenage Engineering / Blender / Linear
-              Features: Glassmorphism, Scrubbable Inputs, Tactile Buttons
-            */}
-            {/* BOOT SEQUENCE: Staggered sidebar entrance */}
-            {controlMode === 'slider' && (
-              <div 
-                className="relative -mt-16 mx-4 md:mx-8 rounded-2xl overflow-hidden"
-                style={{ 
-                  backgroundColor: 'rgba(10, 10, 10, 0.85)',
-                  backdropFilter: 'blur(24px)',
-                  WebkitBackdropFilter: 'blur(24px)',
-                  border: '1px solid rgba(255, 255, 255, 0.06)',
-                  boxShadow: '0 8px 32px rgba(0, 0, 0, 0.4)',
-                  // Staggered entrance animation
-                  opacity: sidebarVisible ? 1 : 0,
-                  transform: sidebarVisible ? 'translateX(0)' : 'translateX(20px)',
-                  transition: `all 0.5s ${THEME.animation.curve}`,
-                  transitionDelay: '100ms',
-                }}
-              >
-                {/* Panel Content */}
-                <div className="p-8">
-                  {/* Panel Header */}
-                  <div className="flex items-center justify-between mb-8 pb-6" style={{ borderBottom: '1px solid rgba(255, 255, 255, 0.05)' }}>
-                    <div className="flex items-center gap-4">
-                      <div 
-                        className="w-10 h-10 rounded-xl flex items-center justify-center"
-                        style={{ 
-                          backgroundColor: 'rgba(255, 215, 0, 0.1)',
-                          border: '1px solid rgba(255, 215, 0, 0.2)',
-                        }}
-                      >
-                        <GridIcon size={18} style={{ color: '#FFD700' }} />
-                      </div>
-                      <div>
-                        <h3 
-                          className="text-[10px] font-bold uppercase tracking-[0.15em]"
-                          style={{ color: 'rgba(255, 255, 255, 0.5)' }}
-                        >
-                          Impedance Controller
-                        </h3>
-                        <p className="text-xs text-white/80 mt-1 font-medium">
-                          Drag labels to scrub values
-                        </p>
-                      </div>
-                    </div>
-                    
-                    {/* Z0 Badge with CountUp effect */}
-                    <div 
-                      className="font-mono text-xs px-4 py-2 rounded-lg"
-                      style={{ 
-                        backgroundColor: '#030303',
-                        boxShadow: 'inset 0 1px 2px rgba(0,0,0,0.5)',
-                        color: '#FFD700',
-                        border: '1px solid rgba(255, 215, 0, 0.15)',
-                      }}
-                    >
-                      Z₀ = <CountUp end={50} duration={800} delay={200} />Ω
-                    </div>
-                  </div>
-                  
-                  {/* Scrubbable Inputs Grid */}
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-8">
-                    {/* Resistance - Scrubbable */}
-                    <ScrubbableInput
-                      label={lang === 'zh' ? '电阻 R' : 'Resistance R'}
-                      value={rValue}
-                      onChange={(v) => {
-                        setRValue(v);
-                        triggerHudEvent('sliderDrag');
-                      }}
-                      min={0}
-                      max={10}
-                      step={0.01}
-                      unit="Ω (norm)"
-                      precision={3}
-                      accentColor="#FFD700"
-                    />
-
-                    {/* Reactance - Scrubbable */}
-                    <ScrubbableInput
-                      label={lang === 'zh' ? '电抗 X' : 'Reactance X'}
-                      value={xValue}
-                      onChange={(v) => {
-                        setXValue(v);
-                        triggerHudEvent('sliderDrag');
-                      }}
-                      min={-10}
-                      max={10}
-                      step={0.01}
-                      unit="jΩ (norm)"
-                      precision={3}
-                      accentColor="#FFFFFF"
-                    />
-                  </div>
-                  
-                  {/* Quick Presets - Tactile Buttons */}
-                  <div className="mb-8">
-                    <SectionHeader>
-                      {lang === 'zh' ? '快速预设' : 'Quick Presets'}
-                    </SectionHeader>
-                    <div className="flex flex-wrap gap-2">
-                      {PRESETS.map((preset) => (
-                        <TactileButton
-                          key={preset.id}
-                          onClick={() => {
-                            setRValue(preset.r);
-                            setXValue(preset.x);
-                          }}
-                          active={Math.abs(rValue - preset.r) < 0.1 && Math.abs(xValue - preset.x) < 0.1}
-                          size="sm"
-                        >
-                          <span className="font-mono mr-1">{preset.symbol}</span>
-                          {preset.label[lang]}
-                        </TactileButton>
-                      ))}
-                    </div>
-                  </div>
+                {/* Screen Glare */}
+                <div className="absolute inset-0 bg-gradient-to-tr from-white/5 to-transparent pointer-events-none z-10" />
                 
-                {/* ========================================
-                    物理补充: 传输线长度控制
-                    沿传输线移动时，阻抗点在圆图上顺时针旋转
-                    Γ_in = Γ_L × e^{-j2βl}
-                   ======================================== */}
+                {/* Model Number */}
+                <div className="absolute top-4 right-4 z-0 font-mono text-[10px] text-white/20 tracking-widest pointer-events-none">
+                   VNA-3000 // FIELD UNIT
+                </div>
+
+                {/* THE CANVAS */}
                 <div 
-                  className="mt-6 pt-6"
-                  style={{ borderTop: `1px solid ${THEME.colors.border.divider}` }}
+                  ref={chartContainerRef}
+                  className="relative w-full h-full flex items-center justify-center"
+                  onMouseEnter={() => setIsHoveringChart(true)}
+                  onMouseLeave={() => setIsHoveringChart(false)}
                 >
-                  <div className="flex items-center gap-3 mb-4">
-                    <CableIcon size={16} style={{ color: THEME.colors.primary }} />
-                    <span className="text-sm font-medium text-white">
-                      {t.sliders.transmissionLine}
-                    </span>
-                    <span 
-                      className="text-xs px-2 py-0.5 rounded"
-                      style={{ 
-                        backgroundColor: THEME.colors.primaryFaint,
-                        color: THEME.colors.primary 
-                      }}
-                    >
-                      {(lineLength * 360).toFixed(0)}° = {lineLength.toFixed(3)}λ
-                    </span>
-                  </div>
+                  <SmithChartCanvas 
+                    reducedMotion={reducedMotion} 
+                    overrideImpedance={controlMode === 'slider' ? { r: rValue, x: xValue } : null}
+                    showAdmittance={showAdmittance}
+                    showVSWRCircles={showVSWRCircles}
+                    lang={lang}
+                    allowDirectDrag={controlMode === 'mouse'}
+                    onDirectDrag={(z) => {
+                      setRValue(z.r);
+                      setXValue(z.x);
+                    }}
+                    onHoverChange={(hovering) => {
+                      if (hovering) triggerHudEvent('pointerHover');
+                    }}
+                    onDragChange={(dragging) => {
+                      if (dragging) triggerHudEvent('sliderDrag');
+                    }}
+                  />
                   
-                  <div className="flex items-center gap-4">
-                    <input
-                      type="range"
-                      min="0"
-                      max="0.5"
-                      step="0.001"
-                      value={lineLength}
-                      onChange={(e) => setLineLength(parseFloat(e.target.value))}
-                      className="flex-1 h-1 rounded-full appearance-none cursor-pointer"
-                      style={{
-                        background: `linear-gradient(to right, ${THEME.colors.primary} ${lineLength * 200}%, rgba(255,255,255,0.1) ${lineLength * 200}%)`
-                      }}
-                    />
-                    <button
-                      onClick={() => setLineLength(0)}
-                      className="text-xs px-2 py-1 rounded"
-                      style={{ 
-                        backgroundColor: 'rgba(255,255,255,0.05)',
-                        color: 'rgba(255,255,255,0.5)'
-                      }}
-                    >
-                      Reset
-                    </button>
-                  </div>
-                  
-                  {/* 传输线旋转后的阻抗 */}
-                  {lineLength > 0.001 && (
+                  {/* Floating Mini HUD (Inside Screen) */}
+                  {controlMode === 'mouse' && (
                     <div 
-                      className="mt-4 p-3 rounded-lg"
-                      style={{ backgroundColor: 'rgba(255, 199, 0, 0.05)' }}
+                      className="absolute bottom-6 left-1/2 -translate-x-1/2 px-4 py-2 rounded-full backdrop-blur-xl flex items-center gap-4 animate-fade-in-up pointer-events-none z-20"
+                      style={{ 
+                        backgroundColor: 'rgba(0,0,0,0.6)',
+                        border: `1px solid ${THEME.colors.primaryDim}`,
+                        boxShadow: THEME.shadows.glow,
+                      }}
                     >
-                      <div className="text-xs mb-2" style={{ color: THEME.colors.text.label }}>
-                        {t.sliders.inputImpedance}
+                      <div className="flex items-center gap-2">
+                        <span className="w-1.5 h-1.5 rounded-full animate-pulse" style={{ backgroundColor: THEME.colors.primary }} />
+                        <span className="text-[10px] font-bold uppercase tracking-widest" style={{ color: THEME.colors.primary }}>
+                          DIRECT CONTROL
+                        </span>
                       </div>
-                      <div className="font-mono text-sm" style={{ color: THEME.colors.primary }}>
-                        {derivedValues.actualZInR.toFixed(1)} {derivedValues.zInX >= 0 ? '+' : '-'} j{Math.abs(derivedValues.actualZInX).toFixed(1)} Ω
-                      </div>
-                      <div className="text-xs mt-2" style={{ color: THEME.colors.text.muted }}>
-                        {t.sliders.rotationInfo.replace('{deg}', (lineLength * 720).toFixed(0))}
+                      <div className="w-px h-3 bg-white/20" />
+                      <div className="font-mono text-xs text-white/90">
+                        <span className="opacity-50 mr-1">z:</span>
+                        {rValue.toFixed(2)} {xValue >= 0 ? '+' : '-'} j{Math.abs(xValue).toFixed(2)}
                       </div>
                     </div>
                   )}
                 </div>
-                
-                {/* ========================================
-                    物理补充: L型匹配网络计算器
-                    这是史密斯圆图最重要的实际应用
-                   ======================================== */}
-                <MatchingNetworkCalculator 
-                  z={{ r: rValue, x: xValue }}
-                  lang={lang}
-                />
-                </div>
-              </div>
-            )}
+             </div>
           </div>
-        </TiltCard>
-        </div>
 
+          {/* =====================================================================================
+              2. CONTROL DECK (The Physical Interface)
+             ===================================================================================== */}
+          <div className="relative p-8 bg-gradient-to-b from-[#161616] to-[#111] border-t border-white/5">
+             
+             {/* Deck Header & Toggles */}
+             <div className="flex flex-col md:flex-row items-start md:items-center justify-between mb-8 gap-6">
+                
+                {/* Left: Signal Source / Presets */}
+                <div className="flex flex-col gap-3">
+                   <h3 className="text-[10px] font-bold text-white/30 uppercase tracking-widest flex items-center gap-2">
+                      <div className="w-2 h-2 rounded-full bg-green-500/50 shadow-[0_0_5px_rgba(34,197,94,0.5)]" />
+                      Signal Source
+                   </h3>
+                   <div className="flex flex-wrap gap-2">
+                      {PRESETS.map((preset) => {
+                        const isActive = rValue === preset.r && xValue === preset.x;
+                        return (
+                          <button
+                            key={preset.id}
+                            onClick={() => handlePreset(preset)}
+                            className={`
+                              relative px-3 py-1.5 rounded text-[10px] font-bold uppercase tracking-wider transition-all duration-200
+                              ${isActive 
+                                ? 'bg-[#222] text-[#FFD700] border border-[#FFD700]/30 shadow-[0_0_10px_rgba(255,215,0,0.1)]' 
+                                : 'bg-[#1A1A1A] text-white/40 border border-white/5 hover:bg-[#222] hover:text-white/70'}
+                            `}
+                          >
+                            {preset.symbol}
+                          </button>
+                        );
+                      })}
+                   </div>
+                </div>
+
+                {/* Right: View Modes & Tools */}
+                <div className="flex flex-col gap-3 items-end">
+                   <h3 className="text-[10px] font-bold text-white/30 uppercase tracking-widest">
+                      Display Mode
+                   </h3>
+                   <div className="flex items-center gap-2">
+                      {/* VSWR Toggle */}
+                      <button
+                        onClick={() => setShowVSWRCircles(!showVSWRCircles)}
+                        className={`
+                          px-3 py-1.5 rounded text-[10px] font-bold uppercase tracking-wider transition-all
+                          ${showVSWRCircles ? 'bg-[#222] text-[#FFD700] border border-[#FFD700]/30' : 'bg-[#1A1A1A] text-white/40 border border-white/5'}
+                        `}
+                      >
+                        VSWR
+                      </button>
+                      
+                      {/* Admittance Toggle */}
+                      <button
+                        onClick={() => {
+                          setShowAdmittance(!showAdmittance);
+                          triggerHudEvent('modeToggle');
+                        }}
+                        className={`
+                          px-3 py-1.5 rounded text-[10px] font-bold uppercase tracking-wider transition-all
+                          ${showAdmittance ? 'bg-[#1A2230] text-[#479CFF] border border-[#479CFF]/30' : 'bg-[#1A1A1A] text-white/40 border border-white/5'}
+                        `}
+                      >
+                        Y-CHART
+                      </button>
+
+                      <div className="w-px h-4 bg-white/10 mx-1" />
+
+                      {/* Input Mode Toggle */}
+                      <div className="flex bg-[#0A0A0A] rounded-lg p-1 border border-white/5">
+                        <button
+                          onClick={() => setControlMode('slider')}
+                          className={`p-1.5 rounded transition-all ${controlMode === 'slider' ? 'bg-[#222] text-white shadow-sm' : 'text-white/20 hover:text-white/50'}`}
+                        >
+                          <GridIcon size={12} />
+                        </button>
+                        <button
+                          onClick={() => setControlMode('mouse')}
+                          className={`p-1.5 rounded transition-all ${controlMode === 'mouse' ? 'bg-[#222] text-[#FFD700] shadow-sm' : 'text-white/20 hover:text-white/50'}`}
+                        >
+                          <CrosshairIcon size={12} />
+                        </button>
+                      </div>
+                      
+                      {/* Export */}
+                      <StudioExport targetRef={chartContainerRef} filename="vna-capture" size="sm" />
+                   </div>
+                </div>
+             </div>
+             
+             {/* Equivalent Circuit Display */}
+             <div className="mb-8">
+                <EquivalentCircuit r={rValue} x={xValue} />
+             </div>
+             
+             {/* Main Sliders */}
+             <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-8">
+                <ScrubbableInput
+                  label={lang === 'zh' ? '电阻 R' : 'Resistance R'}
+                  value={rValue}
+                  onChange={(v) => { setRValue(v); triggerHudEvent('sliderDrag'); }}
+                  min={0} max={10} step={0.01} unit="Ω" precision={3} accentColor="#FFD700"
+                />
+                <ScrubbableInput
+                  label={lang === 'zh' ? '电抗 X' : 'Reactance X'}
+                  value={xValue}
+                  onChange={(v) => { setXValue(v); triggerHudEvent('sliderDrag'); }}
+                  min={-10} max={10} step={0.01} unit="jΩ" precision={3} accentColor="#FFFFFF"
+                />
+             </div>
+
+             {/* Transmission Line & Matching */}
+             <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 pt-8 border-t border-white/5">
+                {/* Transmission Line */}
+                <div>
+                   <div className="flex items-center gap-2 mb-4 text-white/40">
+                      <CableIcon size={14} />
+                      <span className="text-[10px] font-bold uppercase tracking-widest">Transmission Line</span>
+                   </div>
+                   <div className="flex items-center gap-4 bg-[#0A0A0A] p-4 rounded-xl border border-white/5">
+                      <input
+                        type="range" min="0" max="0.5" step="0.001"
+                        value={lineLength}
+                        onChange={(e) => setLineLength(parseFloat(e.target.value))}
+                        className="flex-1 h-1 rounded-full appearance-none cursor-pointer bg-[#222]"
+                        style={{
+                          backgroundImage: `linear-gradient(to right, ${THEME.colors.primary} ${lineLength * 200}%, #222 ${lineLength * 200}%)`
+                        }}
+                      />
+                      <div className="font-mono text-xs text-[#FFD700] w-16 text-right">
+                        {lineLength.toFixed(3)}λ
+                      </div>
+                   </div>
+                </div>
+
+                {/* Matching Network */}
+                <div>
+                   <div className="flex items-center gap-2 mb-4 text-white/40">
+                      <span className="text-[10px] font-bold uppercase tracking-widest">L-Match Solution</span>
+                   </div>
+                   <MatchingNetworkCalculator z={{ r: rValue, x: xValue }} lang={lang} />
+                </div>
+             </div>
+             
+             {/* Bottom Ports Decoration */}
+             <div className="mt-12 pt-6 border-t border-white/5 flex justify-center gap-12 opacity-40">
+                <div className="flex flex-col items-center gap-2">
+                   <div className="w-4 h-4 rounded-full bg-[#050505] border-2 border-[#333] shadow-[inset_0_1px_4px_rgba(0,0,0,1)]" />
+                   <span className="text-[8px] font-mono tracking-widest text-white/30">PORT 1</span>
+                </div>
+                <div className="flex flex-col items-center gap-2">
+                   <div className="w-4 h-4 rounded-full bg-[#050505] border-2 border-[#333] shadow-[inset_0_1px_4px_rgba(0,0,0,1)]" />
+                   <span className="text-[8px] font-mono tracking-widest text-white/30">PORT 2</span>
+                </div>
+             </div>
+
+          </div>
+        </div>
       </div>
     </>
   );

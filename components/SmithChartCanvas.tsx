@@ -867,9 +867,69 @@ function drawChromaticText(
   ctx.fillStyle = `rgba(100, 255, 255, ${CHROMATIC_OPACITY})`;
   ctx.fillText(text, x + CHROMATIC_OFFSET, y);
   
-  // Main text
   ctx.fillStyle = baseColor;
   ctx.fillText(text, x, y);
+}
+
+// ========================================
+// DYNAMIC COORDINATE SYSTEM
+// Draws the specific R-circle and X-arc for the current point
+// ========================================
+function drawDynamicCoordinates(
+  ctx: CanvasRenderingContext2D,
+  cx: number, cy: number, radius: number,
+  r: number, x: number
+) {
+  // 1. Constant Resistance Circle
+  // Center: (r/(r+1), 0) in Gamma plane
+  const rCenterU = r / (r + 1);
+  const rRadius = 1 / (r + 1);
+  const screenRCenterX = cx + rCenterU * radius;
+  const screenRRadius = rRadius * radius;
+
+  ctx.beginPath();
+  ctx.arc(screenRCenterX, cy, screenRRadius, 0, 2 * Math.PI);
+  ctx.strokeStyle = 'rgba(255, 215, 0, 0.8)'; // Gold (High Visibility)
+  ctx.lineWidth = 1.5;
+  ctx.setLineDash([2, 4]);
+  ctx.stroke();
+  
+  // 2. Constant Reactance Arc
+  // Center: (1, 1/x) in Gamma plane
+  if (Math.abs(x) > 0.01) {
+    const xCenterU = 1;
+    const xCenterV = 1 / x;
+    const xRadius = 1 / Math.abs(x);
+    const screenXCenterX = cx + xCenterU * radius;
+    const screenXCenterY = cy - xCenterV * radius; // Note: y is inverted in screen coords
+    const screenXRadius = xRadius * radius;
+
+    ctx.save();
+    // Clip to Smith Chart boundary
+    ctx.beginPath();
+    ctx.arc(cx, cy, radius, 0, 2 * Math.PI);
+    ctx.clip();
+
+    ctx.beginPath();
+    ctx.arc(screenXCenterX, screenXCenterY, screenXRadius, 0, 2 * Math.PI);
+    ctx.strokeStyle = x > 0 ? 'rgba(255, 77, 77, 0.8)' : 'rgba(77, 148, 255, 0.8)'; // Red/Blue (High Visibility)
+    ctx.lineWidth = 1.5;
+    ctx.setLineDash([2, 4]);
+    ctx.stroke();
+    
+    ctx.restore();
+  } else {
+    // Pure Resistance (Real Axis)
+    ctx.beginPath();
+    ctx.moveTo(cx - radius, cy);
+    ctx.lineTo(cx + radius, cy);
+    ctx.strokeStyle = 'rgba(255, 255, 255, 0.4)';
+    ctx.lineWidth = 1;
+    ctx.setLineDash([2, 4]);
+    ctx.stroke();
+  }
+  
+  ctx.setLineDash([]);
 }
 
 // ========================================
@@ -1273,13 +1333,20 @@ export const SmithChartCanvas: React.FC<SmithChartCanvasProps> = ({
         }
 
         if (state.hasImpedance) {
+          // Draw dynamic coordinate lines (R-circle and X-arc)
+          drawDynamicCoordinates(
+            ctx, cx, cy, radius,
+            state.impedance.r,
+            state.impedance.x
+          );
+
           drawActivePoint(
             ctx, cx, cy, radius, 
             state.impedance, 
             state.currentX,
             state.currentY,
             state.isHovering,
-            state.isDragging,
+            state.isDragging || !!overrideImpedance, // Show lines when dragging OR using sliders
             state.isSnapped
           );
           
@@ -1426,6 +1493,8 @@ export const SmithChartCanvas: React.FC<SmithChartCanvasProps> = ({
       const newZ = screenToImpedance(x, y);
       if (newZ) {
         callbacksRef.current.onDirectDrag?.(newZ);
+        // [L3 Synesthesia] Update sound texture based on impedance
+        audio.updateSonification(newZ.r, newZ.x);
       }
       return;
     }
@@ -1469,6 +1538,9 @@ export const SmithChartCanvas: React.FC<SmithChartCanvasProps> = ({
         const newZ = screenToImpedance(x, y);
         if (newZ) {
           callbacksRef.current.onDirectDrag?.(newZ);
+          // [L3 Synesthesia] Start sonification immediately on drag start
+          audio.startSonification();
+          audio.updateSonification(newZ.r, newZ.x);
         }
       }
     }
@@ -1479,6 +1551,8 @@ export const SmithChartCanvas: React.FC<SmithChartCanvasProps> = ({
     if (state.isDragging) {
       state.isDragging = false;
       callbacksRef.current.onDragChange?.(false);
+      // [L3 Synesthesia] Stop sound
+      audio.stopSonification();
     }
   }, []);
 
@@ -1490,6 +1564,8 @@ export const SmithChartCanvas: React.FC<SmithChartCanvasProps> = ({
     if (state.isDragging) {
       state.isDragging = false;
       callbacksRef.current.onDragChange?.(false);
+      // [L3 Synesthesia] Stop sound
+      audio.stopSonification();
     }
     
     if (!overrideImpedance && !state.isDragging) {
@@ -1553,6 +1629,9 @@ export const SmithChartCanvas: React.FC<SmithChartCanvasProps> = ({
         const newZ = screenToImpedance(x, y);
         if (newZ) {
           callbacksRef.current.onDirectDrag?.(newZ);
+          // [L3 Synesthesia] Start sonification
+          audio.startSonification();
+          audio.updateSonification(newZ.r, newZ.x);
         }
       }
     }
@@ -1579,6 +1658,8 @@ export const SmithChartCanvas: React.FC<SmithChartCanvasProps> = ({
     const newZ = screenToImpedance(x, y);
     if (newZ) {
       callbacksRef.current.onDirectDrag?.(newZ);
+      // [L3 Synesthesia] Update sound
+      audio.updateSonification(newZ.r, newZ.x);
     }
   }, [isMobile, allowDirectDrag, isInteractionEnabled, screenToImpedance]);
 
@@ -1587,6 +1668,8 @@ export const SmithChartCanvas: React.FC<SmithChartCanvasProps> = ({
     if (state.isDragging) {
       state.isDragging = false;
       callbacksRef.current.onDragChange?.(false);
+      // [L3 Synesthesia] Stop sound
+      audio.stopSonification();
     }
     touchStartRef.current = null;
   }, []);

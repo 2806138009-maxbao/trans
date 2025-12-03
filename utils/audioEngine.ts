@@ -311,6 +311,180 @@ class AudioEngine {
     osc.start(t);
     osc.stop(t + 0.15);
   }
+
+  // ==========================================
+  // SYNESTHESIA ENGINE (Impedance Sonification)
+  // ==========================================
+  
+  private sonificationOsc: OscillatorNode | null = null;
+  private sonificationGain: GainNode | null = null;
+  
+  // Inductive (+x): Low Frequency Rumble (Tremolo)
+  private sonificationLFO: OscillatorNode | null = null;
+  private sonificationLFOGain: GainNode | null = null;
+  
+  // Capacitive (-x): High Frequency Shimmer (FM Synthesis)
+  private sonificationFM: OscillatorNode | null = null;
+  private sonificationFMGain: GainNode | null = null;
+  
+  private isSonifying: boolean = false;
+
+  public startSonification() {
+    this.resume();
+    if (!this.ctx || this.isSonifying) return;
+    
+    const t = this.ctx.currentTime;
+    
+    // 1. Carrier Oscillator (The "Soul" of the signal)
+    this.sonificationOsc = this.ctx.createOscillator();
+    this.sonificationOsc.type = 'sine';
+    this.sonificationOsc.frequency.setValueAtTime(261.63, t); // Start at C4 (50Ω)
+    
+    // 2. Main Gain
+    this.sonificationGain = this.ctx.createGain();
+    this.sonificationGain.gain.setValueAtTime(0, t);
+    this.sonificationGain.gain.linearRampToValueAtTime(0.15, t + 0.1); // Fade in
+    
+    // 3. Inductive LFO (Tremolo) setup
+    this.sonificationLFO = this.ctx.createOscillator();
+    this.sonificationLFO.type = 'sine';
+    this.sonificationLFO.frequency.setValueAtTime(15, t); // 15Hz rumble
+    
+    this.sonificationLFOGain = this.ctx.createGain();
+    this.sonificationLFOGain.gain.value = 0; // Starts clean
+    
+    // LFO modulates the Main Gain
+    // Signal flow: LFO -> LFO_Gain -> Main_Gain.gain
+    this.sonificationLFO.connect(this.sonificationLFOGain);
+    this.sonificationLFOGain.connect(this.sonificationGain.gain);
+    
+    // 4. Capacitive FM (Shimmer) setup
+    this.sonificationFM = this.ctx.createOscillator();
+    this.sonificationFM.type = 'sawtooth'; // Richer harmonic content for "screech"
+    this.sonificationFM.frequency.setValueAtTime(523.25, t); // 2x Carrier
+    
+    this.sonificationFMGain = this.ctx.createGain();
+    this.sonificationFMGain.gain.value = 0; // Starts clean
+    
+    // FM modulates the Carrier Frequency
+    // Signal flow: FM -> FM_Gain -> Carrier.frequency
+    this.sonificationFM.connect(this.sonificationFMGain);
+    this.sonificationFMGain.connect(this.sonificationOsc.frequency);
+    
+    // 5. Connect to Output
+    this.sonificationOsc.connect(this.sonificationGain);
+    this.sonificationGain.connect(this.ctx.destination);
+    
+    // Start everything
+    this.sonificationOsc.start(t);
+    this.sonificationLFO.start(t);
+    this.sonificationFM.start(t);
+    
+    this.isSonifying = true;
+  }
+
+  public updateSonification(r: number, x: number) {
+    if (!this.ctx || !this.isSonifying || !this.sonificationOsc) return;
+    
+    const t = this.ctx.currentTime;
+    const rampTime = 0.05; // Fast response
+    
+    // --- 1. Resistance (R) -> Pitch ---
+    // Center (50Ω, r=1) = C4 (261.63 Hz)
+    // Range: r=0 (Short) -> Low C3, r=High -> High C6
+    // Use log mapping for natural pitch perception
+    // Clamp r to avoid Infinity/Zero issues
+    const safeR = Math.max(0.05, Math.min(20, r));
+    const baseFreq = 261.63;
+    // Log2(r) gives octaves relative to center
+    const octaves = Math.log2(safeR); 
+    const targetFreq = baseFreq * Math.pow(2, octaves * 0.5); // 0.5 scaling to keep it within comfortable range
+    
+    // Apply pitch (base frequency)
+    // Note: FM modulation adds to this value
+    this.sonificationOsc.frequency.setTargetAtTime(targetFreq, t, rampTime);
+    
+    // --- 2. Reactance (X) -> Texture ---
+    
+    // Inductive (+x): Low Frequency Rumble (Tremolo)
+    if (x > 0.05) {
+      // x goes from 0 to ~5+
+      const intensity = Math.min(1, x / 3);
+      
+      // LFO Rate: 10Hz (slow rumble) -> 30Hz (fast flutter)
+      this.sonificationLFO!.frequency.setTargetAtTime(10 + intensity * 20, t, rampTime);
+      
+      // LFO Depth: 0 -> 0.5 (heavy tremolo)
+      this.sonificationLFOGain!.gain.setTargetAtTime(intensity * 0.1, t, rampTime);
+      
+      // Kill FM
+      this.sonificationFMGain!.gain.setTargetAtTime(0, t, rampTime);
+    } 
+    // Capacitive (-x): High Frequency Screech (FM)
+    else if (x < -0.05) {
+      const intensity = Math.min(1, Math.abs(x) / 3);
+      
+      // FM Ratio: Keep it non-integer for metallic sound? Or harmonic?
+      // Let's track the carrier frequency for ratio
+      const fmFreq = targetFreq * 2.5; // 2.5 ratio = metallic
+      this.sonificationFM!.frequency.setTargetAtTime(fmFreq, t, rampTime);
+      
+      // FM Depth: 0 -> 500Hz deviation
+      this.sonificationFMGain!.gain.setTargetAtTime(intensity * 300, t, rampTime);
+      
+      // Kill LFO
+      this.sonificationLFOGain!.gain.setTargetAtTime(0, t, rampTime);
+    } 
+    // Near Resonance (x ~ 0)
+    else {
+      // Clean sound
+      this.sonificationLFOGain!.gain.setTargetAtTime(0, t, rampTime);
+      this.sonificationFMGain!.gain.setTargetAtTime(0, t, rampTime);
+    }
+    
+    // --- 3. Match Feedback (The "Sweet Spot") ---
+    // If very close to 1+j0, boost volume slightly and ensure purity
+    const isMatched = Math.abs(r - 1) < 0.1 && Math.abs(x) < 0.1;
+    if (isMatched) {
+      // "Lock-in" effect
+      this.sonificationOsc.frequency.setTargetAtTime(261.63, t, 0.02); // Snap to C4
+      this.sonificationGain!.gain.setTargetAtTime(0.2, t, 0.1); // Slight boost
+    } else {
+      this.sonificationGain!.gain.setTargetAtTime(0.15, t, 0.1); // Normal level
+    }
+  }
+
+  public stopSonification() {
+    if (!this.ctx || !this.isSonifying) return;
+    
+    const t = this.ctx.currentTime;
+    
+    // Fade out
+    if (this.sonificationGain) {
+      this.sonificationGain.gain.setTargetAtTime(0, t, 0.1);
+    }
+    
+    // Cleanup after fade
+    setTimeout(() => {
+      this.sonificationOsc?.stop();
+      this.sonificationLFO?.stop();
+      this.sonificationFM?.stop();
+      
+      this.sonificationOsc?.disconnect();
+      this.sonificationLFO?.disconnect();
+      this.sonificationFM?.disconnect();
+      this.sonificationGain?.disconnect();
+      
+      this.sonificationOsc = null;
+      this.sonificationLFO = null;
+      this.sonificationFM = null;
+      this.sonificationGain = null;
+      this.sonificationLFOGain = null;
+      this.sonificationFMGain = null;
+      
+      this.isSonifying = false;
+    }, 150);
+  }
 }
 
 export const audio = new AudioEngine();

@@ -9,7 +9,7 @@ import { HeroSection } from "./components/sections/HeroSection";
 // IntroNarrativeSection removed - content integrated into SmithOdyssey
 import { PrerequisiteSection } from "./components/sections/PrerequisiteSection";
 import { SmithChartExperiment } from "./components/SmithChartExperiment";
-import { EngineeringAppsSection } from "./components/sections/EngineeringAppsSection";
+
 import { SmithModeProvider, SmithMode } from "./state/smithModes";
 import { RecapAndCTASection } from "./components/sections/RecapAndCTASection";
 import { ImpedanceLabReadySection } from "./components/sections/ImpedanceLabReadySection";
@@ -23,7 +23,9 @@ import { MatchingStepsSim } from "./components/MatchingStepsSim";
 import { ExperimentHUDProvider } from "./hooks/useExperimentHUD";
 // GenesisExperience removed - replaced by unified intro flow
 import { SmithOdyssey } from "./components/SmithOdyssey";
+
 import { GenesisIntro } from "./components/GenesisIntro";
+import { EfficiencyCard, QFactorCard, LineRotationCard } from "./components/LiveInfoCards";
 
 const App: React.FC = () => {
   // L3 Audit: Physics Kernel & Brand System Active
@@ -42,12 +44,7 @@ const App: React.FC = () => {
   const t = TRANSLATIONS[lang];
   
   // Callback when engineering mode is selected - scroll to experiment
-  const handleEngineeringModeSelect = useCallback((mode: SmithMode) => {
-    // Scroll to experiment section
-    if (experimentRef.current) {
-      scrollToRef(experimentRef);
-    }
-  }, []);
+
   const tier = usePerformanceTier();
   // Allow user override, otherwise use system tier
   const reducedMotion = userMotionPref !== null ? userMotionPref : tier === 'low';
@@ -329,20 +326,20 @@ const App: React.FC = () => {
                   </span>
                 </summary>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6 w-full animate-fade-in-up">
-            <InfoCard 
+                  <EfficiencyCard 
                     title={t.powerTitle}
-                    value={t.powerValue}
                     desc={t.powerDesc}
-            />
-            <InfoCard 
+                    lang={lang}
+                  />
+                  <QFactorCard 
                     title={t.qFactorTitle}
-                    value={t.qFactorValue}
                     desc={t.qFactorDesc}
-            />
-            <InfoCard 
+                    lang={lang}
+                  />
+                  <LineRotationCard 
                     title={t.lineTitle}
-                    value={t.lineValue}
                     desc={t.lineDesc}
+                    lang={lang}
                   />
                 </div>
               </details>
@@ -352,15 +349,7 @@ const App: React.FC = () => {
             <MatchingStepsSection lang={lang} reducedMotion={reducedMotion} />
           </div>
 
-          {/* Chapter 3: Applications - Swiss Army Knife Mode Selector */}
-          <div ref={engineeringRef}>
-            <EngineeringAppsSection 
-              id="application" 
-              lang={lang} 
-              reducedMotion={reducedMotion}
-              onModeSelect={handleEngineeringModeSelect}
-            />
-          </div>
+
         </SmithModeProvider>
 
         {/* Chapter 4: Recap & CTA */}
@@ -454,54 +443,6 @@ const MatchingStepsSection: React.FC<{lang: Language, reducedMotion?: boolean}> 
   );
 };
 
-/**
- * InfoCard - Applies all 3 Design Tactics
- * 
- * 1. Warm Charcoal background (not pure grey)
- * 2. Hierarchy via Weight & Contrast
- * 3. Generous padding (Let it Breathe)
- */
-const InfoCard: React.FC<{title: string, value: string, desc: string}> = ({title, value, desc}) => (
-  <div 
-    className="rounded-2xl transition-all duration-500 hover:scale-[1.02]"
-    style={{ 
-      backgroundColor: THEME.colors.surface,           // Warm surface
-      border: `1px solid ${THEME.colors.border.default}`,
-      padding: THEME.spacing.cardPaddingLg,            // Let it breathe
-      transitionTimingFunction: THEME.animation.curve,
-    }}
-  >
-    {/* Label: Small, uppercase, letter-spacing, LOW contrast */}
-    <h3 
-      className="font-mono text-[10px] uppercase mb-3"
-      style={{ 
-        color: THEME.colors.text.label,                // Gold-tinted label
-        letterSpacing: '0.1em',
-        fontWeight: 500,
-      }}
-    >
-      {title}
-    </h3>
-    
-    {/* Value: Large, HIGH contrast, Semi-bold */}
-    <div 
-      className="text-2xl font-mono mb-4"
-      style={{ 
-        color: THEME.colors.text.main,
-        fontWeight: 600,
-      }}
-    >
-      {value}
-    </div>
-    
-    {/* Description: Body text, warm muted */}
-    <p 
-      className="text-sm leading-relaxed"
-      style={{ color: THEME.colors.text.muted }}
-    >
-      {desc}
-    </p>
-  </div>
-);
+
 
 export default App;
