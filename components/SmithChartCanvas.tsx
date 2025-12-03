@@ -895,42 +895,31 @@ function drawLivingLight(
   y2: number,
   intensity: number = 1.0
 ) {
-  // RAUNO-TIER: Additive Blending for Light
-  // Light is additive, not paint. Use 'lighter' mode for Bloom and Glow layers.
-
-  // Save current composite operation
-  const originalComposite = ctx.globalCompositeOperation;
-
-  // Layer 1: Bloom (wide, faint, scattered light) - ADDITIVE
-  ctx.globalCompositeOperation = "lighter"; // Additive blending
+  // OPTIMIZED: Simple alpha layers without expensive composite mode switching
+  // Layer 1: Bloom (wide, faint glow)
   ctx.beginPath();
   ctx.moveTo(x1, y1);
   ctx.lineTo(x2, y2);
-  ctx.strokeStyle = `rgba(255, 215, 0, ${0.08 * intensity})`;
-  ctx.lineWidth = 20;
+  ctx.strokeStyle = `rgba(255, 215, 0, ${0.06 * intensity})`;
+  ctx.lineWidth = 16;
   ctx.lineCap = "round";
   ctx.stroke();
 
-  // Layer 2: Glow (medium, visible aura) - ADDITIVE
+  // Layer 2: Glow (medium aura)
   ctx.beginPath();
   ctx.moveTo(x1, y1);
   ctx.lineTo(x2, y2);
-  ctx.strokeStyle = `rgba(255, 200, 50, ${0.25 * intensity})`;
-  ctx.lineWidth = 8;
+  ctx.strokeStyle = `rgba(255, 200, 50, ${0.2 * intensity})`;
+  ctx.lineWidth = 6;
   ctx.stroke();
 
-  // Layer 3: Hot Core (thin, bright white - true high temperature) - SOLID
-  // Core must be solid, not additive
-  ctx.globalCompositeOperation = "source-over"; // Restore normal blending for core
+  // Layer 3: Hot Core (thin, bright)
   ctx.beginPath();
   ctx.moveTo(x1, y1);
   ctx.lineTo(x2, y2);
-  ctx.strokeStyle = `rgba(255, 255, 255, ${0.9 * intensity})`;
+  ctx.strokeStyle = `rgba(255, 255, 255, ${0.85 * intensity})`;
   ctx.lineWidth = 2;
   ctx.stroke();
-
-  // Restore original composite operation
-  ctx.globalCompositeOperation = originalComposite;
 }
 
 // Chromatic aberration for text/edges
@@ -1433,41 +1422,6 @@ export const SmithChartCanvas: React.FC<SmithChartCanvasProps> = ({
         canvas.dataset.cursorDragging = state.isDragging ? "true" : "false";
       }
 
-      // ========================================
-      // RAUNO-TIER: Interactive Ambient Light
-      // The cursor illuminates nearby grid lines
-      // ========================================
-      if (state.hasPosition && state.hasImpedance) {
-        const originalComposite = ctx.globalCompositeOperation;
-
-        // Use 'overlay' mode to brighten the cached grid underneath
-        ctx.globalCompositeOperation = "overlay";
-
-        // Create radial gradient "flashlight" effect
-        const flashlightRadius = 200;
-        const flashlight = ctx.createRadialGradient(
-          state.currentX,
-          state.currentY,
-          0,
-          state.currentX,
-          state.currentY,
-          flashlightRadius
-        );
-
-        // Center: bright white (illuminates grid)
-        flashlight.addColorStop(0, "rgba(255, 255, 255, 0.12)");
-        // Mid: warm gold tint
-        flashlight.addColorStop(0.4, "rgba(255, 215, 0, 0.06)");
-        // Edge: fade to transparent
-        flashlight.addColorStop(1, "rgba(0, 0, 0, 0)");
-
-        ctx.fillStyle = flashlight;
-        ctx.fillRect(0, 0, w, h);
-
-        // Restore composite operation
-        ctx.globalCompositeOperation = originalComposite;
-      }
-
       // Draw active point
       if (state.hasPosition) {
         // Calculate impedance from screen position (in-place update)
@@ -1517,15 +1471,13 @@ export const SmithChartCanvas: React.FC<SmithChartCanvasProps> = ({
               state.vectorY += (state.currentY - state.vectorY) * ease;
             }
 
-            const originalComposite = ctx.globalCompositeOperation;
-            ctx.globalCompositeOperation = "lighter";
+            // OPTIMIZED: Simple vector line without composite mode switching
             ctx.beginPath();
             ctx.moveTo(cx, cy);
             ctx.lineTo(state.vectorX, state.vectorY);
-            ctx.strokeStyle = "rgba(255, 50, 50, 0.8)";
+            ctx.strokeStyle = "rgba(255, 50, 50, 0.75)";
             ctx.lineWidth = 2;
             ctx.stroke();
-            ctx.globalCompositeOperation = originalComposite;
           }
 
           if (shouldShowPoint) {
