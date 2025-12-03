@@ -130,6 +130,21 @@ interface SpringPoint {
 // CANVAS ENGINE
 // ========================================
 
+// L3 Performance: Geometry Baking Cache Structure
+interface CachedSegment {
+  cartX: number;
+  cartY: number; // Start Position (Cartesian)
+  smithX: number;
+  smithY: number; // End Position (Smith)
+  x: number; // Store x value for arc direction calculation
+}
+
+interface CachedLine {
+  colorType: 'r' | 'x'; // To determine color logic
+  isMain: boolean;      // For unity lines (thicker)
+  segments: CachedSegment[];
+}
+
 class GenesisCanvasEngine {
   private canvas: HTMLCanvasElement;
   private ctx: CanvasRenderingContext2D;
@@ -143,6 +158,10 @@ class GenesisCanvasEngine {
   // Grid config
   private readonly R_VALUES = [0, 0.2, 0.5, 1, 2, 5, 10];
   private readonly X_VALUES = [-10, -5, -2, -1, -0.5, 0, 0.5, 1, 2, 5, 10];
+  
+  // L3 Performance: Geometry Baking Cache
+  private cachedLines: CachedLine[] = [];
+  private geometryValid: boolean = false;
   
   // Effects
   private birthFlash: number = 0;
@@ -170,6 +189,95 @@ class GenesisCanvasEngine {
     this.canvas.style.width = `${width}px`;
     this.canvas.style.height = `${height}px`;
     this.ctx.setTransform(this.dpr, 0, 0, this.dpr, 0, 0);
+    
+    // L3 Performance: Recalculate geometry when size changes
+    this.geometryValid = false;
+    this.initGeometry();
+  }
+  
+  // L3 Performance: Pre-calculate all static geometry once
+  private initGeometry(): void {
+    if (this.geometryValid || this.width === 0 || this.height === 0) return;
+    
+    this.cachedLines = [];
+    const cx = this.width / 2;
+    const cy = this.height / 2;
+    const baseSmithR = Math.min(this.width, this.height) * 0.32;
+    const cartScale = baseSmithR * 0.8;
+    
+    // Pre-calculate R lines (Constant Resistance)
+    const rSegments = 80;
+    for (const rVal of this.R_VALUES) {
+      const isUnity = rVal === 1;
+      const segments: CachedSegment[] = [];
+      
+      for (let i = 0; i <= rSegments; i++) {
+        const t = i / rSegments;
+        // Map t to X value: -∞ to +∞, using tan for natural distribution
+        const xVal = Math.tan((t - 0.5) * Math.PI * 0.98) * 5;
+        
+        // Calculate Cartesian coordinates (static)
+        const cartX = cx - cartScale * 0.3 + rVal * cartScale * 0.12;
+        const cartY = cy - xVal * cartScale * 0.12;
+        
+        // Calculate Smith Chart coordinates (static)
+        const gamma = zToGamma(rVal, xVal);
+        const smithX = cx + gamma.re * baseSmithR;
+        const smithY = cy - gamma.im * baseSmithR;
+        
+        segments.push({
+          cartX,
+          cartY,
+          smithX,
+          smithY,
+          x: xVal
+        });
+      }
+      
+      this.cachedLines.push({
+        colorType: 'r',
+        isMain: isUnity,
+        segments
+      });
+    }
+    
+    // Pre-calculate X lines (Constant Reactance)
+    const xSegments = 64;
+    for (const xVal of this.X_VALUES) {
+      const isCenter = xVal === 0;
+      const segments: CachedSegment[] = [];
+      
+      for (let i = 0; i <= xSegments; i++) {
+        const t = i / xSegments;
+        // Map t to R value: 0 to ∞, using exponential for natural distribution
+        const rVal = Math.pow(t, 1.5) * 30;
+        
+        // Calculate Cartesian coordinates (static)
+        const cartX = cx - cartScale * 0.3 + rVal * cartScale * 0.12;
+        const cartY = cy - xVal * cartScale * 0.12;
+        
+        // Calculate Smith Chart coordinates (static)
+        const gamma = zToGamma(rVal, xVal);
+        const smithX = cx + gamma.re * baseSmithR;
+        const smithY = cy - gamma.im * baseSmithR;
+        
+        segments.push({
+          cartX,
+          cartY,
+          smithX,
+          smithY,
+          x: xVal
+        });
+      }
+      
+      this.cachedLines.push({
+        colorType: 'x',
+        isMain: isCenter,
+        segments
+      });
+    }
+    
+    this.geometryValid = true;
   }
   
   setProgress(p: number): void {
@@ -194,22 +302,29 @@ class GenesisCanvasEngine {
   render(): void {
     this.time += 0.016;
     
+    // L3 Performance: Ensure geometry is initialized before rendering
+    if (!this.geometryValid && this.width > 0 && this.height > 0) {
+      this.initGeometry();
+    }
+    
     const ctx = this.ctx;
     const { width, height, progress } = this;
     const transformT = easeOutQuart(this.getTransformProgress());
     
     const cx = width / 2;
     const cy = height / 2;
-    const baseSmithR = Math.min(width, height) * 0.32;
     
-    // L3 Physics: Elastic Impact (The Slam)
-    // When transformT > 0.8, modulate radius with damped sine wave for overshoot and bounce
-    let smithR = baseSmithR;
+    // [L3 物理注入] 弹性撞击：模拟物体闭合时的惯性回弹
+    let impactScale = 1.0;
     if (transformT > 0.8) {
-      const impactT = (transformT - 0.8) / 0.2; // 0 to 1 in the final 20%
-      const dampedOvershoot = Math.exp(-impactT * 3) * Math.sin(impactT * Math.PI * 4) * 0.05;
-      smithR = baseSmithR * (1 + dampedOvershoot);
+       // 撞击发生在动画最后 20%
+       const impactT = (transformT - 0.8) / 0.2; // 0 -> 1
+       // 衰减正弦波：先收缩，再回弹
+       const damp = Math.exp(-impactT * 5);
+       const wave = -Math.sin(impactT * Math.PI * 3); 
+       impactScale = 1.0 + (wave * damp * 0.05); // ±5% 的弹性形变
     }
+    const smithR = Math.min(width, height) * 0.32 * impactScale;
     
     const cartScale = smithR * 0.1;
     
@@ -486,31 +601,26 @@ class GenesisCanvasEngine {
     // t = 0: Cartesian position
     // t = 1: Smith Chart position (Γ = (z-1)/(z+1))
     const mapPoint = (r: number, x: number, t: number): { px: number; py: number } => {
-      // Cartesian coordinates (impedance plane)
-      // R axis horizontal, X axis vertical
       const cartScale = smithR * 0.8;
       const cartX = cx - cartScale * 0.3 + r * cartScale * 0.12;
       const cartY = cy - x * cartScale * 0.12;
       
-      // Smith Chart coordinates via bilinear transform
       const gamma = zToGamma(r, x);
       const smithX = cx + gamma.re * smithR;
       const smithY = cy - gamma.im * smithR;
       
-      // Apply easeInOutExpo for dramatic warp effect
       const easedT = easeInOutExpo(t);
       
-      // L3 Physics: Vertical Arc (The Fold)
-      // Points arc into position during transition (upper half arcs up, lower half arcs down)
-      // Increased arc intensity for more organic, less robotic movement
-      const arcIntensity = 40; // Increased from 30 for more pronounced arc
-      const verticalArcOffset = Math.sin(easedT * Math.PI) * arcIntensity;
-      const arcDirection = cartY < cy ? -1 : 1; // Upper half arcs up, lower half arcs down
-      const arcY = lerp(cartY, smithY, easedT) + verticalArcOffset * arcDirection;
-      
+      // [L3 物理注入] 垂直弧度：模拟纸张折叠的张力
+      // 在 t=0.5 时达到最大拱起高度
+      const arcIntensity = smithR * 0.8; 
+      const arcPhase = Math.sin(easedT * Math.PI); // 0 -> 1 -> 0
+      // 上半部分向上拱，下半部分向下拱
+      const direction = x === 0 ? 0 : (x > 0 ? -1 : 1); 
+      const verticalArc = arcPhase * arcIntensity * direction;
       return {
         px: lerp(cartX, smithX, easedT),
-        py: arcY
+        py: lerp(cartY, smithY, easedT) + verticalArc // 注入灵魂
       };
     };
     
@@ -564,141 +674,137 @@ class GenesisCanvasEngine {
     const gridVisible = phase2Progress > 0.7 || transformT > 0;
     
     if (gridVisible) {
+      // L3 Performance: Ensure geometry is initialized
+      if (!this.geometryValid) {
+        this.initGeometry();
+      }
+      
       // L3 Physics: Chromatic Aberration (The Tear)
-      // When velocity is high (transformT ≈ 0.5), draw grid lines 3 times (R, G, B) with slight offsets
       const chromaticActive = transformT > 0.4 && transformT < 0.6;
       const chromaticIntensity = chromaticActive ? Math.sin((transformT - 0.4) / 0.2 * Math.PI) : 0;
-      const chromaticOffset = chromaticIntensity * 2; // Pixel offset for RGB separation
+      const chromaticOffset = chromaticIntensity * 2;
       
-      // L3 Performance: Manual Glow (replaces expensive shadowBlur)
-      // Draw lines twice: wide/transparent (glow) + thin/solid (core)
-      const drawGlowingLine = (
-        ctx: CanvasRenderingContext2D,
-        points: Array<{ px: number; py: number }>,
-        color: string,
-        glowColor: string,
-        isMain: boolean
-      ) => {
-        // Pass 1: Glow (Wide, Low Opacity) - Only for main lines or high intensity
-        if (isMain && points.length > 1) {
-          ctx.beginPath();
-          points.forEach((p, i) => i === 0 ? ctx.moveTo(p.px, p.py) : ctx.lineTo(p.px, p.py));
-          ctx.strokeStyle = glowColor; // Low opacity glow
-          ctx.lineWidth = 4; // Wide stroke for glow
-          ctx.stroke();
-        }
-        
-        // Pass 2: Core (Thin, High Opacity)
-        if (points.length > 1) {
-          ctx.beginPath();
-          points.forEach((p, i) => i === 0 ? ctx.moveTo(p.px, p.py) : ctx.lineTo(p.px, p.py));
-          ctx.strokeStyle = color;
-          ctx.lineWidth = isMain ? 2 : 1;
-          ctx.stroke();
-        }
-      };
+      // L3 Performance: Fast interpolation using cached geometry
+      const easedT = easeInOutExpo(transformT);
+      const arcIntensity = smithR * 0.8;
+      const arcPhase = Math.sin(easedT * Math.PI);
       
-      // Helper function to draw a line with optional chromatic aberration and manual glow
-      const drawLineWithChromatic = (
-        points: Array<{ px: number; py: number }>,
-        opacity: number,
-        lineWidth: number,
-        isMain: boolean
-      ) => {
-        const baseColor = `hsla(${hue}, ${saturation}%, ${lightness}%, ${opacity})`;
-        const glowColor = `hsla(${hue}, ${saturation}%, ${lightness}%, ${opacity * 0.15})`; // Low opacity glow
+      // L3 Performance: Zero-allocation rendering using cached lines
+      for (const line of this.cachedLines) {
+        const lineOpacity = baseOpacity * (line.isMain ? 1.0 : 0.4);
+        const lineWidth = line.isMain ? 2 : 1;
+        const baseColor = `hsla(${hue}, ${saturation}%, ${lightness}%, ${lineOpacity})`;
+        const glowColor = `hsla(${hue}, ${saturation}%, ${lightness}%, ${lineOpacity * 0.15})`;
         
+        // Zero-allocation: Draw directly without creating point arrays
         if (chromaticActive && chromaticIntensity > 0.1) {
-          // Draw RGB offsets for chromatic aberration
+          // Chromatic aberration: Draw RGB offsets
           const offsets = [
-            { x: -chromaticOffset, y: 0, color: 'rgba(255, 0, 0, 0.3)' },   // Red
-            { x: 0, y: 0, color: baseColor }, // Green (original)
-            { x: chromaticOffset, y: 0, color: 'rgba(0, 0, 255, 0.3)' }    // Blue
+            { x: -chromaticOffset, y: 0, color: 'rgba(255, 0, 0, 0.3)' },
+            { x: 0, y: 0, color: baseColor },
+            { x: chromaticOffset, y: 0, color: 'rgba(0, 0, 255, 0.3)' }
           ];
           
           for (const offset of offsets) {
-            const offsetPoints = points.map(p => ({ px: p.px + offset.x, py: p.py + offset.y }));
-            if (offset.x === 0) {
-              // Main line: use glow
-              drawGlowingLine(ctx, offsetPoints, offset.color, glowColor, isMain);
-            } else {
-              // Chromatic offsets: no glow, just draw
-              ctx.strokeStyle = offset.color;
-              ctx.lineWidth = lineWidth;
+            const isMainOffset = offset.x === 0;
+            
+            // Pass 1: Glow (only for main line)
+            if (isMainOffset && line.isMain) {
               ctx.beginPath();
-              offsetPoints.forEach((p, i) => i === 0 ? ctx.moveTo(p.px, p.py) : ctx.lineTo(p.px, p.py));
+              let first = true;
+              for (const seg of line.segments) {
+                // Fast interpolation: simple lerp + physics
+                const direction = seg.x === 0 ? 0 : (seg.x > 0 ? -1 : 1);
+                const verticalArc = arcPhase * arcIntensity * direction;
+                const px = lerp(seg.cartX, seg.smithX, easedT) + offset.x;
+                const py = lerp(seg.cartY, seg.smithY, easedT) + verticalArc + offset.y;
+                
+                // Viewport clipping
+                if (py >= -50 && py <= height + 50 && px >= -50 && px <= width + 50) {
+                  if (first) {
+                    ctx.moveTo(px, py);
+                    first = false;
+                  } else {
+                    ctx.lineTo(px, py);
+                  }
+                }
+              }
+              ctx.strokeStyle = glowColor;
+              ctx.lineWidth = 4;
               ctx.stroke();
             }
+            
+            // Pass 2: Core line
+            ctx.beginPath();
+            let first = true;
+            for (const seg of line.segments) {
+              // Fast interpolation: simple lerp + physics
+              const direction = seg.x === 0 ? 0 : (seg.x > 0 ? -1 : 1);
+              const verticalArc = arcPhase * arcIntensity * direction;
+              const px = lerp(seg.cartX, seg.smithX, easedT) + offset.x;
+              const py = lerp(seg.cartY, seg.smithY, easedT) + verticalArc + offset.y;
+              
+              // Viewport clipping
+              if (py >= -50 && py <= height + 50 && px >= -50 && px <= width + 50) {
+                if (first) {
+                  ctx.moveTo(px, py);
+                  first = false;
+                } else {
+                  ctx.lineTo(px, py);
+                }
+              }
+            }
+            ctx.strokeStyle = offset.color;
+            ctx.lineWidth = isMainOffset ? lineWidth : 1;
+            ctx.stroke();
           }
         } else {
-          // Normal drawing with manual glow (no chromatic aberration)
-          drawGlowingLine(ctx, points, baseColor, glowColor, isMain);
-        }
-      };
-      
-      // ========================================
-      // CONSTANT R LINES (vertical in Cartesian → circles in Smith)
-      // High-resolution polylines for smooth bending
-      // ========================================
-      const rValues = [0, 0.2, 0.5, 1, 2, 5, 10];
-      
-      for (const rVal of rValues) {
-        const isUnity = rVal === 1;
-        const lineOpacity = baseOpacity * (isUnity ? 1.0 : 0.4);
-        const lineWidth = isUnity ? 2 : 1;
-        
-        // Optimized: 80 segments per line (reduced from 120 for performance)
-        const segments = 80;
-        const points: Array<{ px: number; py: number }> = [];
-        
-        for (let i = 0; i <= segments; i++) {
-          const t = i / segments;
-          // Map t to X value: -∞ to +∞, using tan for natural distribution
-          const xVal = Math.tan((t - 0.5) * Math.PI * 0.98) * 5;
-          
-          const { px, py } = mapPoint(rVal, xVal, transformT);
-          
-          // Clip to viewport with margin
-          if (py >= -50 && py <= height + 50 && px >= -50 && px <= width + 50) {
-            points.push({ px, py });
+          // Normal drawing: Manual glow without chromatic aberration
+          // Pass 1: Glow (only for main lines)
+          if (line.isMain) {
+            ctx.beginPath();
+            let first = true;
+            for (const seg of line.segments) {
+              const direction = seg.x === 0 ? 0 : (seg.x > 0 ? -1 : 1);
+              const verticalArc = arcPhase * arcIntensity * direction;
+              const px = lerp(seg.cartX, seg.smithX, easedT);
+              const py = lerp(seg.cartY, seg.smithY, easedT) + verticalArc;
+              
+              if (py >= -50 && py <= height + 50 && px >= -50 && px <= width + 50) {
+                if (first) {
+                  ctx.moveTo(px, py);
+                  first = false;
+                } else {
+                  ctx.lineTo(px, py);
+                }
+              }
+            }
+            ctx.strokeStyle = glowColor;
+            ctx.lineWidth = 4;
+            ctx.stroke();
           }
-        }
-        
-        if (points.length > 1) {
-          drawLineWithChromatic(points, lineOpacity, lineWidth, isUnity);
-        }
-      }
-      
-      // ========================================
-      // CONSTANT X LINES (horizontal in Cartesian → arcs in Smith)
-      // These bend and converge at the Open Circuit point
-      // ========================================
-      const xValues = [-10, -5, -2, -1, -0.5, 0, 0.5, 1, 2, 5, 10];
-      
-      for (const xVal of xValues) {
-        const isCenter = xVal === 0;
-        const lineOpacity = baseOpacity * (isCenter ? 1.0 : 0.4);
-        const lineWidth = isCenter ? 2 : 1;
-        
-        // Optimized: 64 segments per line (reduced from 100 for performance)
-        const segments = 64;
-        const points: Array<{ px: number; py: number }> = [];
-        
-        for (let i = 0; i <= segments; i++) {
-          const t = i / segments;
-          // Map t to R value: 0 to ∞, using exponential for natural distribution
-          const rVal = Math.pow(t, 1.5) * 30;
           
-          const { px, py } = mapPoint(rVal, xVal, transformT);
-          
-          // Clip to viewport
-          if (py >= -50 && py <= height + 50 && px >= -50 && px <= width + 50) {
-            points.push({ px, py });
+          // Pass 2: Core line
+          ctx.beginPath();
+          let first = true;
+          for (const seg of line.segments) {
+            const direction = seg.x === 0 ? 0 : (seg.x > 0 ? -1 : 1);
+            const verticalArc = arcPhase * arcIntensity * direction;
+            const px = lerp(seg.cartX, seg.smithX, easedT);
+            const py = lerp(seg.cartY, seg.smithY, easedT) + verticalArc;
+            
+            if (py >= -50 && py <= height + 50 && px >= -50 && px <= width + 50) {
+              if (first) {
+                ctx.moveTo(px, py);
+                first = false;
+              } else {
+                ctx.lineTo(px, py);
+              }
+            }
           }
-        }
-        
-        if (points.length > 1) {
-          drawLineWithChromatic(points, lineOpacity, lineWidth, isCenter);
+          ctx.strokeStyle = baseColor;
+          ctx.lineWidth = lineWidth;
+          ctx.stroke();
         }
       }
     }

@@ -216,16 +216,103 @@ function drawReactanceArc(
 // GENESIS ANIMATION - Animated Grid Drawing
 // ========================================
 
+// ========================================
+// GENESIS ANIMATION - Geometry Baking (L3 Optimization)
+// ========================================
+
+interface CachedGenesisSegment {
+  cx0: number; cy0: number; // Cartesian offsets (normalized)
+  sx0: number; sy0: number; // Smith offsets (normalized)
+  dir: number;              // Arc direction
+}
+
+interface CachedGenesisLine {
+  colorType: 'r' | 'x';
+  isMain: boolean;
+  segments: CachedGenesisSegment[];
+}
+
+// Global cache (lazy initialized)
+let GENESIS_CACHE: CachedGenesisLine[] | null = null;
+
+function getGenesisCache(): CachedGenesisLine[] {
+  if (GENESIS_CACHE) return GENESIS_CACHE;
+  
+  GENESIS_CACHE = [];
+  
+  // Pre-calculate R lines
+  const rSegments = 80;
+  for (const rVal of R_VALUES) {
+    const isUnity = rVal === 1;
+    const segments: CachedGenesisSegment[] = [];
+    
+    for (let i = 0; i <= rSegments; i++) {
+      const t = i / rSegments;
+      const xVal = Math.tan((t - 0.5) * Math.PI * 0.98) * 5;
+      
+      // Normalized offsets (independent of screen size/radius)
+      // cartScale = smithR * 0.8
+      // cartX = cx - cartScale * 0.3 + r * cartScale * 0.12
+      // cartX = cx + smithR * (0.8 * (r * 0.12 - 0.3))
+      const cx0 = 0.8 * (rVal * 0.12 - 0.3);
+      
+      // cartY = cy - x * cartScale * 0.12
+      // cartY = cy + smithR * (-x * 0.8 * 0.12)
+      const cy0 = -xVal * 0.8 * 0.12;
+      
+      const gamma = zToGammaSimple(rVal, xVal);
+      const sx0 = gamma.re;
+      const sy0 = -gamma.im;
+      
+      const dir = xVal === 0 ? 0 : (xVal > 0 ? -1 : 1);
+      
+      segments.push({ cx0, cy0, sx0, sy0, dir });
+    }
+    GENESIS_CACHE.push({ colorType: 'r', isMain: isUnity, segments });
+  }
+  
+  // Pre-calculate X lines
+  const xSegments = 64;
+  for (const xVal of X_VALUES) {
+    const isCenter = xVal === 0; // Note: X_VALUES doesn't have 0 usually, but let's check logic
+    // X_VALUES in this file: [0.2, 0.5, 1, 2, 5]. No 0.
+    // But original code checked `xVal === 1` for center color?
+    // Original code: `const isCenter = xVal === 1;`
+    const isMain = Math.abs(xVal) === 1;
+    const segments: CachedGenesisSegment[] = [];
+    
+    for (let i = 0; i <= xSegments; i++) {
+      const t = i / xSegments;
+      const rVal = Math.pow(t, 1.5) * 30;
+      
+      const cx0 = 0.8 * (rVal * 0.12 - 0.3);
+      const cy0 = -xVal * 0.8 * 0.12;
+      
+      const gamma = zToGammaSimple(rVal, xVal);
+      const sx0 = gamma.re;
+      const sy0 = -gamma.im;
+      
+      const dir = xVal === 0 ? 0 : (xVal > 0 ? -1 : 1);
+      
+      segments.push({ cx0, cy0, sx0, sy0, dir });
+    }
+    GENESIS_CACHE.push({ colorType: 'x', isMain, segments });
+  }
+  
+  return GENESIS_CACHE;
+}
+
 /**
  * Draw animated grid with Genesis fold effect
- * Uses mapPoint with vertical arc and elastic impact
+ * Uses Geometry Baking for zero-allocation rendering
  */
 function drawAnimatedGrid(
   ctx: CanvasRenderingContext2D,
   cx: number,
   cy: number,
   radius: number,
-  progress: number, // 0 to 1
+  progress: number,
+  cachedLines: CachedGenesisLine[],
   showAdmittance: boolean = false,
   showVSWRCircles: boolean = false
 ) {
@@ -233,53 +320,30 @@ function drawAnimatedGrid(
   const easedT = easeOutExpo(progress);
   
   // L3 Physics: Elastic Impact (The Slam)
-  // When progress > 0.8, modulate radius with damped sine wave
   let smithR = radius;
   if (easedT > 0.8) {
-    const impactT = (easedT - 0.8) / 0.2; // 0 to 1 in the final 20%
+    const impactT = (easedT - 0.8) / 0.2;
     const dampedOvershoot = Math.exp(-impactT * 3) * Math.sin(impactT * Math.PI * 4) * 0.05;
     smithR = radius * (1 + dampedOvershoot);
   }
   
-  // Thermal color transition: White → Gold
-  const hue = lerp(0, 51, easedT); // 0 → 51 (gold hue)
-  const saturation = lerp(0, 100, easedT); // 0% → 100%
+  // Thermal color transition
+  const hue = lerp(0, 51, easedT);
+  const saturation = lerp(0, 100, easedT);
   let lightness: number;
   if (easedT < 0.5) {
-    lightness = lerp(100, 85, easedT * 2); // Keep near white
+    lightness = lerp(100, 85, easedT * 2);
   } else {
-    lightness = lerp(85, 50, (easedT - 0.5) * 2); // Drop to gold
+    lightness = lerp(85, 50, (easedT - 0.5) * 2);
   }
-  const thermalColor = `hsl(${hue}, ${saturation}%, ${lightness}%)`;
   
   // Opacity curve
   const baseOpacity = lerp(0.2, 1.0, easedT * easedT);
   
-  // mapPoint: Core transformation with vertical arc
-  // Note: t is already eased (easedT from outer scope), so we use it directly
-  const mapPoint = (r: number, x: number, t: number): { px: number; py: number } => {
-    // Cartesian coordinates (impedance plane)
-    const cartScale = smithR * 0.8;
-    const cartX = cx - cartScale * 0.3 + r * cartScale * 0.12;
-    const cartY = cy - x * cartScale * 0.12;
-    
-    // Smith Chart coordinates via bilinear transform
-    const gamma = zToGammaSimple(r, x);
-    const smithX = cx + gamma.re * smithR;
-    const smithY = cy - gamma.im * smithR;
-    
-    // L3 Physics: Vertical Arc (The Fold)
-    // Points arc into position during transition
-    // t is already eased, so we use it directly
-    const verticalArcOffset = Math.sin(t * Math.PI) * 30;
-    const arcDirection = cartY < cy ? -1 : 1; // Upper half arcs up, lower half arcs down
-    const arcY = lerp(cartY, smithY, t) + verticalArcOffset * arcDirection;
-    
-    return {
-      px: lerp(cartX, smithX, t),
-      py: arcY
-    };
-  };
+  // Pre-calculate physics constants for this frame
+  const arcIntensity = smithR * 0.8;
+  const arcPhase = Math.sin(easedT * Math.PI);
+  const verticalArcFactor = arcPhase * arcIntensity;
   
   // Background glow
   const gradient = ctx.createRadialGradient(cx, cy, 0, cx, cy, smithR);
@@ -290,10 +354,10 @@ function drawAnimatedGrid(
   ctx.arc(cx, cy, smithR, 0, TWO_PI);
   ctx.fill();
   
-  // VSWR circles (if enabled)
+  // VSWR circles
   if (showVSWRCircles && easedT > 0.5) {
     ctx.setLineDash([4, 6]);
-    const vswrAlpha = (easedT - 0.5) * 2; // Fade in after 50%
+    const vswrAlpha = (easedT - 0.5) * 2;
     for (let i = 0; i < VSWR_VALUES.length; i++) {
       const vswr = VSWR_VALUES[i];
       const gammaMag = (vswr - 1) / (vswr + 1);
@@ -306,7 +370,7 @@ function drawAnimatedGrid(
     ctx.setLineDash([]);
   }
   
-  // Unit circle - appears with ripple effect
+  // Unit circle
   if (easedT > 0.2) {
     const circleT = (easedT - 0.2) / 0.8;
     const circleAlpha = Math.min(1, circleT * 1.2);
@@ -317,89 +381,68 @@ function drawAnimatedGrid(
     ctx.stroke();
   }
   
-  // Constant resistance circles (R lines)
-  for (let i = 0; i < R_VALUES.length; i++) {
-    const rVal = R_VALUES[i];
-    const isUnity = rVal === 1;
-    const lineOpacity = baseOpacity * (isUnity ? 1.0 : 0.4);
+  // Render Cached Lines (Zero Allocation Loop)
+  for (const line of cachedLines) {
+    const isMain = line.isMain;
+    const lineOpacity = baseOpacity * (isMain ? 1.0 : 0.4);
     
-    // High resolution: 120 segments per line
-    const segments = 120;
-    const points: Array<{ px: number; py: number }> = [];
+    // Set style once per line
+    ctx.strokeStyle = isMain 
+      ? `hsla(${hue}, ${saturation}%, ${lightness}%, ${lineOpacity})`
+      : `hsla(${hue}, ${saturation}%, ${lightness}%, ${lineOpacity * 0.4})`;
+    ctx.lineWidth = isMain ? 1 : 0.5;
     
-    for (let j = 0; j <= segments; j++) {
-      const t = j / segments;
-      // Map t to X value: -∞ to +∞, using tan for natural distribution
-      const xVal = Math.tan((t - 0.5) * Math.PI * 0.98) * 5;
+    ctx.beginPath();
+    let first = true;
+    
+    // Optimized segment loop
+    for (const seg of line.segments) {
+      // px = cx + lerp(cx0, sx0, t) * smithR
+      const px = cx + (seg.cx0 + (seg.sx0 - seg.cx0) * easedT) * smithR;
       
-      const { px, py } = mapPoint(rVal, xVal, easedT);
+      // py = cy + lerp(cy0, sy0, t) * smithR + verticalArc
+      const verticalArc = verticalArcFactor * seg.dir;
+      const py = cy + (seg.cy0 + (seg.sy0 - seg.cy0) * easedT) * smithR + verticalArc;
       
-      // Clip to viewport with margin
-      if (py >= -50 && py <= cy * 2 + 50 && px >= -50 && px <= cx * 2 + 50) {
-        points.push({ px, py });
+      // Viewport clipping (simple bounding box check)
+      // Assuming canvas size is roughly 2*cx, 2*cy
+      if (px > -50 && px < cx * 2 + 50 && py > -50 && py < cy * 2 + 50) {
+        if (first) {
+          ctx.moveTo(px, py);
+          first = false;
+        } else {
+          ctx.lineTo(px, py);
+        }
+      } else {
+        first = true; // Lift pen if out of bounds
       }
     }
+    ctx.stroke();
     
-    if (points.length > 1) {
+    // Mirror for X lines (negative reactance)
+    if (line.colorType === 'x') {
       ctx.beginPath();
-      ctx.moveTo(points[0].px, points[0].py);
-      for (let k = 1; k < points.length; k++) {
-        ctx.lineTo(points[k].px, points[k].py);
+      first = true;
+      for (const seg of line.segments) {
+        // Mirror Y for negative reactance
+        // px is same
+        const px = cx + (seg.cx0 + (seg.sx0 - seg.cx0) * easedT) * smithR;
+        
+        const verticalArc = verticalArcFactor * seg.dir;
+        const dy = (seg.cy0 + (seg.sy0 - seg.cy0) * easedT) * smithR + verticalArc;
+        const py = cy - dy;
+        
+        if (px > -50 && px < cx * 2 + 50 && py > -50 && py < cy * 2 + 50) {
+          if (first) {
+            ctx.moveTo(px, py);
+            first = false;
+          } else {
+            ctx.lineTo(px, py);
+          }
+        } else {
+          first = true;
+        }
       }
-      ctx.strokeStyle = isUnity 
-        ? `hsla(${hue}, ${saturation}%, ${lightness}%, ${lineOpacity})`
-        : `hsla(${hue}, ${saturation}%, ${lightness}%, ${lineOpacity * 0.4})`;
-      ctx.lineWidth = isUnity ? 1 : 0.5;
-      ctx.stroke();
-    }
-  }
-  
-  // Constant reactance arcs (X lines)
-  for (let i = 0; i < X_VALUES.length; i++) {
-    const xVal = X_VALUES[i];
-    const isCenter = xVal === 1;
-    const lineOpacity = baseOpacity * (isCenter ? 1.0 : 0.4);
-    
-    // High resolution: 100 segments per line
-    const segments = 100;
-    const points: Array<{ px: number; py: number }> = [];
-    
-    for (let j = 0; j <= segments; j++) {
-      const t = j / segments;
-      // Map t to R value: 0 to ∞, using exponential for natural distribution
-      const rVal = Math.pow(t, 1.5) * 30;
-      
-      const { px, py } = mapPoint(rVal, xVal, easedT);
-      
-      // Clip to viewport
-      if (py >= -50 && py <= cy * 2 + 50 && px >= -50 && px <= cx * 2 + 50) {
-        points.push({ px, py });
-      }
-    }
-    
-    if (points.length > 1) {
-      // Draw positive arc
-      ctx.beginPath();
-      ctx.moveTo(points[0].px, points[0].py);
-      for (let k = 1; k < points.length; k++) {
-        ctx.lineTo(points[k].px, points[k].py);
-      }
-      ctx.strokeStyle = isCenter
-        ? `hsla(${hue}, ${saturation}%, ${lightness}%, ${lineOpacity})`
-        : `hsla(${hue}, ${saturation}%, ${lightness}%, ${lineOpacity * 0.4})`;
-      ctx.lineWidth = isCenter ? 0.8 : 0.5;
-      ctx.stroke();
-      
-      // Draw negative arc (mirror)
-      ctx.beginPath();
-      ctx.moveTo(points[0].px, 2 * cy - points[0].py);
-      for (let k = 1; k < points.length; k++) {
-        ctx.lineTo(points[k].px, 2 * cy - points[k].py);
-      }
-      ctx.strokeStyle = isCenter
-        ? `hsla(${hue}, ${saturation}%, ${lightness}%, ${lineOpacity})`
-        : `hsla(${hue}, ${saturation}%, ${lightness}%, ${lineOpacity * 0.4})`;
-      ctx.lineWidth = isCenter ? 0.8 : 0.5;
       ctx.stroke();
     }
   }
@@ -570,7 +613,8 @@ function drawActivePoint(
   const vswr = gammaMag < 0.999 ? (1 + gammaMag) / (1 - gammaMag) : 10;
   const matchQuality = Math.max(0, 1 - gammaMag); // 1 = perfect match, 0 = total mismatch
   // L3 Interaction Bloom: When dragging, significantly increase intensity (2.5x) to compensate for hidden cursor
-  const intensity = isSnapped ? 1.5 : (isDragging ? 2.5 : 1.0);
+  // 拖拽时亮度提升 2.5 倍，吸附时提升 1.5 倍
+  const intensity = isDragging ? 2.5 : (isSnapped ? 1.5 : 1.0);
   
   // ========================================
   // LAYER 0: Ambient Light Scatter
@@ -1150,7 +1194,8 @@ export const SmithChartCanvas: React.FC<SmithChartCanvasProps> = ({
       // Draw grid: animated during opening, cached after
       if (state.openingProgress < 1 && !reducedMotion) {
         // Use animated grid during opening sequence
-        drawAnimatedGrid(ctx, state.cx, state.cy, state.radius, state.openingProgress, showAdmittance, showVSWRCircles);
+        const cachedLines = getGenesisCache();
+        drawAnimatedGrid(ctx, state.cx, state.cy, state.radius, state.openingProgress, cachedLines, showAdmittance, showVSWRCircles);
       } else {
         // Use cached static grid for performance
         if (gridCacheRef.current && state.gridCacheValid) {
@@ -1555,13 +1600,7 @@ export const SmithChartCanvas: React.FC<SmithChartCanvasProps> = ({
         <div className="absolute inset-0 z-20 flex items-center justify-center pointer-events-auto">
           <button
             onClick={() => setIsInteractionEnabled(true)}
-            className="px-6 py-3 rounded-lg font-semibold transition-all duration-300"
-            style={{
-              backgroundColor: 'rgba(255, 215, 0, 0.15)',
-              border: '2px solid rgba(255, 215, 0, 0.5)',
-              color: '#FFD700',
-              fontFamily: '-apple-system, BlinkMacSystemFont, "Inter", "Segoe UI", "Roboto", "Noto Sans SC", sans-serif',
-            }}
+            className="px-6 py-3 rounded-lg font-semibold transition-all duration-300 bg-[#FFD70026] border-2 border-[#FFD70080] text-[#FFD700] font-sans"
           >
             {lang === 'zh' ? '激活交互' : 'Enable Interaction'}
           </button>
@@ -1579,10 +1618,7 @@ export const SmithChartCanvas: React.FC<SmithChartCanvasProps> = ({
       
       <canvas
         ref={canvasRef}
-        className={`absolute inset-0 w-full h-full smith-canvas ${getCursorStyle()}`}
-        style={{
-          touchAction: isMobile && !isInteractionEnabled ? 'pan-y pinch-zoom' : 'none',
-        }}
+        className={`absolute inset-0 w-full h-full smith-canvas ${getCursorStyle()} ${isMobile && !isInteractionEnabled ? 'touch-pan-y touch-pinch-zoom' : 'touch-none'}`}
         onMouseMove={handleMouseMove}
         onMouseDown={handleMouseDown}
         onMouseUp={handleMouseUp}
@@ -1596,8 +1632,7 @@ export const SmithChartCanvas: React.FC<SmithChartCanvasProps> = ({
       {!overrideImpedance && (
         <div 
           ref={hudContainerRef}
-          className="absolute top-4 left-4 pointer-events-none transition-opacity duration-300"
-          style={{ opacity: 0 }}
+          className="absolute top-4 left-4 pointer-events-none transition-opacity duration-300 opacity-0"
         >
           <div className="py-2">
             <div className="flex items-center gap-3 mb-2">

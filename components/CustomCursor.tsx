@@ -279,8 +279,7 @@ export const CustomCursor: React.FC = () => {
         className="custom-cursor-element fixed pointer-events-none z-[9999] 
                    px-2 py-1 rounded-md 
                    bg-black/60 backdrop-blur-sm border border-white/10
-                   font-mono text-[10px] tabular-nums"
-        style={{ display: 'none' }}
+                   font-mono text-[10px] tabular-nums hidden"
       >
         <span ref={labelRRef} className="text-amber-400"></span>
         <span className="text-white/30 mx-1">|</span>
