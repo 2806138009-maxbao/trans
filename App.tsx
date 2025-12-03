@@ -7,15 +7,15 @@ import { Language, TRANSLATIONS } from "./types";
 import { HeroSection } from "./components/sections/HeroSection";
 // StepTimeline removed - content covered in Odyssey
 // IntroNarrativeSection removed - content integrated into SmithOdyssey
-import { PrerequisiteSection } from "./components/sections/PrerequisiteSection";
+
 import { SmithChartExperiment } from "./components/SmithChartExperiment";
 
 import { SmithModeProvider, SmithMode } from "./state/smithModes";
 import { RecapAndCTASection } from "./components/sections/RecapAndCTASection";
 import { ImpedanceLabReadySection } from "./components/sections/ImpedanceLabReadySection";
 import { usePerformanceTier } from "./hooks/usePerformanceTier";
-import { TiltCard } from "./components/TiltCard";
-import { SplashScreen } from "./components/SplashScreen";
+
+
 import { NoiseOverlay } from "./components/NoiseOverlay";
 import { THEME } from "./theme";
 import { AnimateOnScroll } from "./components/AnimateOnScroll";

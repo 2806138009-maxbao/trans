@@ -1,9 +1,9 @@
 ﻿import React, { useState, useMemo, useRef, useCallback, useEffect } from 'react';
 import { SmithChartCanvas } from './SmithChartCanvas';
-import { TiltCard } from './TiltCard';
+
 import { THEME } from '../theme';
-import { GridIcon, CircleIcon, RotateCcwIcon, CrosshairIcon, CableIcon } from './Icons';
-import { InstrumentSlider } from './InstrumentSlider';
+import { GridIcon, CrosshairIcon, CableIcon } from './Icons';
+
 import { MatchingNetworkCalculator } from './MatchingNetworkCalculator';
 import { TRANSLATIONS } from '../types';
 
@@ -12,19 +12,13 @@ import { useSmithModeOptional, SMITH_MODE_PRESETS } from '../state/smithModes';
 import { EquivalentCircuit } from './EquivalentCircuit';
 import { 
   ScrubbableInput, 
-  PanelChassis, 
-  SectionHeader, 
-  TactileButton, 
-  SegmentedControl,
-  PanelDivider,
-  ValueDisplay 
 } from './ControlPanel';
 // MatchIndicator removed - cleaner UI without victory visuals
 import { ToastManager } from './Toast';
 import { useKeyboardShortcuts, ShortcutAction } from '../hooks/useKeyboardShortcuts';
 // Audio removed for cleaner experience
 import { StudioExport } from './StudioExport';
-import { CountUp } from './CountUp';
+
 
 export interface ExperimentPreset {
   r: number;
@@ -52,27 +46,7 @@ const PRESETS = [
 ];
 
 
-// Reusable Formula Card - Void Style
-const FormulaCard: React.FC<{ title: string, formula: string, description: string, color: string }> = ({ title, formula, description, color }) => (
-  <div 
-    className="relative pl-5 py-4 group"
-  >
-    {/* Left accent line */}
-    <div 
-      className="absolute top-0 left-0 w-0.5 h-full transition-all duration-300 group-hover:w-1" 
-      style={{ backgroundColor: color }} 
-    />
-    <h4 className="text-xs font-bold uppercase tracking-widest mb-3" style={{ color: THEME.colors.text.label }}>
-      {title}
-    </h4>
-    <div className="font-mono text-lg mb-3 text-white font-medium">
-      {formula}
-    </div>
-    <p className="text-xs leading-relaxed" style={{ color: THEME.colors.text.muted }}>
-      {description}
-    </p>
-  </div>
-);
+
 
 export const SmithChartExperiment: React.FC<SmithChartExperimentProps> = ({ 
   reducedMotion, 
@@ -209,73 +183,7 @@ export const SmithChartExperiment: React.FC<SmithChartExperimentProps> = ({
     prevMatchedRef.current = isNearMatch;
   }, [rValue, xValue, triggerHudEvent]);
 
-  // Calculate derived values - 包含完整的 RF 物理参数
-  const derivedValues = useMemo(() => {
-    const z = { r: rValue, x: xValue };
-    const denom = (z.r + 1) * (z.r + 1) + z.x * z.x;
-    const gammaReal = (z.r * z.r + z.x * z.x - 1) / denom;
-    const gammaImag = (2 * z.x) / denom;
-    const gammaMag = Math.sqrt(gammaReal * gammaReal + gammaImag * gammaImag);
-    const gammaAngle = Math.atan2(gammaImag, gammaReal); // 弧度
-    const gammaAngleDeg = gammaAngle * (180 / Math.PI);
-    
-    // ========================================
-    // 物理补充 1: 传输线长度影响
-    // Γ_in = Γ_L * e^{-j2βl}
-    // 在史密斯圆图上表现为顺时针旋转
-    // ========================================
-    const beta_l = 2 * Math.PI * lineLength; // 2βl = 2π * (l/λ)
-    const rotatedAngle = gammaAngle - 2 * beta_l; // 顺时针旋转
-    const gammaInReal = gammaMag * Math.cos(rotatedAngle);
-    const gammaInImag = gammaMag * Math.sin(rotatedAngle);
-    
-    // 旋转后的阻抗
-    const denomIn = (1 - gammaInReal) * (1 - gammaInReal) + gammaInImag * gammaInImag;
-    const zInR = denomIn > 0.0001 ? (1 - gammaInReal * gammaInReal - gammaInImag * gammaInImag) / denomIn : 100;
-    const zInX = denomIn > 0.0001 ? (2 * gammaInImag) / denomIn : 0;
-    
-    const vswr = gammaMag < 0.999 ? (1 + gammaMag) / (1 - gammaMag) : Infinity;
-    const returnLoss = gammaMag > 0.0001 ? -20 * Math.log10(gammaMag) : Infinity;
-    
-    // ========================================
-    // 物理补充 2: 功率传输效率
-    // P_delivered / P_available = 1 - |Γ|²
-    // ========================================
-    const powerEfficiency = (1 - gammaMag * gammaMag) * 100; // 百分比
-    const mismatchLoss = gammaMag < 0.999 ? -10 * Math.log10(1 - gammaMag * gammaMag) : Infinity;
-    
-    // Calculate actual impedance (assuming Z0 = 50Ω)
-    const z0 = 50;
-    const actualR = z.r * z0;
-    const actualX = z.x * z0;
-    const actualZInR = zInR * z0;
-    const actualZInX = zInX * z0;
-    
-    // ========================================
-    // 物理补充 3: Q 因子 (品质因数)
-    // Q = |X| / R (对于串联电路)
-    // Q 越高，带宽越窄
-    // ========================================
-    const qFactor = z.r > 0.01 ? Math.abs(z.x) / z.r : Infinity;
-    
-    return { 
-      gammaMag, 
-      gammaAngleDeg,
-      gammaInReal,
-      gammaInImag,
-      zInR,
-      zInX,
-      actualZInR,
-      actualZInX,
-      vswr, 
-      returnLoss, 
-      actualR, 
-      actualX,
-      powerEfficiency,
-      mismatchLoss,
-      qFactor,
-    };
-  }, [rValue, xValue, lineLength]);
+
 
   const handlePreset = (preset: typeof PRESETS[0]) => {
     setRValue(preset.r);

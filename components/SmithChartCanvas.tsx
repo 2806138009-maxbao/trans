@@ -643,25 +643,33 @@ function drawActivePoint(
   // ========================================
   // LAYER 2: VSWR Circle (Pulsing if matched)
   // ========================================
-  if (gammaMag > 0.01 && gammaMag < 0.99) {
+  // ========================================
+  // LAYER 2: VSWR Circle (Pulsing if matched)
+  // ========================================
+  // L3 Fix: Smooth opacity transition to prevent flickering near zero
+  if (gammaMag < 0.99) {
     const vswrRadius = gammaMag * radius;
+    // Fade in smoothly between gamma 0.01 and 0.05
+    const fadeOpacity = Math.max(0, Math.min(1, (gammaMag - 0.01) / 0.04));
     
-    // Outer bloom
-    ctx.beginPath();
-    ctx.arc(cx, cy, vswrRadius, 0, TWO_PI);
-    ctx.strokeStyle = `rgba(255, 215, 0, ${0.08 * intensity})`;
-    ctx.lineWidth = 6;
-    ctx.setLineDash([]);
-    ctx.stroke();
-    
-    // Core line
-    ctx.beginPath();
-    ctx.arc(cx, cy, vswrRadius, 0, TWO_PI);
-    ctx.strokeStyle = `rgba(255, 215, 0, ${0.25 * intensity})`;
-    ctx.lineWidth = 1;
-    ctx.setLineDash([4, 6]);
-    ctx.stroke();
-    ctx.setLineDash([]);
+    if (fadeOpacity > 0) {
+      // Outer bloom
+      ctx.beginPath();
+      ctx.arc(cx, cy, vswrRadius, 0, TWO_PI);
+      ctx.strokeStyle = `rgba(255, 215, 0, ${0.08 * intensity * fadeOpacity})`;
+      ctx.lineWidth = 6;
+      ctx.setLineDash([]);
+      ctx.stroke();
+      
+      // Core line
+      ctx.beginPath();
+      ctx.arc(cx, cy, vswrRadius, 0, TWO_PI);
+      ctx.strokeStyle = `rgba(255, 215, 0, ${0.25 * intensity * fadeOpacity})`;
+      ctx.lineWidth = 1;
+      ctx.setLineDash([4, 6]);
+      ctx.stroke();
+      ctx.setLineDash([]);
+    }
   }
   
   // ========================================
