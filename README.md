@@ -19,9 +19,7 @@
   <br/>
 
   <p>
-    <a href="[INSERT_DEMO_LINK]">Live Demo</a> &nbsp;&middot;&nbsp; 
-    <a href="#run-locally">Run Locally</a> &nbsp;&middot;&nbsp; 
-    <a href="#philosophy">Philosophy</a>
+   
   </p>
 </div>
 
@@ -62,24 +60,3 @@ A bespoke aesthetic system designed to reduce eye strain. It feels like high-end
 
 <br/>
 
-## The Experience
-
-| Phase 1. The Void | Phase 2. The Fold |
-| :---: | :---: |
-| <img src="[INSERT_SCREENSHOT_1_LINK]" width="100%" /> | <img src="[INSERT_SCREENSHOT_2_LINK]" width="100%" /> |
-| System Initialization | Conformal Mapping Animation |
-
-| Phase 3. The Instrument | Phase 4. The Lab |
-| :---: | :---: |
-| <img src="[INSERT_SCREENSHOT_3_LINK]" width="100%" /> | <img src="[INSERT_SCREENSHOT_4_LINK]" width="100%" /> |
-| Spring-loaded Interaction | Full Impedance Control |
-
-<br/>
-
-## Run Locally
-
-**Prerequisites.** Node.js v16 or higher.
-
-1. Clone the repository.
-   ```bash
-   git clone [https://github.com/maxbao/trans.git](https://github.com/maxbao/trans.git)
