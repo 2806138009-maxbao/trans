@@ -1,5 +1,5 @@
 <div align="center">
-  <img src="[此处替换为你刚才做的黑金Banner图链接]" width="100%" alt="Luminous Harmonics Banner" />
+ 
 </div>
 
 <div align="center">
@@ -15,9 +15,7 @@
   </blockquote>
 
   <p>
-    <a href="[你的在线演示链接]"><strong>🔴 Live Demo</strong></a> · 
-    <a href="#run-locally"><strong>⚡ Run Locally</strong></a> · 
-    <a href="#philosophy"><strong>🧠 Philosophy</strong></a>
+  
   </p>
 </div>
 
