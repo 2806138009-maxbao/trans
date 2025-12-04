@@ -1,5 +1,5 @@
 <div align="center">
-  <img src="[INSERT_YOUR_COVER_IMAGE_LINK_HERE]" width="100%" alt="Luminous Harmonics Banner" />
+
 </div>
 
 <div align="center">
