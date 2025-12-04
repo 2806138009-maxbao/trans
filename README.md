@@ -5,7 +5,6 @@ Built with AI. Directed by Human.
 
 > *Dedicated to the one who grounds my signals.*
 
-[Live Demo]([INSERT_LINK]) · [Run Locally](#run-locally) · [Philosophy](#philosophy)
 
 <br>
 <hr>
