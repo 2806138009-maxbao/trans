@@ -1,35 +1,19 @@
-<div align="center">
+# Luminous Harmonics
+### The Smith Odyssey
 
-</div>
+Built with AI. Directed by Human.
 
-<div align="center">
-  <h1>Luminous Harmonics</h1>
-  <h3>The Smith Odyssey</h3>
-  
-  <p>
-    Built with AI. Directed by Human.
-  </p>
+> *Dedicated to the one who grounds my signals.*
 
-  <br/>
+[Live Demo]([INSERT_LINK]) · [Run Locally](#run-locally) · [Philosophy](#philosophy)
 
-  <blockquote>
-    <em>Dedicated to the one who grounds my signals.</em>
-  </blockquote>
-
-  <br/>
-
-  <p>
-   
-  </p>
-</div>
-
-<br/>
-<hr/>
-<br/>
+<br>
+<hr>
+<br>
 
 ## The Why
 
-Impedance is not a number. It is a feeling.
+**Impedance is not a number. It is a feeling.**
 
 Traditional engineering tools are static. They are disconnected from reality. We believed there was a better way to visualize the invisible.
 
@@ -37,7 +21,7 @@ Luminous Harmonics is not a chart. It is a physics-based instrument.
 
 We replaced static data points with a custom Spring Dynamics Engine. It allows you to feel the resistance. It lets you experience the magnetic snap of a 50Ω match. It transforms the Smith Chart from a terrifying grid into a fluid, explorable space.
 
-<br/>
+<br>
 
 ## The Technology
 
@@ -58,5 +42,12 @@ A bespoke aesthetic system designed to reduce eye strain. It feels like high-end
 * **Film Grain.** A subtle SVG noise overlay removes digital coldness.
 * **Zero-Allocation.** Canvas rendering logic is optimized to reuse object references. No frame drops.
 
-<br/>
+<br>
 
+## Run Locally
+
+**Prerequisites.** Node.js v16 or higher.
+
+**1. Clone the repository.**
+```bash
+git clone [https://github.com/maxbao/trans.git](https://github.com/maxbao/trans.git)
